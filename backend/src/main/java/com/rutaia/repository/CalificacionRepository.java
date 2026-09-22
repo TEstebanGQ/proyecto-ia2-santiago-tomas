@@ -14,4 +14,7 @@ public interface CalificacionRepository extends JpaRepository<Calificacion, Long
 
     @Query("SELECT AVG(c.puntuacion) FROM Calificacion c")
     Double obtenerPromedioPuntuacion();
+
+    @Query("SELECT AVG(c.puntuacion) FROM Calificacion c JOIN c.recomendacion r JOIN r.consulta con WHERE con.estudiante.id = :estudianteId")
+    Double obtenerPromedioPuntuacionPorEstudiante(@org.springframework.data.repository.query.Param("estudianteId") Long estudianteId);
 }

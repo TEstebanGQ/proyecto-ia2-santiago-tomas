@@ -26,6 +26,41 @@ public class EstadisticaService {
 
     @Transactional(readOnly = true)
     public EstadisticasDTO obtenerEstadisticas() {
+        return obtenerEstadisticas(null);
+    }
+
+    @Transactional(readOnly = true)
+    public EstadisticasDTO obtenerEstadisticas(Long estudianteId) {
+        if (estudianteId != null) {
+            long total = consultaRepository.countByEstudianteId(estudianteId);
+            long respondidas = consultaRepository.countByEstudianteIdAndEstado(estudianteId, "Respondida");
+            long sinResultados = consultaRepository.countByEstudianteIdAndEstado(estudianteId, "Sin resultados");
+            long errores = consultaRepository.countByEstudianteIdAndEstado(estudianteId, "Error");
+
+            Double promedio = calificacionRepository.obtenerPromedioPuntuacionPorEstudiante(estudianteId);
+            if (promedio != null) {
+                promedio = Math.round(promedio * 100.0) / 100.0;
+            }
+
+            String cursoTop = "Ninguno aún";
+            List<Object[]> topCursos = cursoRepository.findCursoMasRecomendadoPorEstudiante(estudianteId);
+            if (topCursos != null && !topCursos.isEmpty() && topCursos.get(0) != null) {
+                Object[] row = topCursos.get(0);
+                if (row.length > 0 && row[0] != null) {
+                    cursoTop = row[0].toString() + " (" + row[1] + " recomendaciones)";
+                }
+            }
+
+            return new EstadisticasDTO(
+                    total,
+                    respondidas,
+                    sinResultados,
+                    errores,
+                    promedio,
+                    cursoTop
+            );
+        }
+
         long total = consultaRepository.count();
         long respondidas = consultaRepository.countByEstado("Respondida");
         long sinResultados = consultaRepository.countByEstado("Sin resultados");
