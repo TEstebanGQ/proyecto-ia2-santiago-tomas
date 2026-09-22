@@ -55,6 +55,18 @@ public class EstudianteService {
     }
 
     @Transactional(readOnly = true)
+    public List<EstudianteResponseDTO> buscarPorNombre(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return listarTodos();
+        }
+        String q = query.trim();
+        return estudianteRepository.findByNombreCompletoContainingIgnoreCaseOrCorreoElectronicoContainingIgnoreCase(q, q)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public EstudianteResponseDTO obtenerPorId(Long id) {
         Estudiante estudiante = estudianteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Estudiante no encontrado con ID: " + id));
