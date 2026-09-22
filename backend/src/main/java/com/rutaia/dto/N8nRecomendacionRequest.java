@@ -15,6 +15,8 @@ public class N8nRecomendacionRequest {
     @JsonProperty("area_interes")
     private String areaInteres;
 
+    private Double umbral;
+
     public N8nRecomendacionRequest() {
     }
 
@@ -23,6 +25,14 @@ public class N8nRecomendacionRequest {
         this.pregunta = pregunta;
         this.nivelExperiencia = nivelExperiencia;
         this.areaInteres = areaInteres;
+    }
+
+    public N8nRecomendacionRequest(Long idConsulta, String pregunta, String nivelExperiencia, String areaInteres, Double umbral) {
+        this.idConsulta = idConsulta;
+        this.pregunta = pregunta;
+        this.nivelExperiencia = nivelExperiencia;
+        this.areaInteres = areaInteres;
+        this.umbral = umbral;
     }
 
     public Long getIdConsulta() {
@@ -55,5 +65,13 @@ public class N8nRecomendacionRequest {
 
     public void setAreaInteres(String areaInteres) {
         this.areaInteres = areaInteres;
+    }
+
+    public Double getUmbral() {
+        return umbral;
+    }
+
+    public void setUmbral(Double umbral) {
+        this.umbral = umbral;
     }
 }

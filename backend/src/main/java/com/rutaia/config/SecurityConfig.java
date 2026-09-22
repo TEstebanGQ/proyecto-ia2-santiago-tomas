@@ -46,11 +46,13 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/", "/api").permitAll()
 
-                        // Operaciones Administrativas de Cursos exclusivas para rol ADMINISTRADOR (RF 03, RF 05)
+                        // Operaciones Administrativas de Cursos y Configuración exclusivas para rol ADMINISTRADOR (RF 03, RF 05)
                         .requestMatchers(HttpMethod.GET, "/api/cursos/admin").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/cursos").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.PUT, "/api/cursos/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.PATCH, "/api/cursos/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/configuracion/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.GET, "/api/configuracion/**").permitAll()
 
                         // Resto de operaciones (consultas RAG, calificaciones, gestión estudiantes) requieren autenticación
                         .anyRequest().authenticated()
