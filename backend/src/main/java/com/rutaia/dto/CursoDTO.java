@@ -17,12 +17,14 @@ public class CursoDTO {
     private String categoria;
 
     @NotBlank(message = "El nivel es obligatorio")
-    @Pattern(regexp = "^(Básico|Intermedio|Avanzado)$", message = "El nivel debe ser Básico, Intermedio o Avanzado")
+    @Pattern(regexp = "^(Principiante|Básico|Intermedio|Avanzado)$", message = "El nivel debe ser Principiante, Básico, Intermedio o Avanzado")
     private String nivel;
 
     @NotNull(message = "La duración en horas es obligatoria")
     @Min(value = 1, message = "La duración de un curso debe ser mayor que cero")
     private Integer duracionHoras;
+
+    private String prerrequisitos;
 
     private Boolean activo = true;
 
@@ -30,11 +32,16 @@ public class CursoDTO {
     }
 
     public CursoDTO(String nombre, String descripcion, String categoria, String nivel, Integer duracionHoras, Boolean activo) {
+        this(nombre, descripcion, categoria, nivel, duracionHoras, null, activo);
+    }
+
+    public CursoDTO(String nombre, String descripcion, String categoria, String nivel, Integer duracionHoras, String prerrequisitos, Boolean activo) {
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.categoria = categoria;
         this.nivel = nivel;
         this.duracionHoras = duracionHoras;
+        this.prerrequisitos = prerrequisitos;
         this.activo = activo != null ? activo : true;
     }
 
@@ -76,6 +83,14 @@ public class CursoDTO {
 
     public void setDuracionHoras(Integer duracionHoras) {
         this.duracionHoras = duracionHoras;
+    }
+
+    public String getPrerrequisitos() {
+        return prerrequisitos;
+    }
+
+    public void setPrerrequisitos(String prerrequisitos) {
+        this.prerrequisitos = prerrequisitos;
     }
 
     public Boolean getActivo() {

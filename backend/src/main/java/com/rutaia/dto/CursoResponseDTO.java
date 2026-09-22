@@ -10,6 +10,7 @@ public class CursoResponseDTO {
     private String categoria;
     private String nivel;
     private Integer duracionHoras;
+    private String prerrequisitos;
     private Boolean activo;
     private LocalDateTime fechaCreacion;
 
@@ -17,12 +18,17 @@ public class CursoResponseDTO {
     }
 
     public CursoResponseDTO(Long id, String nombre, String descripcion, String categoria, String nivel, Integer duracionHoras, Boolean activo, LocalDateTime fechaCreacion) {
+        this(id, nombre, descripcion, categoria, nivel, duracionHoras, null, activo, fechaCreacion);
+    }
+
+    public CursoResponseDTO(Long id, String nombre, String descripcion, String categoria, String nivel, Integer duracionHoras, String prerrequisitos, Boolean activo, LocalDateTime fechaCreacion) {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.categoria = categoria;
         this.nivel = nivel;
         this.duracionHoras = duracionHoras;
+        this.prerrequisitos = prerrequisitos;
         this.activo = activo;
         this.fechaCreacion = fechaCreacion;
     }
@@ -73,6 +79,14 @@ public class CursoResponseDTO {
 
     public void setDuracionHoras(Integer duracionHoras) {
         this.duracionHoras = duracionHoras;
+    }
+
+    public String getPrerrequisitos() {
+        return prerrequisitos;
+    }
+
+    public void setPrerrequisitos(String prerrequisitos) {
+        this.prerrequisitos = prerrequisitos;
     }
 
     public Boolean getActivo() {

@@ -50,11 +50,12 @@ public class QdrantSyncService {
 
             // 1. Construir texto representativo para el embedding
             String textoParaEmbedding = String.format(
-                    "Curso: %s. Categoría: %s. Nivel: %s. Duración: %d horas. Descripción: %s",
+                    "Curso: %s. Categoría: %s. Nivel: %s. Duración: %d horas. Prerrequisitos: %s. Descripción: %s",
                     curso.getNombre(),
                     curso.getCategoria(),
                     curso.getNivel(),
                     curso.getDuracionHoras(),
+                    curso.getPrerrequisitos() != null ? curso.getPrerrequisitos() : "Ninguno",
                     curso.getDescripcion()
             );
 
@@ -73,6 +74,7 @@ public class QdrantSyncService {
             payload.put("categoria", curso.getCategoria());
             payload.put("nivel", curso.getNivel());
             payload.put("duracion_horas", curso.getDuracionHoras());
+            payload.put("prerrequisitos", curso.getPrerrequisitos() != null ? curso.getPrerrequisitos() : "");
             payload.put("activo", curso.getActivo() != null ? curso.getActivo() : true);
 
             Map<String, Object> point = new HashMap<>();

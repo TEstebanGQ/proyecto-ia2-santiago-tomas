@@ -26,6 +26,9 @@ public class Curso {
     @Column(name = "duracion_horas", nullable = false)
     private Integer duracionHoras;
 
+    @Column(columnDefinition = "TEXT")
+    private String prerrequisitos;
+
     @Column(nullable = false)
     private Boolean activo = true;
 
@@ -36,11 +39,16 @@ public class Curso {
     }
 
     public Curso(String nombre, String descripcion, String categoria, String nivel, Integer duracionHoras, Boolean activo) {
+        this(nombre, descripcion, categoria, nivel, duracionHoras, null, activo);
+    }
+
+    public Curso(String nombre, String descripcion, String categoria, String nivel, Integer duracionHoras, String prerrequisitos, Boolean activo) {
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.categoria = categoria;
         this.nivel = nivel;
         this.duracionHoras = duracionHoras;
+        this.prerrequisitos = prerrequisitos;
         this.activo = activo != null ? activo : true;
     }
 
@@ -100,6 +108,14 @@ public class Curso {
 
     public void setDuracionHoras(Integer duracionHoras) {
         this.duracionHoras = duracionHoras;
+    }
+
+    public String getPrerrequisitos() {
+        return prerrequisitos;
+    }
+
+    public void setPrerrequisitos(String prerrequisitos) {
+        this.prerrequisitos = prerrequisitos;
     }
 
     public Boolean getActivo() {

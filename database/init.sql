@@ -34,8 +34,9 @@ CREATE TABLE cursos (
     nombre VARCHAR(200) NOT NULL,
     descripcion TEXT NOT NULL,
     categoria VARCHAR(100) NOT NULL,
-    nivel VARCHAR(30) NOT NULL CHECK (nivel IN ('Básico', 'Intermedio', 'Avanzado')),
+    nivel VARCHAR(30) NOT NULL CHECK (nivel IN ('Principiante', 'Básico', 'Intermedio', 'Avanzado')),
     duracion_horas INT NOT NULL CHECK (duracion_horas > 0),
+    prerrequisitos TEXT,
     activo BOOLEAN DEFAULT TRUE NOT NULL,
     fecha_creacion TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

@@ -63,6 +63,7 @@ public class CursoService {
                 dto.getCategoria().trim(),
                 dto.getNivel().trim(),
                 dto.getDuracionHoras(),
+                dto.getPrerrequisitos() != null ? dto.getPrerrequisitos().trim() : null,
                 dto.getActivo() != null ? dto.getActivo() : true
         );
         Curso guardado = cursoRepository.save(curso);
@@ -86,6 +87,7 @@ public class CursoService {
         curso.setCategoria(dto.getCategoria().trim());
         curso.setNivel(dto.getNivel().trim());
         curso.setDuracionHoras(dto.getDuracionHoras());
+        curso.setPrerrequisitos(dto.getPrerrequisitos() != null ? dto.getPrerrequisitos().trim() : null);
         if (dto.getActivo() != null) {
             curso.setActivo(dto.getActivo());
         }
@@ -148,6 +150,7 @@ public class CursoService {
                 c.getCategoria(),
                 c.getNivel(),
                 c.getDuracionHoras(),
+                c.getPrerrequisitos(),
                 c.getActivo(),
                 c.getFechaCreacion()
         );
