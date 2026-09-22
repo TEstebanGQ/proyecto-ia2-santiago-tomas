@@ -1,0 +1,247 @@
+{
+  "name": "RutaIA - 02 Consulta y Recomendacion RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "recomendar-cursos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-rag",
+      "name": "Webhook Recomendar Cursos",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst idConsulta = body.id_consulta || body.idConsulta;\nconst pregunta = (body.pregunta || '').trim();\nconst nivel = body.nivel_experiencia || body.nivelExperiencia || 'No especificado';\nconst area = body.area_interes || body.areaInteres || 'General';\n\nif (!pregunta) {\n  throw new Error('La pregunta no puede estar vacía');\n}\n\nreturn {\n  json: {\n    id_consulta: idConsulta,\n    pregunta: pregunta,\n    nivel_experiencia: nivel,\n    area_interes: area\n  }\n};"
+      },
+      "id": "code-validate-input",
+      "name": "Validar Consulta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/text-embedding-3-small\",\n  \"input\": \"{{ $json.pregunta.replace(/\"/g, '\\\\\"') }}\"\n}"
+      },
+      "id": "http-query-embedding",
+      "name": "Generar Embedding Pregunta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/cursos_academicos/points/search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"vector\": {{ JSON.stringify($json.data[0].embedding) }},\n  \"limit\": 5,\n  \"with_payload\": true,\n  \"filter\": {\n    \"must\": [\n      {\n        \"key\": \"activo\",\n        \"match\": { \"value\": true }\n      }\n    ]\n  }\n}"
+      },
+      "id": "http-search-qdrant",
+      "name": "Buscar en Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const qdrantResp = $json.result || [];\nconst inputData = $('Validar Consulta').first().json;\nconst UMBRAL = 0.40;\n\n// Filtrar por umbral de relevancia (RF 11)\nconst relevantes = qdrantResp.filter(item => (item.score || 0) >= UMBRAL);\n\nif (relevantes.length === 0) {\n  return {\n    json: {\n      id_consulta: inputData.id_consulta,\n      pregunta: inputData.pregunta,\n      respuesta: `No encontramos cursos en nuestro catálogo institucional que coincidan suficientemente con tu búsqueda (\"${inputData.pregunta}\"). Te invitamos a consultar el catálogo completo de tecnología o buscar términos relacionados con programación, desarrollo web, ciencia de datos, ciberseguridad o inteligencia artificial.`,\n      fuentes: [],\n      similitudes: [],\n      estado_final: \"Sin resultados\",\n      ejecutar_llm: false\n    }\n  };\n}\n\n// Construir fuentes normalizadas y contexto RAG (RF 12, RF 13)\nconst fuentes = relevantes.map(r => ({\n  id: r.payload.curso_id || r.id,\n  nombre: r.payload.nombre,\n  descripcion: r.payload.descripcion,\n  categoria: r.payload.categoria,\n  nivel: r.payload.nivel,\n  duracion_horas: r.payload.duracion_horas,\n  similitud: Math.round(r.score * 10000) / 10000\n}));\n\nconst similitudes = fuentes.map(f => f.similitud);\n\nconst contextoTexto = fuentes.map((f, idx) => (\n  `Curso ${idx + 1}: ${f.nombre}\n- Identificador: ${f.id}\n- Categoría: ${f.categoria} | Nivel: ${f.nivel} | Duración: ${f.duracion_horas} horas\n- Similitud Semántica: ${(f.similitud * 100).toFixed(2)}%\n- Descripción: ${f.descripcion}`\n)).join('\\n\\n');\n\nreturn {\n  json: {\n    id_consulta: inputData.id_consulta,\n    pregunta: inputData.pregunta,\n    nivel_experiencia: inputData.nivel_experiencia,\n    area_interes: inputData.area_interes,\n    contexto: contextoTexto,\n    fuentes: fuentes,\n    similitudes: similitudes,\n    ejecutar_llm: true\n  }\n};"
+      },
+      "id": "code-evaluate-threshold",
+      "name": "Evaluar Umbral y Contexto RAG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.ejecutar_llm }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-needs-llm",
+      "name": "¿Superó Umbral?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"google/gemini-3.5-flash\",\n  \"max_tokens\": 1000,\n  \"temperature\": 0.2,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Eres RutaIA, el asesor vocacional y académico inteligente de la institución. Tu misión es orientar al estudiante recomendándole exclusivamente los cursos provistos en el CONTEXTO DEL CATÁLOGO. Reglas estrictas:\\n1. Basa tus recomendaciones ÚNICAMENTE en los cursos listados en el contexto.\\n2. NO inventes nombres de cursos, códigos, duraciones ni contenidos que no estén en el contexto.\\n3. Si los cursos del contexto no son suficientes para cubrir la pregunta del estudiante, reconócelo explícitamente.\\n4. Presenta una recomendación motivadora, estructurada y profesional, explicando cómo cada curso seleccionado se articula con la necesidad del estudiante.\\n5. Menciona de forma destacada el nombre exacto de cada curso recomendado.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Perfil del Estudiante:\\n- Nivel: {{ $json.nivel_experiencia }}\\n- Área de interés: {{ $json.area_interes }}\\n\\nPregunta del Estudiante:\\n\\\"{{ $json.pregunta }}\\\"\\n\\nCONTEXTO DEL CATÁLOGO INSTITUCIONAL (Cursos recuperados por relevancia semántica):\\n{{ $json.contexto }}\\n\\nPor favor genera la recomendación fundamentada para el estudiante:\"\n    }\n  ]\n}"
+      },
+      "id": "http-llm-rag",
+      "name": "Generar Recomendacion LLM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const llmChoice = $json.choices && $json.choices[0] ? $json.choices[0].message.content : '';\nconst evaluacion = $('Evaluar Umbral y Contexto RAG').first().json;\n\nreturn {\n  json: {\n    id_consulta: evaluacion.id_consulta,\n    pregunta: evaluacion.pregunta,\n    respuesta: llmChoice || 'No se pudo generar la recomendación en este momento.',\n    fuentes: evaluacion.fuentes,\n    similitudes: evaluacion.similitudes,\n    estado_final: 'Respondida'\n  }\n};"
+      },
+      "id": "code-format-success",
+      "name": "Formatear Respuesta Respondida",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1660, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-webhook-final",
+      "name": "Responder a Spring Boot",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Recomendar Cursos": {
+      "main": [
+        [
+          {
+            "node": "Validar Consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Consulta": {
+      "main": [
+        [
+          {
+            "node": "Generar Embedding Pregunta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Embedding Pregunta": {
+      "main": [
+        [
+          {
+            "node": "Buscar en Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar en Qdrant": {
+      "main": [
+        [
+          {
+            "node": "Evaluar Umbral y Contexto RAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar Umbral y Contexto RAG": {
+      "main": [
+        [
+          {
+            "node": "¿Superó Umbral?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Superó Umbral?": {
+      "main": [
+        [
+          {
+            "node": "Generar Recomendacion LLM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder a Spring Boot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Recomendacion LLM": {
+      "main": [
+        [
+          {
+            "node": "Formatear Respuesta Respondida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear Respuesta Respondida": {
+      "main": [
+        [
+          {
+            "node": "Responder a Spring Boot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
