@@ -794,6 +794,13 @@
               </svg>
               <span>Consulta de Estudiantes</span>
             </button>
+            <button type="button" class="admin-subtab" id="subtab-admin-config" data-admintab="config">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              <span>Configuración del Umbral RAG</span>
+            </button>
           </div>
 
           <!-- ==========================================================
@@ -905,7 +912,7 @@
               </div>
             </div>
 
-            <!-- Barra de Consulta por Identificador -->
+            <!-- Barra de Consulta General por Nombre -->
             <div class="admin-student-search-card">
               <div class="student-search-header">
                 <div class="search-icon-circle">
@@ -915,18 +922,18 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="student-search-title">Consultar Estudiante por Identificador (ID)</h3>
-                  <p class="student-search-desc">Ingresa el ID único para consultar su perfil académico y su historial de consultas RAG. Si no existe, el sistema reportará el estado adecuadamente.</p>
+                  <h3 class="student-search-title">Consulta General de Estudiantes por Nombre</h3>
+                  <p class="student-search-desc">Ingresa el nombre o correo electrónico del estudiante para consultar su perfil académico y su historial de consultas RAG. El sistema traerá todos los nombres y correos coincidentes.</p>
                 </div>
               </div>
 
               <form id="admin-student-search-form" class="student-search-form">
                 <div class="student-search-input-wrap">
-                  <span class="id-prefix">#ID</span>
-                  <input type="number" id="admin-student-id-input" placeholder="Ej: 1, 2, 5, 999..." min="1" required />
+                  <span class="id-prefix">👤</span>
+                  <input type="text" id="admin-student-name-input" placeholder="Ingresa nombre o correo del estudiante (ej: Santiago, Ana, carlos@...)" required />
                 </div>
-                <button type="submit" class="btn-primary-lime" id="btn-search-student-id">
-                  <span>Consultar por ID</span>
+                <button type="submit" class="btn-primary-lime" id="btn-search-student-name">
+                  <span>Consultar por Nombre</span>
                   <span class="btn-arrow">➔</span>
                 </button>
               </form>
@@ -983,6 +990,67 @@
                   <!-- Renderizado dinámico -->
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- ==========================================================
+               SUB-PANEL 3: CONFIGURACIÓN DE UMBRAL RAG
+               ========================================================== -->
+          <div class="admin-pane" id="admin-pane-config" style="display: none;">
+            <div class="editorial-view-header admin-header-flex">
+              <div>
+                <div class="admin-badge-tag">Parámetros RAG</div>
+                <h2 class="view-title">Configuración del Umbral de Similitud Vectorial</h2>
+                <p class="view-subtitle">Ajusta el porcentaje de coincidencia semántica mínimo requerido para que los cursos sean recomendados por el asistente vocacional RAG.</p>
+              </div>
+            </div>
+
+            <!-- Tarjeta Principal de Configuración del Umbral -->
+            <div class="admin-student-search-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 2rem;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 280px;">
+                  <h3 style="font-size: 1.2rem; font-weight: 800; color: #18191E; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>⚙️ Umbral de Relevancia Semántica</span>
+                    <span class="status-pill respondida" id="admin-umbral-badge-status" style="font-size: 0.78rem;">Equilibrado</span>
+                  </h3>
+                  <p style="color: #4B5563; font-size: 0.9rem; line-height: 1.55;">
+                    El umbral determina la exigencia del motor vectorial Qdrant. Un porcentaje menor a 35% incrementa la cobertura recomendando más cursos; un valor superior a 65% restringe los resultados a coincidencias muy estrictas.
+                  </p>
+                </div>
+                
+                <div style="background: #FAF8F2; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.25rem; text-align: center; min-width: 180px;">
+                  <span style="display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Valor Actual</span>
+                  <span id="admin-umbral-display-value" style="font-size: 2.2rem; font-weight: 900; color: #18191E; line-height: 1.1; display: block; margin: 0.3rem 0;">40.0%</span>
+                  <span id="admin-umbral-decimal-value" style="font-size: 0.8rem; color: #6B7280; font-family: monospace;">(0.4000)</span>
+                </div>
+              </div>
+
+              <form id="admin-threshold-form" style="margin-top: 2rem; border-top: 1px solid #F1F5F9; padding-top: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                  <div style="flex: 1; min-width: 220px;">
+                    <label for="admin-threshold-slider" style="display: block; font-weight: 700; font-size: 0.88rem; color: #18191E; margin-bottom: 0.5rem;">
+                      Porcentaje de Umbral (0% - 100%)
+                    </label>
+                    <input type="range" id="admin-threshold-slider" min="0" max="100" step="1" value="40" style="width: 100%; height: 8px; accent-color: #7C3AED; cursor: pointer;" />
+                  </div>
+                  <div style="width: 110px;">
+                    <label for="admin-threshold-number-input" style="display: block; font-weight: 700; font-size: 0.85rem; color: #18191E; margin-bottom: 0.5rem;">
+                      Porcentaje %
+                    </label>
+                    <input type="number" id="admin-threshold-number-input" min="0" max="100" step="0.5" value="40" style="width: 100%; padding: 0.55rem; border: 1px solid #CBD5E1; border-radius: 8px; font-weight: 800; text-align: center; font-size: 1rem;" required />
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                  <div style="font-size: 0.82rem; color: #6B7280;">
+                    💡 <em>Nota: El nuevo umbral se aplicará inmediatamente a todas las consultas RAG entrantes.</em>
+                  </div>
+                  <button type="submit" class="btn-primary-lime" id="btn-save-threshold" style="padding: 0.65rem 1.4rem;">
+                    <span>Guardar Configuración de Umbral</span>
+                    <span class="btn-arrow">➔</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </section>

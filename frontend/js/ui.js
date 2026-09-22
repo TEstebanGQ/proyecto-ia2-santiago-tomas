@@ -753,8 +753,9 @@ export const ui = {
       tr.innerHTML = `
         <td style="font-weight: 700; color: var(--text-muted); font-size: 0.8rem;">#${c.id}</td>
         <td>
-          <div class="course-table-title">${c.nombre}</div>
-          <div class="course-table-prereq">${c.prerrequisitos ? 'Prerreq: ' + c.prerrequisitos : 'Sin prerrequisitos'}</div>
+          <div class="course-table-title" style="font-weight: 800; color: #18191E; font-size: 0.95rem;">${c.nombre}</div>
+          <div class="course-table-desc" style="font-size: 0.82rem; color: #4B5563; margin-top: 0.3rem; line-height: 1.45; max-width: 450px; white-space: normal;">${c.descripcion || 'Sin descripción'}</div>
+          <div class="course-table-prereq" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; font-style: italic;">${c.prerrequisitos ? '📌 Prerrequisitos: ' + c.prerrequisitos : 'Sin prerrequisitos'}</div>
         </td>
         <td><span class="catalog-badge-cat" style="font-size:0.75rem;">${c.categoria}</span></td>
         <td><span style="font-weight: 600;">${c.nivel}</span></td>
@@ -1033,7 +1034,84 @@ export const ui = {
     container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   },
 
-  renderErrorEstudianteAdmin(idConsultado, mensajeError) {
+  renderResultadosBusquedaEstudiantesAdmin(query, estudiantes, onVerHistorial) {
+    const container = document.getElementById('admin-student-inspection-result');
+    if (!container) return;
+
+    if (!estudiantes || estudiantes.length === 0) {
+      this.renderErrorEstudianteAdmin(query, 'No se encontraron estudiantes coincidentes');
+      return;
+    }
+
+    const itemsHtml = estudiantes.map(est => {
+      const initials = (est.nombreCompleto || 'E').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      return `
+        <div class="search-result-item" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; margin-bottom: 0.75rem; transition: all 0.2s ease;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #D7F338; color: #18191E; font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              ${initials}
+            </div>
+            <div>
+              <div style="font-weight: 700; color: #18191E; font-size: 1rem;">
+                ${est.nombreCompleto}
+                <span class="id-badge" style="font-size: 0.72rem; margin-left: 0.35rem;">ID #${est.id}</span>
+              </div>
+              <div style="color: #4B5563; font-size: 0.88rem; font-weight: 500; margin-top: 0.15rem;">
+                📧 <strong>${est.correoElectronico}</strong>
+              </div>
+              <div style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.2rem;">
+                🎓 ${est.nivelExperiencia || 'General'} | 🎯 ${est.areaInteres || 'Tecnología'}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn-inspect-single" data-id="${est.id}" style="background: #18191E; color: #FFFFFF; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span>Ver Ficha e Historial</span>
+            <span style="color: #D7F338;">➔</span>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="admin-search-results-card" style="background: #FAF8F2; border: 1px solid #E2E8F0; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+          <h4 style="font-weight: 800; color: #18191E; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>🔍 Coincidencias encontradas para "${query}" (${estudiantes.length})</span>
+          </h4>
+          <button type="button" class="btn-close-inspection" id="btn-close-results-card" style="background: #E2E8F0; color: #475569; border: none; padding: 0.35rem 0.75rem; border-radius: 6px; font-weight: 600; font-size: 0.8rem; cursor: pointer;">
+            ✕ Cerrar
+          </button>
+        </div>
+        <div class="search-results-list">
+          ${itemsHtml}
+        </div>
+      </div>
+    `;
+
+    container.style.display = 'block';
+
+    const closeBtn = document.getElementById('btn-close-results-card');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        container.style.display = 'none';
+        container.innerHTML = '';
+      });
+    }
+
+    container.querySelectorAll('.btn-inspect-single').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const est = estudiantes.find(e => String(e.id) === String(id));
+        if (est && onVerHistorial) {
+          onVerHistorial(est);
+        }
+      });
+    });
+
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  },
+
+  renderErrorEstudianteAdmin(queryConsultada, mensajeError) {
     const container = document.getElementById('admin-student-inspection-result');
     if (!container) return;
 
@@ -1041,12 +1119,12 @@ export const ui = {
       <div class="admin-notfound-card">
         <div class="notfound-icon-box">⚠</div>
         <div class="notfound-body" style="flex: 1;">
-          <h4>Estudiante No Encontrado (HTTP 404)</h4>
+          <h4>Sin coincidencias de búsqueda</h4>
           <p>
-            No existe ningún estudiante registrado con el identificador <strong>#${idConsultado}</strong> en la base de datos institucional.
+            No existe ningún estudiante registrado que coincida con la consulta: <strong>"${queryConsultada}"</strong>.
           </p>
           <p style="margin-top: 0.35rem; font-size: 0.82rem; opacity: 0.9;">
-            Mensaje del servidor: <em>"${mensajeError || 'Recurso no encontrado'}"</em>. Verifica que el identificador sea correcto o consulta la lista general inferior.
+            Detalle: <em>"${mensajeError || 'Recurso no encontrado'}"</em>. Verifica que el nombre o correo ingresado esté bien escrito o revisa el directorio general.
           </p>
         </div>
         <button type="button" class="btn-close-inspection" id="btn-close-error-card" style="background:#FED7AA; border-color:#FDBA74; color:#7C2D12;">
