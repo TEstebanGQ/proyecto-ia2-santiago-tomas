@@ -78,10 +78,23 @@
     {
       "parameters": {
         "conditions": {
-          "boolean": [
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
             {
-              "value1": "={{ $json.ejecutar_llm }}",
-              "value2": true
+              "id": "cond_ejecutar_llm",
+              "leftValue": "={{ $json.ejecutar_llm }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ]
         }
@@ -111,7 +124,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"google/gemini-3.5-flash\",\n  \"max_tokens\": 1000,\n  \"temperature\": 0.2,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Eres RutaIA, el asesor vocacional y académico inteligente de la institución. Tu misión es orientar al estudiante recomendándole exclusivamente los cursos provistos en el CONTEXTO DEL CATÁLOGO. Reglas estrictas:\\n1. Basa tus recomendaciones ÚNICAMENTE en los cursos listados en el contexto.\\n2. NO inventes nombres de cursos, códigos, duraciones ni contenidos que no estén en el contexto.\\n3. Si los cursos del contexto no son suficientes para cubrir la pregunta del estudiante, reconócelo explícitamente.\\n4. Presenta una recomendación motivadora, estructurada y profesional, explicando cómo cada curso seleccionado se articula con la necesidad del estudiante.\\n5. Menciona de forma destacada el nombre exacto de cada curso recomendado.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Perfil del Estudiante:\\n- Nivel: {{ $json.nivel_experiencia }}\\n- Área de interés: {{ $json.area_interes }}\\n\\nPregunta del Estudiante:\\n\\\"{{ $json.pregunta }}\\\"\\n\\nCONTEXTO DEL CATÁLOGO INSTITUCIONAL (Cursos recuperados por relevancia semántica):\\n{{ $json.contexto }}\\n\\nPor favor genera la recomendación fundamentada para el estudiante:\"\n    }\n  ]\n}"
+        "jsonBody": "={{\n  JSON.stringify({\n    model: \"google/gemini-2.5-flash\",\n    max_tokens: 350,\n    temperature: 0.2,\n    messages: [\n      {\n        role: \"system\",\n        content: \"Eres RutaIA, el asesor vocacional y académico inteligente de la institución. Tu misión es orientar al estudiante recomendándole exclusivamente los cursos provistos en el CONTEXTO DEL CATÁLOGO.\\n\\nReglas estrictas:\\n1. Basa tus recomendaciones ÚNICAMENTE en los cursos listados en el contexto.\\n2. NO inventes nombres de cursos, códigos, duraciones ni contenidos que no estén en el contexto.\\n3. Si los cursos del contexto no son suficientes para cubrir la pregunta del estudiante, reconócelo explícitamente.\\n4. Presenta una recomendación motivadora, estructurada y profesional, explicando cómo cada curso seleccionado se articula con la necesidad del estudiante.\\n5. Menciona de forma destacada el nombre exacto de cada curso recomendado.\"\n      },\n      {\n        role: \"user\",\n        content: `Perfil del Estudiante:\\n- Nivel: ${$json.nivel_experiencia || 'Principiante'}\\n- Área de interés: ${$json.area_interes || 'General'}\\n\\nPregunta del Estudiante:\\n\"${$json.pregunta || ''}\"\\n\\nCONTEXTO DEL CATÁLOGO INSTITUCIONAL (Cursos recuperados por relevancia semántica):\\n${$json.contexto || ''}\\n\\nPor favor genera la recomendación fundamentada para el estudiante:`\n      }\n    ]\n  })\n}}"
       },
       "id": "http-llm-rag",
       "name": "Generar Recomendacion LLM",
