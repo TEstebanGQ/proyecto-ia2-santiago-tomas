@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rutaia_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rutaia_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-rutaia_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rutaia_net
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.5
+    container_name: rutaia_qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - rutaia_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: rutaia_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - rutaia_net
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: rutaia_n8n
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=America/Bogota
+      - TZ=America/Bogota
+      - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ../n8n/workflows:/data/workflows:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    networks:
+      - rutaia_net
+
+volumes:
+  postgres_data:
+    name: rutaia_postgres_data
+  qdrant_storage:
+    name: rutaia_qdrant_data
+  n8n_data:
+    name: rutaia_n8n_data
+  redis_data:
+    name: rutaia_redis_data
+
+networks:
+  rutaia_net:
+    name: rutaia_network
+    driver: bridge
