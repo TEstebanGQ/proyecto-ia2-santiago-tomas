@@ -217,8 +217,10 @@ export const api = {
   },
 
   // Estadísticas
-  async getEstadisticas() {
-    const res = await fetch(`${API_BASE_URL}/estadisticas`, {
+  async getEstadisticas(estudianteId = null) {
+    const query = estudianteId ? `?estudianteId=${encodeURIComponent(estudianteId)}` : '';
+    const res = await fetch(`${API_BASE_URL}/estadisticas${query}`, {
+      headers: getAuthHeaders(false),
       credentials: 'include'
     });
     if (!res.ok) throw new Error('Error al consultar las estadísticas');

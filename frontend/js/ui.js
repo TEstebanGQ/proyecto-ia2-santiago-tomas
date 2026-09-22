@@ -60,6 +60,9 @@ export const ui = {
       .toUpperCase();
 
     if (avatarEl) avatarEl.textContent = initials || 'US';
+    const mobileInitials = document.getElementById('mobile-user-initials');
+    if (mobileInitials) mobileInitials.textContent = initials || 'US';
+
     if (nameEl) nameEl.textContent = nombre;
 
     const esAdmin = estudiante.rol === 'ADMINISTRADOR';
@@ -84,6 +87,72 @@ export const ui = {
         navAdmin.style.display = 'none';
       }
     }
+  },
+
+  // Renderizado dinámico de la Vista Oficial de Registro
+  renderVistaRegistro(estudianteActivo, estudiantes, onSeleccionar) {
+    // 1. Perfil activo en la vista de registro
+    const activeAvatar = document.getElementById('view-reg-active-avatar');
+    const activeName = document.getElementById('view-reg-active-name');
+    const activeEmail = document.getElementById('view-reg-active-email');
+    const activeLevel = document.getElementById('view-reg-active-level');
+    const activeArea = document.getElementById('view-reg-active-area');
+
+    if (estudianteActivo) {
+      const nombre = estudianteActivo.nombreCompleto || estudianteActivo.nombre || 'Estudiante';
+      const initials = nombre
+        .split(' ')
+        .filter(n => n.length > 0)
+        .map(n => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+
+      if (activeAvatar) activeAvatar.textContent = initials || 'ES';
+      if (activeName) activeName.textContent = nombre;
+      if (activeEmail) activeEmail.textContent = estudianteActivo.correoElectronico || estudianteActivo.email || '-';
+      if (activeLevel) activeLevel.textContent = estudianteActivo.nivelExperiencia || estudianteActivo.nivel || 'Principiante';
+      if (activeArea) activeArea.textContent = estudianteActivo.areaInteres || estudianteActivo.area || 'General';
+    }
+
+    // 2. Directorio de estudiantes
+    const listEl = document.getElementById('view-reg-students-list');
+    const countEl = document.getElementById('view-reg-students-count');
+    if (countEl) countEl.textContent = (estudiantes || []).length;
+
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    if (!estudiantes || estudiantes.length === 0) {
+      listEl.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">No hay estudiantes registrados aún.</div>';
+      return;
+    }
+
+    const activoId = estudianteActivo ? estudianteActivo.id : null;
+
+    estudiantes.forEach(est => {
+      const isSelected = est.id === activoId;
+      const row = document.createElement('div');
+      row.className = `directory-student-row ${isSelected ? 'active' : ''}`;
+
+      row.innerHTML = `
+        <div class="directory-student-meta">
+          <span class="directory-student-name">${est.nombreCompleto}</span>
+          <span class="directory-student-sub">${est.correoElectronico} • ${est.nivelExperiencia}</span>
+        </div>
+        <button type="button" class="btn-activate-student">
+          ${isSelected ? 'Activo ✓' : 'Seleccionar'}
+        </button>
+      `;
+
+      if (!isSelected && onSeleccionar) {
+        row.querySelector('.btn-activate-student').addEventListener('click', () => {
+          onSeleccionar(est);
+        });
+      }
+
+      listEl.appendChild(row);
+    });
   },
 
   // Modal para Seleccionar Estudiante
@@ -434,6 +503,7 @@ export const ui = {
           </div>
           <h3 class="course-editorial-title">${curso.nombre}</h3>
           <p class="course-editorial-desc">${curso.descripcion}</p>
+          ${curso.prerrequisitos ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; background: var(--bg-card-subtle); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border-left: 2px solid var(--accent-lime);"><strong>Prerrequisitos:</strong> ${curso.prerrequisitos}</div>` : ''}
         </div>
         <div class="course-editorial-footer">
           <span class="course-editorial-hours">
@@ -542,20 +612,42 @@ export const ui = {
   },
 
   // Renderizado de Estadísticas (RF 18)
-  renderEstadisticas(stats) {
+  renderEstadisticas(stats, usuario = null) {
     if (!stats) return;
 
+    const titleEl = document.getElementById('stats-view-title');
+    const subtitleEl = document.getElementById('stats-view-subtitle');
     const totalEl = document.getElementById('stat-total');
     const respEl = document.getElementById('stat-respondidas');
     const sinResEl = document.getElementById('stat-sin-resultados');
     const promEl = document.getElementById('stat-promedio');
     const topEl = document.getElementById('stat-curso-top');
 
+    const isEstudiante = usuario && usuario.rol === 'ESTUDIANTE';
+    if (titleEl) {
+      titleEl.textContent = isEstudiante ? 'Mis Métricas de Orientación Académica' : 'Métricas de Orientación Académica';
+    }
+    if (subtitleEl) {
+      subtitleEl.textContent = isEstudiante
+        ? `Estadísticas personales de tus consultas, recomendaciones y satisfacción vocacional.`
+        : 'Estadísticas consolidadas del sistema de recomendación y satisfacción estudiantil.';
+    }
+
     if (totalEl) totalEl.textContent = stats.totalConsultas || 0;
     if (respEl) respEl.textContent = stats.consultasRespondidas || 0;
     if (sinResEl) sinResEl.textContent = stats.consultasSinResultados || 0;
-    if (promEl) promEl.textContent = stats.promedioCalificaciones ? `★ ${stats.promedioCalificaciones.toFixed(1)}` : 'N/A';
-    if (topEl) topEl.textContent = stats.cursoMasRecomendado || 'Sin recomendaciones registradas aún';
+    if (promEl) {
+      promEl.textContent = (stats.promedioCalificaciones !== null && stats.promedioCalificaciones !== undefined)
+        ? `★ ${Number(stats.promedioCalificaciones).toFixed(1)}`
+        : 'N/A';
+    }
+    if (topEl) {
+      if (!stats.totalConsultas || stats.totalConsultas === 0 || !stats.cursoMasRecomendado || stats.cursoMasRecomendado === 'Ninguno aún') {
+        topEl.textContent = isEstudiante ? 'Aún no tienes recomendaciones registradas' : 'Sin recomendaciones registradas aún';
+      } else {
+        topEl.textContent = stats.cursoMasRecomendado;
+      }
+    }
   },
 
   // Modal con Detalle Completo del Curso
@@ -726,7 +818,7 @@ export const ui = {
       if (nombreInput) nombreInput.value = curso.nombre || '';
       if (descInput) descInput.value = curso.descripcion || '';
       if (catInput) catInput.value = curso.categoria || '';
-      if (nivelInput) nivelInput.value = curso.nivel || 'Principiante';
+      if (nivelInput) nivelInput.value = (curso.nivel === 'Básico' ? 'Principiante' : curso.nivel) || 'Principiante';
       if (durInput) durInput.value = curso.duracionHoras || 40;
       if (prereqInput) prereqInput.value = curso.prerrequisitos || '';
     } else {

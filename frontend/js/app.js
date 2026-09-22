@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   initNavigation();
+  initMobileNavigation();
   initPastelTiles();
   initTestChips();
   initQueryForm();
@@ -21,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initQuickSearch();
   initAuthModal();
   initAdminPanel();
+  initRegisterView();
 
   await cargarDatosIniciales();
 });
@@ -66,13 +68,142 @@ function initNavigation() {
   }
 }
 
-export function cambiarVista(viewId) {
-  // 1. Descartar vista registro obsoleta
-  if (viewId === 'registro') {
-    viewId = 'asesor';
+// Navegación Móvil (Drawer y Backdrop)
+function initMobileNavigation() {
+  const btnMenu = document.getElementById('btn-mobile-menu');
+  const btnClose = document.getElementById('btn-close-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const sidebar = document.getElementById('app-sidebar');
+
+  const openDrawer = () => {
+    if (sidebar) sidebar.classList.add('open');
+    if (backdrop) backdrop.classList.add('active');
+  };
+
+  const closeDrawer = () => {
+    if (sidebar) sidebar.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('active');
+  };
+
+  if (btnMenu) btnMenu.addEventListener('click', openDrawer);
+  if (btnClose) btnClose.addEventListener('click', closeDrawer);
+  if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
+  // Cerrar el drawer al seleccionar una opción de navegación en móviles
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        closeDrawer();
+      }
+    });
+  });
+}
+
+// Inicialización de la Vista de Registro de Estudiantes
+function initRegisterView() {
+  const form = document.getElementById('view-student-register-form');
+  const btnGoToQuery = document.getElementById('btn-go-to-query-from-reg');
+
+  if (btnGoToQuery) {
+    btnGoToQuery.addEventListener('click', () => {
+      cambiarVista('asesor');
+      const input = document.getElementById('query-input');
+      if (input) {
+        input.focus();
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
   }
 
-  // 2. Proteger vista admin exclusiva para Administrador
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const nombreInput = document.getElementById('view-reg-nombre');
+      const correoInput = document.getElementById('view-reg-correo');
+      const nivelSelect = document.getElementById('view-reg-nivel');
+      const areaInput = document.getElementById('view-reg-area');
+
+      const errNombre = document.getElementById('view-reg-nombre-error');
+      const errCorreo = document.getElementById('view-reg-correo-error');
+      const errArea = document.getElementById('view-reg-area-error');
+
+      if (errNombre) errNombre.textContent = '';
+      if (errCorreo) errCorreo.textContent = '';
+      if (errArea) errArea.textContent = '';
+
+      const nombre = (nombreInput ? nombreInput.value : '').trim();
+      const correo = (correoInput ? correoInput.value : '').trim();
+      const nivel = nivelSelect ? nivelSelect.value : 'Intermedio';
+      const area = (areaInput ? areaInput.value : '').trim();
+
+      let hasError = false;
+      if (!nombre) {
+        if (errNombre) errNombre.textContent = 'El nombre completo es obligatorio.';
+        hasError = true;
+      }
+      if (!correo || !correo.includes('@')) {
+        if (errCorreo) errCorreo.textContent = 'Ingresa un correo institucional válido.';
+        hasError = true;
+      }
+      if (!area) {
+        if (errArea) errArea.textContent = 'El área de interés es obligatoria.';
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      const submitBtn = document.getElementById('btn-submit-student-register');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Registrando estudiante...</span>';
+      }
+
+      try {
+        const nuevoEstudiante = await api.registrarEstudiante({
+          nombreCompleto: nombre,
+          correoElectronico: correo,
+          nivelExperiencia: nivel,
+          areaInteres: area
+        });
+
+        ui.showToast(`¡Estudiante ${nuevoEstudiante.nombreCompleto} registrado exitosamente!`, 'success');
+
+        // Actualizar estado global
+        const actualizados = [...(state.estudiantes || []), nuevoEstudiante];
+        state.setEstudiantes(actualizados);
+        state.setEstudianteActivo(nuevoEstudiante);
+
+        // Actualizar interfaz reactiva
+        ui.renderEstudianteActivo(nuevoEstudiante);
+        cargarVistaRegistro();
+
+        form.reset();
+        if (nivelSelect) nivelSelect.value = 'Intermedio';
+        if (areaInput) areaInput.value = 'Inteligencia Artificial';
+      } catch (err) {
+        ui.showToast(err.message || 'Error al registrar estudiante.', 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Completar Registro de Estudiante</span><span class="btn-arrow">➔</span>';
+        }
+      }
+    });
+  }
+}
+
+export function cargarVistaRegistro() {
+  ui.renderVistaRegistro(state.estudianteActivo, state.estudiantes, (estudianteSeleccionado) => {
+    state.setEstudianteActivo(estudianteSeleccionado);
+    ui.renderEstudianteActivo(estudianteSeleccionado);
+    cargarVistaRegistro();
+    ui.showToast(`Perfil activo cambiado a: ${estudianteSeleccionado.nombreCompleto}`, 'info');
+  });
+}
+
+export function cambiarVista(viewId) {
+  // Proteger vista admin exclusiva para Administrador
   if (viewId === 'admin' && (!state.usuario || state.usuario.rol !== 'ADMINISTRADOR')) {
     ui.showToast('Acceso restringido: Esta vista es exclusiva para el rol de Administrador.', 'error');
     viewId = 'asesor';
@@ -88,6 +219,7 @@ export function cambiarVista(viewId) {
     sec.classList.toggle('active', sec.id === `view-${viewId}`);
   });
 
+  if (viewId === 'registro') cargarVistaRegistro();
   if (viewId === 'catalogo') cargarCatalogo();
   if (viewId === 'historial') cargarHistorial();
   if (viewId === 'estadisticas') cargarEstadisticas();
@@ -187,7 +319,9 @@ async function ejecutarConsulta(pregunta) {
     state.setUltimaRecomendacion(resultado);
 
     ui.renderResultadoRecomendacion(resultado, async (recId, puntuacion, comentario) => {
-      return await api.calificarRecomendacion(recId, puntuacion, comentario);
+      const resCal = await api.calificarRecomendacion(recId, puntuacion, comentario);
+      cargarEstadisticas();
+      return resCal;
     });
 
     if (resultado.estadoFinal === 'Sin resultados') {
@@ -196,8 +330,9 @@ async function ejecutarConsulta(pregunta) {
       ui.showToast('¡Recomendación vocacional generada exitosamente!', 'success');
     }
 
-    // Actualizar historial en segundo plano
+    // Actualizar historial y estadísticas en segundo plano
     actualizarHistorialesEstudiante();
+    cargarEstadisticas();
   } catch (err) {
     ui.showToast(err.message, 'error');
   } finally {
@@ -322,6 +457,7 @@ function initStudentModal() {
     ui.showToast(`Perfil activo: ${est.nombreCompleto}`, 'info');
     if (modal) modal.style.display = 'none';
     actualizarHistorialesEstudiante();
+    cargarEstadisticas();
   });
 }
 
@@ -423,15 +559,20 @@ function mostrarDetalleHistorial(item) {
   });
   cambiarVista('asesor');
   ui.renderResultadoRecomendacion(state.ultimaRecomendacion, async (recId, puntuacion, comentario) => {
-    return await api.calificarRecomendacion(recId, puntuacion, comentario);
+    const resCal = await api.calificarRecomendacion(recId, puntuacion, comentario);
+    cargarEstadisticas();
+    return resCal;
   });
 }
 
 async function cargarEstadisticas() {
   try {
-    const stats = await api.getEstadisticas();
+    const estudianteId = (state.usuario && state.usuario.rol === 'ESTUDIANTE')
+      ? (state.usuario.id || (state.estudianteActivo ? state.estudianteActivo.id : null))
+      : null;
+    const stats = await api.getEstadisticas(estudianteId);
     state.setEstadisticas(stats);
-    ui.renderEstadisticas(stats);
+    ui.renderEstadisticas(stats, state.usuario);
   } catch (err) {
     ui.showToast('Error al cargar estadísticas: ' + err.message, 'error');
   }
