@@ -1,0 +1,73 @@
+/* ==========================================================
+   RutaIA - Concepto 2: Editorial Learning Lab (Design System)
+   Inspirado en estética editorial, cálida, limpia y académica.
+   ========================================================== */
+
+:root {
+  /* Fondos y Superficies Cálidas */
+  --bg-body: #F7F5EE;
+  --bg-sidebar: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-subtle: #F2EFE8;
+  --bg-input: #FFFFFF;
+  --bg-highlight: #E4FB52;
+
+  /* Acentos Principales de Marca */
+  --accent-lime: #D7F338;
+  --accent-lime-hover: #C5E226;
+  --accent-coral: #FF5E3A;
+  --accent-orange: #FF9F38;
+  --accent-emerald: #10B981;
+  --accent-success: #16A34A;
+  --accent-danger: #EF4444;
+
+  /* Mosaicos Pastel de Categorías (Bento Grid) */
+  --cat-web-bg: #E8F88E;
+  --cat-web-text: #374706;
+  --cat-java-bg: #FEE1BA;
+  --cat-java-text: #733E0A;
+  --cat-data-bg: #FFD4CE;
+  --cat-data-text: #7A281E;
+  --cat-rpa-bg: #F8D3EC;
+  --cat-rpa-text: #6B1E54;
+  --cat-ai-bg: #DFDAFC;
+  --cat-ai-text: #32267B;
+  --cat-security-bg: #C7F6EB;
+  --cat-security-text: #0E5848;
+  --cat-docker-bg: #D4F4F0;
+  --cat-docker-text: #135A52;
+
+  /* Tipografía y Textos */
+  --text-primary: #18191E;
+  --text-secondary: #575861;
+  --text-muted: #848590;
+  --text-on-lime: #121316;
+
+  /* Bordes y Líneas */
+  --border-subtle: #E8E4DB;
+  --border-card: #ECE8E0;
+  --border-focus: #18191E;
+
+  /* Sombras Suaves Editoriales */
+  --shadow-xs: 0 1px 2px rgba(24, 25, 30, 0.04);
+  --shadow-sm: 0 2px 8px rgba(24, 25, 30, 0.05);
+  --shadow-card: 0 4px 16px -2px rgba(24, 25, 30, 0.04), 0 1px 3px rgba(24, 25, 30, 0.03);
+  --shadow-hover: 0 10px 25px -4px rgba(24, 25, 30, 0.07);
+
+  /* Bordes Redondeados */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --radius-full: 9999px;
+
+  /* Tipografías */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Transiciones */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
