@@ -2,10 +2,62 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RutaIA - Editorial Learning Lab | Recomendación Inteligente de Cursos</title>
-  <meta name="description" content="Plataforma de orientación académica y recomendación de cursos mediante búsqueda semántica y arquitectura RAG.">
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>RutaIA - Orientación Académica y Recomendación Inteligente de Cursos con IA</title>
+  <meta name="description" content="Plataforma de orientación académica y recomendación personalizada de cursos universitarios mediante búsqueda semántica vectorial y arquitectura RAG.">
+  <meta name="keywords" content="orientación académica, cursos universitarios, inteligencia artificial, recomendación RAG, catálogo formativo, ingeniería, tecnología, programación">
+  <meta name="author" content="Editorial Learning Lab - RutaIA">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#121316">
+  <link rel="canonical" href="https://rutaia.universidad.edu.co/index.html">
+
+  <!-- Open Graph / Redes Sociales y Motores de Búsqueda -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_CO">
+  <meta property="og:site_name" content="RutaIA - Editorial Learning Lab">
+  <meta property="og:title" content="RutaIA - Orientación Académica y Recomendación Inteligente de Cursos con IA">
+  <meta property="og:description" content="Encuentra el camino que conecta tus intereses y conocimientos con tu futuro profesional mediante orientación vocacional inteligente con IA.">
+  <meta property="og:url" content="https://rutaia.universidad.edu.co/index.html">
+  <meta property="og:image" content="https://rutaia.universidad.edu.co/img/og-preview.png">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="RutaIA - Recomendación Inteligente de Cursos">
+  <meta name="twitter:description" content="Plataforma de orientación académica impulsada por IA y búsqueda semántica para estudiantes de tecnología.">
+  <meta name="twitter:image" content="https://rutaia.universidad.edu.co/img/og-preview.png">
+
+  <!-- Datos Estructurados Schema.org JSON-LD para SEO -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://rutaia.universidad.edu.co/#website",
+        "url": "https://rutaia.universidad.edu.co/",
+        "name": "RutaIA",
+        "description": "Plataforma de orientación académica y recomendación de cursos universitarios con IA y RAG.",
+        "inLanguage": "es"
+      },
+      {
+        "@type": "EducationalOrganization",
+        "@id": "https://rutaia.universidad.edu.co/#organization",
+        "name": "RutaIA - Editorial Learning Lab",
+        "url": "https://rutaia.universidad.edu.co/",
+        "description": "Laboratorio de innovación curricular y orientación académica con IA."
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://rutaia.universidad.edu.co/#webapp",
+        "name": "RutaIA",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "All",
+        "browserRequirements": "Requires HTML5, CSS3, JavaScript ES6+, Fetch API"
+      }
+    ]
+  }
+  </script>
+
   <!-- Fuentes Google Fonts: Inter y Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,13 +85,36 @@
 </head>
 <body>
 
+  <!-- Barra de Navegación Móvil (Visible en pantallas <= 768px) -->
+  <header class="mobile-topbar" id="mobile-topbar">
+    <button class="btn-mobile-menu" id="btn-mobile-menu" aria-label="Abrir menú de navegación" type="button">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <div class="mobile-brand">
+      <div class="mobile-brand-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <span class="mobile-brand-title">RutaIA</span>
+    </div>
+    <div class="mobile-user-quick" id="mobile-user-initials" title="Usuario activo">TG</div>
+  </header>
+
+  <!-- Telón de fondo (Backdrop) para cerrar el menú móvil al hacer tap fuera -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
   <!-- Layout Principal con Barra Lateral y Área de Contenido -->
   <div class="app-layout">
 
     <!-- ==========================================================
          BARRA LATERAL IZQUIERDA (SIDEBAR)
          ========================================================== -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="app-sidebar">
       <div class="sidebar-top">
         <div class="brand">
           <div class="brand-badge">
@@ -51,6 +126,7 @@
             <span class="brand-title">RutaIA</span>
             <span class="brand-tagline">Tu mejor decisión académica.</span>
           </div>
+          <button class="btn-close-sidebar" id="btn-close-sidebar" aria-label="Cerrar menú lateral" type="button">✕</button>
         </div>
 
         <nav class="sidebar-nav">
@@ -493,6 +569,117 @@
         </section>
 
         <!-- ==========================================================
+             VISTA: REGISTRO E INSCRIPCIÓN DE ESTUDIANTES
+             ========================================================== -->
+        <section class="view-section" id="view-registro">
+          <div class="editorial-view-header">
+            <h2 class="view-title">Registro e Inscripción de Estudiantes</h2>
+            <p class="view-subtitle">Registra nuevos perfiles de estudiantes para personalizar las recomendaciones curriculares o activa un perfil existente para tus consultas vocacionales.</p>
+          </div>
+
+          <div class="register-bento-layout">
+            <!-- Columna Izquierda: Formulario de Registro Oficial -->
+            <div class="register-form-card">
+              <div class="form-card-header">
+                <div class="form-icon-badge">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="8.5" cy="7" r="4"></circle>
+                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="form-card-title">Inscribir Nuevo Estudiante</h3>
+                  <p class="form-card-subtitle">Ingresa los datos para registrar un estudiante en la base de datos institucional.</p>
+                </div>
+              </div>
+
+              <form id="view-student-register-form" class="editorial-form" novalidate>
+                <div class="form-field">
+                  <label for="view-reg-nombre">Nombre completo *</label>
+                  <input type="text" id="view-reg-nombre" required placeholder="Ej: Marcela Benítez Ospina" />
+                  <span class="field-error-text" id="view-reg-nombre-error"></span>
+                </div>
+
+                <div class="form-field">
+                  <label for="view-reg-correo">Correo electrónico institucional *</label>
+                  <input type="email" id="view-reg-correo" required placeholder="marcela.benitez@universidad.edu.co" />
+                  <span class="field-error-text" id="view-reg-correo-error"></span>
+                </div>
+
+                <div class="form-grid-2">
+                  <div class="form-field">
+                    <label for="view-reg-nivel">Nivel de experiencia *</label>
+                    <select id="view-reg-nivel" required class="editorial-select">
+                      <option value="Principiante">Principiante</option>
+                      <option value="Intermedio" selected>Intermedio</option>
+                      <option value="Avanzado">Avanzado</option>
+                    </select>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="view-reg-area">Área de interés académica *</label>
+                    <input type="text" id="view-reg-area" required placeholder="Ej: Desarrollo Web, IA, Datos" value="Inteligencia Artificial" />
+                    <span class="field-error-text" id="view-reg-area-error"></span>
+                  </div>
+                </div>
+
+                <div class="form-submit-row">
+                  <button type="submit" class="btn-primary-lime w-100" id="btn-submit-student-register">
+                    <span>Completar Registro de Estudiante</span>
+                    <span class="btn-arrow">➔</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Columna Derecha: Estudiante Activo y Directorio -->
+            <div class="register-side-col">
+              <!-- Ficha de Perfil Activo -->
+              <div class="active-profile-card">
+                <div class="active-profile-badge">
+                  <span class="pulse-dot"></span>
+                  <span>Perfil en Sesión Activa</span>
+                </div>
+                <div class="active-profile-body">
+                  <div class="active-profile-avatar" id="view-reg-active-avatar">TG</div>
+                  <div class="active-profile-info">
+                    <h4 class="active-profile-name" id="view-reg-active-name">Santiago Gómez Morales</h4>
+                    <p class="active-profile-email" id="view-reg-active-email">santiago.gomez@universidad.edu.co</p>
+                    <div class="active-profile-tags">
+                      <span class="profile-tag level-tag" id="view-reg-active-level">Intermedio</span>
+                      <span class="profile-tag area-tag" id="view-reg-active-area">Desarrollo Web</span>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="btn-secondary-pill w-100" id="btn-go-to-query-from-reg">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 6px;">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <span>Hacer consulta con este perfil</span>
+                </button>
+              </div>
+
+              <!-- Directorio Rápido de Estudiantes Registrados -->
+              <div class="registered-directory-card">
+                <div class="registered-directory-header">
+                  <div>
+                    <h4 class="directory-title">Estudiantes Registrados</h4>
+                    <p class="directory-desc">Selecciona un estudiante para cambiar el perfil activo de consulta.</p>
+                  </div>
+                  <span class="badge-counter" id="view-reg-students-count">0</span>
+                </div>
+                <div class="directory-students-list" id="view-reg-students-list">
+                  <!-- Renderizado dinámico -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================================
              VISTA 2: CATÁLOGO DE CURSOS
              ========================================================== -->
         <section class="view-section" id="view-catalogo">
@@ -515,7 +702,7 @@
               </select>
               <select id="catalog-level" class="editorial-select">
                 <option value="">Todos los niveles</option>
-                <option value="Básico">Básico</option>
+                <option value="Principiante">Principiante</option>
                 <option value="Intermedio">Intermedio</option>
                 <option value="Avanzado">Avanzado</option>
               </select>
@@ -546,8 +733,8 @@
              ========================================================== -->
         <section class="view-section" id="view-estadisticas">
           <div class="editorial-view-header">
-            <h2 class="view-title">Métricas de Orientación Académica</h2>
-            <p class="view-subtitle">Estadísticas consolidadas del sistema de recomendación y satisfacción estudiantil.</p>
+            <h2 class="view-title" id="stats-view-title">Métricas de Orientación Académica</h2>
+            <p class="view-subtitle" id="stats-view-subtitle">Estadísticas consolidadas del sistema de recomendación y satisfacción estudiantil.</p>
           </div>
 
           <div class="stats-editorial-grid">

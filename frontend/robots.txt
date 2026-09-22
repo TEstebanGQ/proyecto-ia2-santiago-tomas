@@ -1,0 +1,14 @@
+# robots.txt para RutaIA - Plataforma de Orientación Curricular e IA
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /login.html
+Allow: /css/
+Allow: /js/
+
+# Deshabilitar rastreo de rutas privadas de API interna
+Disallow: /api/
+Disallow: /auth/
+
+# Mapa del sitio web
+Sitemap: https://rutaia.universidad.edu.co/sitemap.xml
