@@ -1,0 +1,219 @@
+{
+  "name": "RutaIA - 01 Indexacion de Cursos en Qdrant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "indexar-cursos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Indexar Cursos",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "http://qdrant:6333/collections/cursos_academicos",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"vectors\": {\n    \"size\": 1536,\n    \"distance\": \"Cosine\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "http-create-collection",
+      "name": "Crear Coleccion Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [320, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8080/api/cursos",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "http-get-cursos",
+      "name": "Obtener Cursos de Spring Boot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const c = item.json;\n  return {\n    json: {\n      id: c.id,\n      nombre: c.nombre,\n      descripcion: c.descripcion,\n      categoria: c.categoria,\n      nivel: c.nivel,\n      duracionHoras: c.duracionHoras,\n      activo: c.activo,\n      textoEmbed: `Curso: ${c.nombre}. Categoría: ${c.categoria}. Nivel: ${c.nivel}. Duración: ${c.duracionHoras} horas. Descripción: ${c.descripcion}`\n    }\n  };\n});"
+      },
+      "id": "code-prepare-data",
+      "name": "Preparar Textos Cursos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batches",
+      "name": "Procesar por Lotes",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [980, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/text-embedding-3-small\",\n  \"input\": \"{{ $json.textoEmbed.replace(/\"/g, '\\\\\"') }}\"\n}"
+      },
+      "id": "http-openrouter-embed",
+      "name": "Generar Embedding Curso",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 200]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "http://qdrant:6333/collections/cursos_academicos/points",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"points\": [\n    {\n      \"id\": {{ $('Procesar por Lotes').item.json.id }},\n      \"vector\": {{ JSON.stringify($json.data[0].embedding) }},\n      \"payload\": {\n        \"curso_id\": {{ $('Procesar por Lotes').item.json.id }},\n        \"nombre\": \"{{ $('Procesar por Lotes').item.json.nombre }}\",\n        \"descripcion\": \"{{ $('Procesar por Lotes').item.json.descripcion }}\",\n        \"categoria\": \"{{ $('Procesar por Lotes').item.json.categoria }}\",\n        \"nivel\": \"{{ $('Procesar por Lotes').item.json.nivel }}\",\n        \"duracion_horas\": {{ $('Procesar por Lotes').item.json.duracionHoras }},\n        \"activo\": {{ $('Procesar por Lotes').item.json.activo }}\n      }\n    }\n  ]\n}"
+      },
+      "id": "http-upsert-qdrant",
+      "name": "Upsert Punto en Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1420, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"Completado\",\n  \"mensaje\": \"Indexación de cursos finalizada exitosamente en Qdrant\",\n  \"coleccion\": \"cursos_academicos\"\n}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respuesta Exitosa",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 440]
+    }
+  ],
+  "connections": {
+    "Webhook Indexar Cursos": {
+      "main": [
+        [
+          {
+            "node": "Crear Coleccion Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Coleccion Qdrant": {
+      "main": [
+        [
+          {
+            "node": "Obtener Cursos de Spring Boot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Cursos de Spring Boot": {
+      "main": [
+        [
+          {
+            "node": "Preparar Textos Cursos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Textos Cursos": {
+      "main": [
+        [
+          {
+            "node": "Procesar por Lotes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar por Lotes": {
+      "main": [
+        [
+          {
+            "node": "Generar Embedding Curso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Exitosa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Embedding Curso": {
+      "main": [
+        [
+          {
+            "node": "Upsert Punto en Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Punto en Qdrant": {
+      "main": [
+        [
+          {
+            "node": "Procesar por Lotes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
