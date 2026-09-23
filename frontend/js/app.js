@@ -1180,8 +1180,15 @@ async function cargarPanelDocente() {
     ui.renderDocenteCursos(
       cursos,
       perfil,
-      (c) => abrirModalCursoDocente(c, perfil.areaEspecialidad),
-      (id, activar) => toggleActivoDocenteCurso(id, activar)
+      async (curso) => {
+        try {
+          const currentEmail = state.usuario ? state.usuario.email : null;
+          const inscritos = await api.getDocenteInscritosCurso(curso.id, currentEmail);
+          ui.mostrarModalInscritosDocente(curso, inscritos);
+        } catch (err) {
+          ui.showToast('Error al consultar inscritos: ' + err.message, 'error');
+        }
+      }
     );
     ui.renderDocenteFeedback(feedback);
     ui.renderDocenteEstadisticas(stats);

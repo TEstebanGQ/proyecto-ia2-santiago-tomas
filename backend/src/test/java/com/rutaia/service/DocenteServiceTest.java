@@ -44,43 +44,55 @@ class DocenteServiceTest {
     @Mock
     private CalificacionRepository calificacionRepository;
 
+    @Mock
+    private com.rutaia.repository.InscripcionRepository inscripcionRepository;
+
+    @Mock
+    private com.rutaia.repository.EstudianteRepository estudianteRepository;
+
     @InjectMocks
     private DocenteService docenteService;
 
     @Test
-    @DisplayName("Frontera curricular: Docente no puede crear cursos fuera de su especialidad")
+    @DisplayName("Permiso restringido: Docente no puede crear cursos (tarea exclusiva de Administración)")
     void testDocenteNoPuedeCrearCursoOtraEspecialidad() {
         String email = "profesor.web@universidad.edu.co";
-        Docente docente = new Docente("Profesor Web", email, "Programación", "Ingeniería");
-        when(docenteRepository.findByCorreoElectronicoIgnoreCase(email)).thenReturn(Optional.of(docente));
-
         CursoDTO cursoIA = new CursoDTO("Redes Neuronales", "Deep Learning", "Inteligencia Artificial", "Avanzado", 40, true);
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> {
             docenteService.crearCursoEspecialidad(email, cursoIA);
         });
 
-        assertTrue(ex.getMessage().contains("Frontera curricular"));
+        assertTrue(ex.getMessage().contains("Permiso restringido"));
         verify(cursoService, never()).crear(any());
     }
 
     @Test
-    @DisplayName("Docente puede crear cursos dentro de su especialidad")
-    void testDocentePuedeCrearCursoSuEspecialidad() {
+    @DisplayName("Docente puede consultar estudiantes inscritos en cursos de su especialidad")
+    void testDocentePuedeConsultarInscritosEnSuEspecialidad() {
         String email = "profesor.web@universidad.edu.co";
         Docente docente = new Docente("Profesor Web", email, "Programación", "Ingeniería");
         when(docenteRepository.findByCorreoElectronicoIgnoreCase(email)).thenReturn(Optional.of(docente));
 
-        CursoDTO cursoWeb = new CursoDTO("React Avanzado", "Frontend reactivo", "Programación", "Intermedio", 45, true);
-        CursoResponseDTO resEsperado = new CursoResponseDTO(10L, "React Avanzado", "Frontend reactivo", "Programación", "Intermedio", 45, null, true, LocalDateTime.now());
-        when(cursoService.crear(cursoWeb)).thenReturn(resEsperado);
+        Curso curso = new Curso("Java 21", "POO", "Programación", "Básico", 40, true);
+        curso.setId(10L);
+        when(cursoRepository.findById(10L)).thenReturn(Optional.of(curso));
 
-        CursoResponseDTO res = docenteService.crearCursoEspecialidad(email, cursoWeb);
+        Estudiante est = new Estudiante("Santiago Gómez", "santiago@universidad.edu.co", "Principiante", "Programación");
+        est.setId(1L);
+        Inscripcion inscripcion = new Inscripcion(est, curso, "En Curso");
+        inscripcion.setId(100L);
+        when(inscripcionRepository.findByCursoIdOrderByFechaInscripcionDesc(10L)).thenReturn(List.of(inscripcion));
 
-        assertNotNull(res);
-        assertEquals("React Avanzado", res.getNombre());
-        verify(cursoService, times(1)).crear(cursoWeb);
+        List<com.rutaia.dto.InscripcionResponseDTO> inscritos = docenteService.obtenerInscritosPorCurso(email, 10L);
+
+        assertNotNull(inscritos);
+        assertEquals(1, inscritos.size());
+        assertEquals("Santiago Gómez", inscritos.get(0).getEstudianteNombre());
+        assertEquals("santiago@universidad.edu.co", inscritos.get(0).getEstudianteCorreo());
+        assertEquals("En Curso", inscritos.get(0).getEstado());
     }
+
 
     @Test
     @DisplayName("Estadísticas del docente deben corresponder exclusivamente a su área")

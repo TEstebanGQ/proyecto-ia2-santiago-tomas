@@ -65,11 +65,20 @@ export const ui = {
 
     if (nameEl) nameEl.textContent = nombre;
 
-    const esAdmin = estudiante.rol === 'ADMINISTRADOR';
+    const rol = (estudiante.rol || 'ESTUDIANTE').toUpperCase();
     if (badgeEl) {
-      badgeEl.textContent = esAdmin ? 'Administrador' : 'Estudiante';
-      badgeEl.className = `user-role-badge ${esAdmin ? 'role-badge-admin' : 'role-badge-student'}`;
+      if (rol === 'ADMINISTRADOR') {
+        badgeEl.textContent = 'Administrador';
+        badgeEl.className = 'user-role-badge role-badge-admin';
+      } else if (rol === 'DOCENTE') {
+        badgeEl.textContent = 'Docente';
+        badgeEl.className = 'user-role-badge role-badge-docente';
+      } else {
+        badgeEl.textContent = 'Estudiante';
+        badgeEl.className = 'user-role-badge role-badge-student';
+      }
     }
+
     
     // Widgets del perfil en barra lateral / Bento
     if (widgetLevelEl) widgetLevelEl.textContent = estudiante.nivelExperiencia || estudiante.nivel || 'Principiante';
@@ -1340,27 +1349,27 @@ export const ui = {
   },
 
   // ==========================================================
-  // Renderizado del Panel Docente
+  // Renderizado del Panel Docente (Supervisión Curricular e Inscritos)
   // ==========================================================
-  renderDocenteCursos(cursos, docente, onEditar, onToggleActivar) {
+  renderDocenteCursos(cursos, docente, onVerInscritos) {
     const badgeEl = document.getElementById('docente-badge-area');
     const subtitleEl = document.getElementById('docente-view-subtitle');
     const totalEl = document.getElementById('docente-count-total');
     const activosEl = document.getElementById('docente-count-activos');
-    const inactivosEl = document.getElementById('docente-count-inactivos');
+    const matriculadosEl = document.getElementById('docente-count-matriculados');
     const tbody = document.getElementById('docente-courses-tbody');
 
     const area = docente ? (docente.areaEspecialidad || docente.area || 'Programación') : 'Especialidad';
     if (badgeEl) badgeEl.textContent = `Especialidad: ${area}`;
-    if (subtitleEl) subtitleEl.textContent = `Gestiona exclusivamente los contenidos curriculares y prerrequisitos de tu área de cátedra (${area}).`;
+    if (subtitleEl) subtitleEl.textContent = `Supervisa la oferta académica de tu especialidad (${area}) y consulta los estudiantes inscritos en cada materia.`;
 
     const total = cursos ? cursos.length : 0;
     const activos = cursos ? cursos.filter(c => c.activo).length : 0;
-    const inactivos = total - activos;
+    const totalMatriculados = cursos ? cursos.reduce((acc, c) => acc + (c.totalInscritos || 0), 0) : 0;
 
     if (totalEl) totalEl.textContent = total;
     if (activosEl) activosEl.textContent = activos;
-    if (inactivosEl) inactivosEl.textContent = inactivos;
+    if (matriculadosEl) matriculadosEl.textContent = totalMatriculados;
 
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -1368,8 +1377,8 @@ export const ui = {
     if (!cursos || cursos.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align: center; padding: 2.5rem; color: #64748B;">
-            No tienes cursos registrados en tu especialidad (${area}). Haz clic en "+ Nuevo Curso en mi Área" para publicar tu primera asignatura.
+          <td colspan="7" style="text-align: center; padding: 2.5rem; color: #64748B;">
+            No hay cursos asignados en tu especialidad (${area}).
           </td>
         </tr>
       `;
@@ -1378,42 +1387,173 @@ export const ui = {
 
     cursos.forEach(curso => {
       const tr = document.createElement('tr');
+      tr.className = 'docente-row-clickable';
       const isActivo = curso.activo !== false;
+
+      // Estado LIMPIO: Solo "Activo" o "Inactivo", sin nada entre paréntesis
       const statusBadge = isActivo
-        ? '<span class="status-pill status-active">Activo (Qdrant)</span>'
-        : '<span class="status-pill status-inactive">Inactivo (Oculto)</span>';
+        ? '<span class="status-badge status-badge-active"><span class="status-dot"></span> Activo</span>'
+        : '<span class="status-badge status-badge-inactive"><span class="status-dot"></span> Inactivo</span>';
 
       const prereqBadge = curso.prerrequisitos
-        ? `<span class="badge-prereq" title="${curso.prerrequisitos}">📚 ${curso.prerrequisitos}</span>`
-        : '<span class="text-muted" style="font-size:0.8rem;">Sin prerrequisitos</span>';
+        ? `<span class="badge-prereq" title="${curso.prerrequisitos}" style="font-size: 0.8rem; background: #F1F5F9; padding: 3px 8px; border-radius: 6px; border: 1px solid #E2E8F0; color: #334155;">📚 ${curso.prerrequisitos}</span>`
+        : '<span class="text-muted" style="font-size: 0.8rem; color: #94A3B8;">Sin prerrequisitos</span>';
+
+      const numInscritos = curso.totalInscritos || 0;
 
       tr.innerHTML = `
         <td>
-          <div style="font-weight: 600; color: #0F172A;">${curso.nombre}</div>
-          <div style="font-size: 0.8rem; color: #64748B; margin-top: 2px;">${curso.descripcion ? curso.descripcion.substring(0, 85) + '...' : ''}</div>
+          <div class="course-table-title" style="font-weight: 700; color: #0F172A; font-size: 0.95rem;">${curso.nombre}</div>
+          <div class="course-table-prereq" style="font-size: 0.82rem; color: #64748B; margin-top: 3px; max-width: 440px; line-height: 1.4;">
+            ${curso.descripcion ? curso.descripcion.substring(0, 95) + '...' : ''}
+          </div>
         </td>
         <td><span class="badge-level badge-level-${(curso.nivel || 'Intermedio').toLowerCase()}">${curso.nivel || 'Intermedio'}</span></td>
-        <td><span style="font-size: 0.88rem; font-weight: 500;">${curso.duracionHoras || 40}h</span></td>
+        <td><span style="font-size: 0.88rem; font-weight: 600; color: #1E293B;">${curso.duracionHoras || 40}h</span></td>
         <td>${prereqBadge}</td>
         <td>${statusBadge}</td>
+        <td>
+          <span class="badge-inscritos">
+            👥 <strong>${numInscritos}</strong> ${numInscritos === 1 ? 'alumno' : 'alumnos'}
+          </span>
+        </td>
         <td style="text-align: right; white-space: nowrap;">
-          <button type="button" class="btn-action-edit btn-edit-docente-curso" data-id="${curso.id}" title="Editar curso">
-            ✏ Editar
-          </button>
-          <button type="button" class="btn-action-toggle ${isActivo ? 'btn-deactivate' : 'btn-activate'} btn-toggle-docente-curso" data-id="${curso.id}">
-            ${isActivo ? 'Desactivar' : 'Activar'}
+          <button type="button" class="btn-ver-inscritos btn-docente-ver-inscritos" data-id="${curso.id}" title="Ver lista de inscritos">
+            <span>Ver Inscritos</span> ➔
           </button>
         </td>
       `;
 
-      const editBtn = tr.querySelector('.btn-edit-docente-curso');
-      if (editBtn) editBtn.addEventListener('click', () => onEditar(curso));
+      // Al hacer clic en el botón o en la fila se abre el detalle con inscritos
+      const verBtn = tr.querySelector('.btn-docente-ver-inscritos');
+      if (verBtn) {
+        verBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (onVerInscritos) onVerInscritos(curso);
+        });
+      }
 
-      const toggleBtn = tr.querySelector('.btn-toggle-docente-curso');
-      if (toggleBtn) toggleBtn.addEventListener('click', () => onToggleActivar(curso.id, !isActivo));
+      tr.addEventListener('click', () => {
+        if (onVerInscritos) onVerInscritos(curso);
+      });
 
       tbody.appendChild(tr);
     });
+  },
+
+  // Modal para visualizar los estudiantes inscritos en una materia
+  mostrarModalInscritosDocente(curso, inscritos) {
+    let modal = document.getElementById('docente-inscritos-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'docente-inscritos-modal';
+      modal.className = 'modal-overlay';
+      document.body.appendChild(modal);
+    }
+
+    const total = (inscritos || []).length;
+    let studentsHtml = '';
+
+    if (!inscritos || inscritos.length === 0) {
+      studentsHtml = `
+        <div style="text-align: center; padding: 2.8rem 1.5rem; background: #F8FAFC; border-radius: 12px; border: 1px dashed #CBD5E1;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">👨‍🎓</div>
+          <p style="font-weight: 700; color: #1E293B; font-size: 1rem; margin-bottom: 0.35rem;">Aún no hay estudiantes inscritos en esta materia</p>
+          <p style="font-size: 0.85rem; color: #64748B; max-width: 440px; margin: 0 auto;">
+            Tan pronto los alumnos seleccionen esta asignatura o reciban su plan vocacional con IA, aparecerán registrados en esta nómina.
+          </p>
+        </div>
+      `;
+    } else {
+      studentsHtml = `
+        <div class="admin-table-container" style="max-height: 380px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 12px;">
+          <table class="admin-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="background: #F8FAFC;">Estudiante</th>
+                <th style="background: #F8FAFC;">Correo Institucional</th>
+                <th style="background: #F8FAFC;">Nivel</th>
+                <th style="background: #F8FAFC;">Fecha Matrícula</th>
+                <th style="background: #F8FAFC; text-align: right;">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${inscritos.map(ins => {
+                const nombre = ins.estudianteNombre || 'Estudiante';
+                const initials = nombre
+                  .split(' ')
+                  .filter(n => n.length > 0)
+                  .map(n => n[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase();
+                const fecha = ins.fechaInscripcion
+                  ? new Date(ins.fechaInscripcion).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' })
+                  : 'Reciente';
+                return `
+                  <tr>
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 0.65rem;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: #E0E7FF; color: #4338CA; font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                          ${initials}
+                        </div>
+                        <div>
+                          <div style="font-weight: 600; color: #0F172A; font-size: 0.88rem;">${nombre}</div>
+                          <div style="font-size: 0.75rem; color: #64748B;">Interés: ${ins.estudianteAreaInteres || 'Tecnología'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="color: #475569; font-size: 0.85rem;">${ins.estudianteCorreo || '-'}</td>
+                    <td><span class="badge-level badge-level-${(ins.estudianteNivel || 'Principiante').toLowerCase()}" style="font-size: 0.75rem;">${ins.estudianteNivel || 'Principiante'}</span></td>
+                    <td style="color: #64748B; font-size: 0.82rem;">${fecha}</td>
+                    <td style="text-align: right;">
+                      <span class="status-badge status-badge-active" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+                        <span class="status-dot"></span> ${ins.estado || 'Inscrito'}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    modal.innerHTML = `
+      <div class="modal-editorial-card modal-course-card" style="max-width: 720px; width: 94%;">
+        <div class="modal-header" style="margin-bottom: 0.75rem;">
+          <div class="course-modal-badges">
+            <span class="badge-cat">${curso.categoria || 'Especialidad'}</span>
+            <span class="badge-level badge-level-${(curso.nivel || 'Intermedio').toLowerCase()}">${curso.nivel || 'Intermedio'}</span>
+            <span class="badge-inscritos" style="background: #E0E7FF; color: #4338CA; border-color: #C7D2FE;">👥 ${total} matriculado${total === 1 ? '' : 's'}</span>
+          </div>
+          <button class="modal-close-btn" id="close-inscritos-modal-btn">✕</button>
+        </div>
+        
+        <h3 class="modal-course-title" style="font-size: 1.35rem; margin-bottom: 0.35rem; color: #0F172A;">${curso.nombre}</h3>
+        <p class="modal-course-desc" style="margin-bottom: 1.25rem; font-size: 0.88rem; color: #64748B;">
+          Nómina oficial de estudiantes inscritos en esta materia académica (${curso.duracionHoras || 40} horas lectivas).
+        </p>
+
+        ${studentsHtml}
+
+        <div class="modal-course-footer" style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+          <button class="btn-secondary-pill" id="btn-close-inscritos-footer">
+            Cerrar Nómina
+          </button>
+        </div>
+      </div>
+    `;
+
+    modal.style.display = 'flex';
+    const closeBtn = document.getElementById('close-inscritos-modal-btn');
+    const closeBtnFooter = document.getElementById('btn-close-inscritos-footer');
+    if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
+    if (closeBtnFooter) closeBtnFooter.onclick = () => modal.style.display = 'none';
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    };
   },
 
   renderDocenteFeedback(feedbackList) {

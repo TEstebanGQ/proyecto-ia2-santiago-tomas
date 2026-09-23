@@ -2139,6 +2139,57 @@ button, input, select, textarea {
   color: #372A7C;
 }
 
+.role-badge-docente {
+  background: #E0E7FF;
+  color: #4338CA;
+  border: 1px solid #C7D2FE;
+}
+
+.btn-ver-inscritos {
+  background: #F8FAFC;
+  color: #1E293B;
+  border: 1px solid #CBD5E1;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-ver-inscritos:hover {
+  background: #D7F338;
+  color: #0F172A;
+  border-color: #B5DE00;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(215, 243, 56, 0.3);
+}
+
+.badge-inscritos {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  background: #F1F5F9;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid #E2E8F0;
+}
+
+.docente-row-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.docente-row-clickable:hover {
+  background: #F8FAFC !important;
+}
+
 .header-user-actions {
   display: flex;
   align-items: center;

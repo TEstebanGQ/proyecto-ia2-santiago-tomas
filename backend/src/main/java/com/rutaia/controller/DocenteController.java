@@ -64,6 +64,16 @@ public class DocenteController {
         return ResponseEntity.ok(docenteService.listarCursosEspecialidad(emailDocente));
     }
 
+    @GetMapping("/cursos/{id}/inscritos")
+    @Operation(summary = "Consultar lista de estudiantes inscritos en un curso de su especialidad")
+    public ResponseEntity<List<com.rutaia.dto.InscripcionResponseDTO>> listarInscritos(
+            @PathVariable Long id,
+            @RequestParam(required = false) String email,
+            Authentication authentication) {
+        String emailDocente = extraerEmail(authentication, email);
+        return ResponseEntity.ok(docenteService.obtenerInscritosPorCurso(emailDocente, id));
+    }
+
     @PostMapping("/cursos")
     @Operation(summary = "Crear nuevo curso validando frontera curricular de especialidad")
     public ResponseEntity<CursoResponseDTO> crearCurso(

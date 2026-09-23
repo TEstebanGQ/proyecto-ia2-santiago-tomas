@@ -257,6 +257,17 @@ export const api = {
     return await res.json();
   },
 
+  async getDocenteInscritosCurso(id, email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/cursos/${id}/inscritos${q}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Error al consultar estudiantes inscritos en la materia');
+    return await res.json();
+  },
+
+
   async crearDocenteCurso(curso, email = null) {
     const q = email ? `?email=${encodeURIComponent(email)}` : '';
     const res = await fetch(`${API_BASE_URL}/docentes/cursos${q}`, {
