@@ -19,7 +19,7 @@ def load_env():
 
 load_env()
 
-API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
+API_KEY = os.getenv("OPENROUTER_API_KEY", "tu_openrouter_api_key_aqui")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080/api/cursos")
 QDRANT_PORT = os.getenv("QDRANT_PORT", "6333")
 OPENROUTER_EMBED_URL = "https://openrouter.ai/api/v1/embeddings"
