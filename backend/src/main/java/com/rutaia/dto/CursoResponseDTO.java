@@ -104,7 +104,17 @@ public class CursoResponseDTO {
     }
 
     public void setFechaCreacion(LocalDateTime fechaCreacion) {
-        this.fechaCreacion = fechaCreacion;
+    this.fechaCreacion = fechaCreacion;
+    }
+
+    private Integer totalInscritos = 0;
+
+    public Integer getTotalInscritos() {
+        return totalInscritos != null ? totalInscritos : 0;
+    }
+
+    public void setTotalInscritos(Integer totalInscritos) {
+        this.totalInscritos = totalInscritos;
     }
 
     public Double getPromedioCalificaciones() {
@@ -121,5 +131,6 @@ public class CursoResponseDTO {
 
     public void setTotalCalificaciones(Long totalCalificaciones) {
         this.totalCalificaciones = totalCalificaciones;
+    }
     }
 }

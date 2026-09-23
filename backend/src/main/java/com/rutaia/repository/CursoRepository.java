@@ -30,4 +30,18 @@ public interface CursoRepository extends JpaRepository<Curso, Long> {
                    "GROUP BY c.id, c.nombre " +
                    "ORDER BY total_recomendaciones DESC LIMIT 1", nativeQuery = true)
     List<Object[]> findCursoMasRecomendadoPorEstudiante(@org.springframework.data.repository.query.Param("estudianteId") Long estudianteId);
+
+    List<Curso> findByCategoriaIgnoreCaseOrderByNombreAsc(String categoria);
+
+    long countByCategoriaIgnoreCase(String categoria);
+
+    long countByCategoriaIgnoreCaseAndActivoTrue(String categoria);
+
+    @Query(value = "SELECT c.nombre, COUNT(f.id) as total_recomendaciones " +
+                   "FROM fuentes f " +
+                   "JOIN cursos c ON f.curso_id = c.id " +
+                   "WHERE LOWER(c.categoria) = LOWER(:categoria) " +
+                   "GROUP BY c.id, c.nombre " +
+                   "ORDER BY total_recomendaciones DESC LIMIT 1", nativeQuery = true)
+    List<Object[]> findCursoMasRecomendadoPorCategoria(@org.springframework.data.repository.query.Param("categoria") String categoria);
 }

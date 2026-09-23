@@ -21,24 +21,27 @@ import java.util.*;
 public class AuthController {
 
     private final EstudianteRepository estudianteRepository;
+    private final com.rutaia.repository.DocenteRepository docenteRepository;
     private final JwtUtil jwtUtil;
     private final RedisTokenService redisTokenService;
     private final AuditoriaService auditoriaService;
 
     public AuthController(
             EstudianteRepository estudianteRepository,
+            com.rutaia.repository.DocenteRepository docenteRepository,
             JwtUtil jwtUtil,
             RedisTokenService redisTokenService,
             AuditoriaService auditoriaService
     ) {
         this.estudianteRepository = estudianteRepository;
+        this.docenteRepository = docenteRepository;
         this.jwtUtil = jwtUtil;
         this.redisTokenService = redisTokenService;
         this.auditoriaService = auditoriaService;
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Iniciar sesión con rol Estudiante o Administrador (Genera JWT y almacena en Redis)")
+    @Operation(summary = "Iniciar sesión con rol Estudiante, Docente o Administrador (Genera JWT y almacena en Redis)")
     public ResponseEntity<AuthResponseDTO> login(@RequestBody AuthRequestDTO request) {
         String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
         String rol = request.getRol() != null ? request.getRol().trim().toUpperCase() : "ESTUDIANTE";
@@ -56,8 +59,38 @@ public class AuthController {
             rol = "ADMINISTRADOR";
             nivel = "Coordinador";
             area = "Administración y Gestión Curricular";
+        } else if ("DOCENTE".equalsIgnoreCase(rol) || email.contains("profesor") || email.contains("docente")) {
+            // 2. Rol Docente
+            rol = "DOCENTE";
+            if (email.isBlank()) email = "profesor.programacion@universidad.edu.co";
+            Optional<com.rutaia.entity.Docente> optDoc = docenteRepository.findByCorreoElectronicoIgnoreCase(email);
+            com.rutaia.entity.Docente doc;
+            if (optDoc.isPresent()) {
+                doc = optDoc.get();
+            } else {
+                String nom = request.getNombre() != null ? request.getNombre() : "Profesor de Programación";
+                String especialidad = "Programación";
+                String lower = email.toLowerCase();
+                if (lower.contains("ia") || lower.contains("inteligencia")) {
+                    especialidad = "Inteligencia Artificial";
+                    nom = "Dr. Especialista en IA";
+                } else if (lower.contains("devops") || lower.contains("cloud")) {
+                    especialidad = "DevOps y Cloud";
+                    nom = "Ing. Especialista DevOps";
+                } else if (lower.contains("datos") || lower.contains("data")) {
+                    especialidad = "Bases de Datos";
+                    nom = "Prof. Especialista en Datos";
+                }
+                doc = new com.rutaia.entity.Docente(nom, email, especialidad, "Facultad de Ingeniería");
+                doc = docenteRepository.save(doc);
+            }
+            id = doc.getId();
+            nombre = doc.getNombreCompleto();
+            email = doc.getCorreoElectronico();
+            nivel = "Docente Titular";
+            area = doc.getAreaEspecialidad();
         } else {
-            // 2. Rol Estudiante
+            // 3. Rol Estudiante
             rol = "ESTUDIANTE";
             Optional<Estudiante> optEst = estudianteRepository.findByCorreoElectronicoIgnoreCase(email);
             Estudiante est;

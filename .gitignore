@@ -52,3 +52,6 @@ out/
 
 # Local JDK
 .jdk-21/
+
+# Worktrees
+worktree-*/

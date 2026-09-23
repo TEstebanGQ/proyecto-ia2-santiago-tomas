@@ -65,7 +65,7 @@
   
   <!-- Estilos del Sistema -->
   <link rel="stylesheet" href="css/variables.css?v=5.0">
-  <link rel="stylesheet" href="css/styles.css?v=5.0">
+  <link rel="stylesheet" href="css/styles.css?v=6.4">
 
   <!-- Enrutador y Control de Autenticación: si no hay sesión, ir a login.html -->
   <script>
@@ -158,6 +158,15 @@
               <line x1="6" y1="20" x2="6" y2="14"></line>
             </svg>
             <span class="nav-label">Estadísticas</span>
+          </button>
+          <button class="nav-item nav-item-docente" data-view="docente" id="nav-docente-item" style="display: none;">
+            <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              <line x1="10" y1="6" x2="16" y2="6"></line>
+              <line x1="10" y1="10" x2="16" y2="10"></line>
+            </svg>
+            <span class="nav-label">Panel Docente</span>
           </button>
           <button class="nav-item nav-item-admin" data-view="admin" id="nav-admin-item" style="display: none;">
             <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -262,190 +271,171 @@
              ========================================================== -->
         <section class="view-section active" id="view-asesor">
 
-          <!-- Cuadrícula Bento Principal (Izquierda: Hero, Consulta y Resultados / Derecha: Catálogo y Widgets) -->
+          <!-- Cuadrícula Bento Principal (Izquierda: Chat Conversacional / Derecha: Catálogo y Widgets) -->
           <div class="bento-grid">
 
-            <!-- Columna Izquierda (Hero, Consulta Inteligente y Respuestas RAG) -->
-            <div class="bento-col-main">
+            <!-- Columna Izquierda — Chat Conversacional Natural -->
+            <div class="bento-col-main chat-layout">
 
-              <!-- Hero Editorial -->
-              <div class="hero-editorial">
-                <div class="hero-left">
-                  <h1 class="hero-headline">
-                    Tu futuro<br>
-                    empieza con<br>
-                    una buena<br>
-                    <span class="lime-mark">pregunta.</span>
-                  </h1>
+              <!-- Barra de Sesión de Chat (Fija arriba) -->
+              <div class="chat-session-bar" id="chat-session-bar">
+                <div class="session-progress-info">
+                  <span class="session-badge" id="session-badge">Sesión: <strong id="session-turn-count">0</strong> / 5 consultas</span>
+                  <span class="session-hint" id="session-hint">Conversación activa: puedes hacer preguntas de seguimiento.</span>
                 </div>
-                <div class="hero-right">
-                  <p class="hero-description">
-                    RutaIA te ayuda a encontrar los cursos que mejor se ajustan a tus intereses, conocimientos y objetivos profesionales.
-                  </p>
-                  <div class="hero-doodle">
-                    <svg width="54" height="28" viewBox="0 0 54 28" fill="none" stroke="#121316" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M4 22 C 16 6, 28 26, 50 12" />
-                      <path d="M44 10 L 50 12 L 48 18" />
+                <button type="button" class="btn-clean-session" id="btn-reset-chat" title="Comenzar nueva conversación desde cero">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                  <span>Nueva conversación</span>
+                </button>
+              </div>
+
+              <!-- Área de Conversación (scrollable) -->
+              <div class="chat-scroll-area" id="chat-scroll-area">
+
+                <!-- Welcome State (se oculta cuando hay mensajes) -->
+                <div class="chat-welcome-state" id="chat-welcome-state">
+                  <div class="chat-welcome-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D7F338" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                      <rect x="9" y="9" width="6" height="6"></rect>
+                      <line x1="9" y1="1" x2="9" y2="4"></line>
+                      <line x1="15" y1="1" x2="15" y2="4"></line>
+                      <line x1="9" y1="20" x2="9" y2="23"></line>
+                      <line x1="15" y1="20" x2="15" y2="23"></line>
+                      <line x1="20" y1="9" x2="23" y2="9"></line>
+                      <line x1="20" y1="15" x2="23" y2="15"></line>
+                      <line x1="1" y1="9" x2="4" y2="9"></line>
+                      <line x1="1" y1="15" x2="4" y2="15"></line>
                     </svg>
                   </div>
+                  <h2 class="chat-welcome-title">¡Hola! Soy <span class="lime-mark">RutaIA</span></h2>
+                  <p class="chat-welcome-desc">Tu asistente académico con IA. Cuéntame qué quieres aprender y te recomendaré los mejores cursos.</p>
+                  
+                  <!-- Chips de Consultas Sugeridas (dentro del welcome) -->
+                  <div class="chat-welcome-chips" id="chat-welcome-chips">
+                    <span class="chips-title">Prueba con alguna de estas consultas:</span>
+                    <div class="chips-group">
+                      <button class="chip-item" data-query="Quiero aprender a crear páginas web.">🌐 Páginas Web</button>
+                      <button class="chip-item" data-query="Necesito aprender Java para trabajar con Spring Boot.">☕ Java + Spring Boot</button>
+                      <button class="chip-item" data-query="Me interesa analizar datos y construir dashboards.">📊 Datos & Dashboards</button>
+                      <button class="chip-item" data-query="¿Qué puedo estudiar para trabajar con inteligencia artificial?">🤖 Inteligencia Artificial</button>
+                      <button class="chip-item" data-query="Quiero aprender a proteger aplicaciones web.">🔒 Ciberseguridad</button>
+                      <button class="chip-item" data-query="Necesito desplegar aplicaciones usando contenedores.">🐳 Docker</button>
+                      <button class="chip-item chip-special" data-query="Quiero aprender cocina italiana.">🍝 Cocina Italiana (Fuera de Catálogo)</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Caja de Consulta Estilo Editorial -->
-              <div class="query-editorial-box">
-                <label class="query-box-label" for="query-input">¿Qué quieres aprender?</label>
-                <div class="query-input-container">
-                  <textarea 
-                    id="query-input" 
-                    class="editorial-textarea" 
-                    rows="2"
-                    placeholder='Ejemplo: "Quiero aprender Java para trabajar con Spring Boot" o "¿Qué estudiar para trabajar con IA?"'
-                  ></textarea>
+                <!-- Contenedor del Hilo de Conversación -->
+                <div class="chat-thread-container" id="chat-thread-container"></div>
+
+                <!-- Indicador de Carga Animado (dentro del scroll) -->
+                <div class="chat-loading-indicator" id="loading-box" style="display: none;">
+                  <div class="chat-loading-avatar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D7F338" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
+                  </div>
+                  <div class="chat-loading-dots">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <span class="chat-loading-text">RutaIA está pensando...</span>
                 </div>
 
-                <div class="query-footer-bar">
-                  <div class="query-actions-left">
-                    <button class="btn-primary-lime" id="submit-query-btn">
-                      <span>Buscar recomendaciones</span>
-                      <span class="btn-arrow">➔</span>
+                <!-- Tarjeta de Resultados RAG (para detalle del historial, ahora dentro del scroll para poder bajar y revisarlo completo) -->
+                <div class="result-bento-card" id="result-card" style="display: none; margin-top: 0.5rem; width: 100%; box-sizing: border-box;">
+                  <div class="result-history-nav-bar" style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #E2E8F0; padding-bottom: 0.75rem;">
+                    <button type="button" class="btn-clean-session" id="btn-back-to-active-chat" onclick="window.volverAlChatActivo && window.volverAlChatActivo()">
+                      ← Volver a la conversación activa
                     </button>
-                    <button class="btn-text-options" id="toggle-chips-btn" type="button">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;">
-                        <line x1="4" y1="21" x2="4" y2="14"></line>
-                        <line x1="4" y1="10" x2="4" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12" y2="3"></line>
-                        <line x1="20" y1="21" x2="20" y2="16"></line>
-                        <line x1="20" y1="12" x2="20" y2="3"></line>
-                        <line x1="1" y1="14" x2="7" y2="14"></line>
-                        <line x1="9" y1="8" x2="15" y2="8"></line>
-                        <line x1="17" y1="16" x2="23" y2="16"></line>
-                      </svg>
-                      <span>Consultas sugeridas</span>
-                    </button>
+                    <span style="font-size: 0.8rem; color: #64748B; font-weight: 700;">Consulta del historial</span>
+                  </div>
+
+                  <div class="result-top-badge-row">
+                    <div class="badge-spark-group">
+                      <span class="sparkle-icon">✦</span>
+                      <span class="badge-spark-text">Curso recomendado</span>
+                    </div>
+                    <span class="status-pill respondida" id="result-status-badge">Respondida</span>
+                  </div>
+                  <div class="query-recap-box">
+                    <span class="recap-label">Consulta realizada:</span>
+                    <span class="recap-query" id="result-pregunta">-</span>
+                  </div>
+                  <div id="course-success-view">
+                    <div class="featured-course-card" id="featured-course-container"></div>
+                    <div class="ai-rationale-box">
+                      <div class="rationale-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <span class="rationale-title">Orientación Académica Institucional</span>
+                      </div>
+                      <div class="rationale-body" id="result-ai-text">Cargando orientación...</div>
+                    </div>
+                    <div class="sources-bento-section" id="sources-section">
+                      <div class="sources-section-title">
+                        <span>Fuentes de la recomendación</span>
+                        <span class="sources-counter" id="sources-counter">1 curso</span>
+                      </div>
+                      <div class="sources-list" id="sources-container"></div>
+                    </div>
+                  </div>
+                  <div class="fallback-bento-card" id="fallback-box" style="display: none;">
+                    <div class="fallback-icon-box">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div class="fallback-content">
+                      <h4 class="fallback-title">No encontramos cursos para tu consulta</h4>
+                      <p class="fallback-message" id="fallback-message-text">No hay cursos relacionados con tu búsqueda en nuestro catálogo institucional.</p>
+                    </div>
+                    <button class="btn-secondary-pill" id="fallback-catalog-btn" data-view="catalogo">Ver catálogo de cursos</button>
+                  </div>
+                  <div class="rating-bento-section" id="rating-section">
+                    <div class="rating-header-row">
+                      <span class="rating-label">¿Qué tan útil fue esta orientación?</span>
+                      <span class="rating-status-hint" id="rating-status-message"></span>
+                    </div>
+                    <div class="star-rating" id="star-rating">
+                      <button class="star-btn" data-rating="1">★</button>
+                      <button class="star-btn" data-rating="2">★</button>
+                      <button class="star-btn" data-rating="3">★</button>
+                      <button class="star-btn" data-rating="4">★</button>
+                      <button class="star-btn" data-rating="5">★</button>
+                    </div>
+                    <div class="rating-input-row">
+                      <input type="text" id="rating-comment" class="rating-input-field" placeholder="Deja un comentario o feedback opcional..." />
+                      <button class="btn-dark-pill" id="rating-submit-btn">Enviar Calificación</button>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Chips de Consultas Obligatorias -->
-                <div class="suggested-chips-tray" id="suggested-chips-tray">
-                  <span class="chips-title">Consultas de prueba institucionales:</span>
-                  <div class="chips-group">
-                    <button class="chip-item" data-query="Quiero aprender a crear páginas web.">Páginas Web</button>
-                    <button class="chip-item" data-query="Necesito aprender Java para trabajar con Spring Boot.">Java + Spring Boot</button>
-                    <button class="chip-item" data-query="Me interesa analizar datos y construir dashboards.">Datos & Dashboards</button>
-                    <button class="chip-item" data-query="Quiero automatizar procesos empresariales.">Automatización RPA</button>
-                    <button class="chip-item" data-query="¿Qué puedo estudiar para trabajar con inteligencia artificial?">Inteligencia Artificial</button>
-                    <button class="chip-item" data-query="Quiero aprender a proteger aplicaciones web.">Ciberseguridad Web</button>
-                    <button class="chip-item" data-query="Necesito desplegar aplicaciones usando contenedores.">Docker y Contenedores</button>
-                    <button class="chip-item chip-special" data-query="Quiero aprender cocina italiana.">Cocina Italiana (Fuera de Catálogo)</button>
-                  </div>
-                </div>
               </div>
 
-              <!-- Indicador de Carga Animado -->
-              <div class="loading-editorial-card" id="loading-box" style="display: none;">
-                <div class="editorial-spinner"></div>
-                <div class="loading-texts">
-                  <h4 id="loading-title">Analizando consulta con RAG...</h4>
-                  <p id="loading-desc">Generando embeddings semánticos, recuperando cursos de Qdrant y sintetizando la orientación...</p>
-                </div>
-              </div>
-
-              <!-- Tarjeta de Resultados RAG (Editorial Bento) -->
-              <div class="result-bento-card" id="result-card" style="display: none;">
-
-                <!-- Cabecera del Resultado -->
-                <div class="result-top-badge-row">
-                  <div class="badge-spark-group">
-                    <span class="sparkle-icon">✦</span>
-                    <span class="badge-spark-text">Curso recomendado</span>
+              <!-- Input de Chat (Fijo abajo) -->
+              <div class="chat-input-bar" id="chat-input-bar">
+                <!-- Banner de Límite Alcanzado -->
+                <div class="session-limit-banner" id="session-limit-banner" style="display: none;">
+                  <div class="limit-content">
+                    <span>🎓 Has completado las 5 consultas de esta sesión.</span>
                   </div>
-                  <span class="status-pill respondida" id="result-status-badge">Respondida</span>
-                </div>
-
-                <!-- Consulta original enviada -->
-                <div class="query-recap-box">
-                  <span class="recap-label">Consulta realizada:</span>
-                  <span class="recap-query" id="result-pregunta">-</span>
-                </div>
-
-                <!-- Contenedor para Respuesta Exitosa (Curso Recomendado Principal) -->
-                <div id="course-success-view">
-                  <div class="featured-course-card" id="featured-course-container">
-                    <!-- Renderizado dinámico del curso top -->
-                  </div>
-
-                  <!-- Explicación Generada por la IA -->
-                  <div class="ai-rationale-box">
-                    <div class="rationale-header">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                      </svg>
-                      <span class="rationale-title">Orientación Académica Institucional</span>
-                    </div>
-                    <div class="rationale-body" id="result-ai-text">
-                      Cargando orientación...
-                    </div>
-                  </div>
-
-                  <!-- Fuentes de la Recomendación (Trazabilidad RAG) -->
-                  <div class="sources-bento-section" id="sources-section">
-                    <div class="sources-section-title">
-                      <span>Fuentes de la recomendación</span>
-                      <span class="sources-counter" id="sources-counter">1 curso</span>
-                    </div>
-                    <div class="sources-list" id="sources-container">
-                      <!-- Renderizado dinámico de fuentes -->
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Tarjeta Fallback: Sin Resultados (Fuera de Catálogo) -->
-                <div class="fallback-bento-card" id="fallback-box" style="display: none;">
-                  <div class="fallback-icon-box">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                  </div>
-                  <div class="fallback-content">
-                    <h4 class="fallback-title">No encontramos cursos para tu consulta</h4>
-                    <p class="fallback-message" id="fallback-message-text">
-                      No hay cursos relacionados con tu búsqueda en nuestro catálogo institucional. Puedes intentar con otro tema de tecnología o explorar las áreas disponibles.
-                    </p>
-                  </div>
-                  <button class="btn-secondary-pill" id="fallback-catalog-btn" data-view="catalogo">
-                    Ver catálogo de cursos
+                  <button type="button" class="btn-primary-lime btn-sm" id="btn-new-chat-from-limit">
+                    Nueva conversación
                   </button>
                 </div>
-
-                <!-- Calificación de la Recomendación -->
-                <div class="rating-bento-section" id="rating-section">
-                  <div class="rating-header-row">
-                    <span class="rating-label">¿Qué tan útil fue esta orientación?</span>
-                    <span class="rating-status-hint" id="rating-status-message"></span>
-                  </div>
-                  <div class="star-rating" id="star-rating">
-                    <button class="star-btn" data-rating="1">★</button>
-                    <button class="star-btn" data-rating="2">★</button>
-                    <button class="star-btn" data-rating="3">★</button>
-                    <button class="star-btn" data-rating="4">★</button>
-                    <button class="star-btn" data-rating="5">★</button>
-                  </div>
-                  <div class="rating-input-row">
-                    <input 
-                      type="text" 
-                      id="rating-comment" 
-                      class="rating-input-field" 
-                      placeholder="Deja un comentario o feedback opcional..." 
-                    />
-                    <button class="btn-dark-pill" id="rating-submit-btn">Enviar Calificación</button>
-                  </div>
+                <div class="chat-input-row">
+                  <textarea 
+                    id="query-input" 
+                    class="chat-textarea" 
+                    rows="1"
+                    placeholder="Escribe tu pregunta aquí..."
+                  ></textarea>
+                  <button class="chat-send-btn" id="submit-query-btn" title="Enviar consulta">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="19" x2="12" y2="5"></line>
+                      <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                  </button>
                 </div>
-
               </div>
 
             </div>
@@ -1200,6 +1190,146 @@
           </div>
         </section>
 
+        <!-- ==========================================================
+             VISTA 6: PANEL DOCENTE (GESTIÓN DE ESPECIALIDAD Y FEEDBACK)
+             ========================================================== -->
+        <section class="view-section" id="view-docente">
+
+          <!-- Pestañas de Navegación del Panel Docente -->
+          <div class="admin-tabs-nav">
+            <button type="button" class="admin-subtab active" id="subtab-docente-courses" data-docentetab="courses">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <span>Mis Cursos y Prerrequisitos</span>
+            </button>
+            <button type="button" class="admin-subtab" id="subtab-docente-feedback" data-docentetab="feedback">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Monitoreo & Feedback IA</span>
+            </button>
+            <button type="button" class="admin-subtab" id="subtab-docente-stats" data-docentetab="stats">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+              <span>Analíticas Curriculares</span>
+            </button>
+          </div>
+
+          <!-- ==========================================================
+               SUB-PANEL 1: MIS CURSOS
+               ========================================================== -->
+          <div class="admin-pane active" id="docente-pane-courses">
+            <div class="editorial-view-header admin-header-flex">
+              <div>
+                <div class="admin-badge-tag" id="docente-badge-area">Especialidad: Programación</div>
+                <h2 class="view-title">Cursos de tu Especialidad</h2>
+                <p class="view-subtitle" id="docente-view-subtitle">Supervisa la oferta formativa de tu cátedra y consulta a los estudiantes matriculados en cada asignatura.</p>
+              </div>
+            </div>
+
+            <!-- Métricas Rápidas de Especialidad -->
+            <div class="admin-summary-grid">
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Total Asignaturas</span>
+                <span class="admin-card-number" id="docente-count-total">0</span>
+                <span class="admin-card-note">Oferta en tu especialidad</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Cursos Activos</span>
+                <span class="admin-card-number text-success" id="docente-count-activos">0</span>
+                <span class="admin-card-note">Disponibles para estudiantes</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Total Inscripciones</span>
+                <span class="admin-card-number text-primary" id="docente-count-matriculados" style="color: #4F46E5;">0</span>
+                <span class="admin-card-note">Estudiantes matriculados en tu área</span>
+              </div>
+            </div>
+
+            <!-- Tabla de Cursos del Docente con diseño oficial y limpio -->
+            <div class="admin-table-container" style="margin-top: 1.5rem;">
+              <table class="admin-table" id="docente-courses-table">
+                <thead>
+                  <tr>
+                    <th style="min-width: 280px;">Curso y Descripción</th>
+                    <th>Nivel</th>
+                    <th>Duración</th>
+                    <th>Prerrequisitos</th>
+                    <th>Estado</th>
+                    <th style="text-align: right;">Ver Inscritos</th>
+                  </tr>
+                </thead>
+                <tbody id="docente-courses-tbody">
+                  <!-- Renderizado dinámico -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ==========================================================
+               SUB-PANEL 2: MONITOREO Y FEEDBACK IA
+               ========================================================== -->
+          <div class="admin-pane" id="docente-pane-feedback" style="display: none;">
+            <div class="editorial-view-header">
+              <h2 class="view-title">Monitoreo de Consultas y Feedback de Estudiantes</h2>
+              <p class="view-subtitle">Inquietudes formuladas a la IA donde tus materias fueron recomendadas, acompañadas de la satisfacción y comentarios recibidos.</p>
+            </div>
+
+            <div id="docente-feedback-container" class="docente-feedback-list">
+              <!-- Renderizado dinámico -->
+            </div>
+          </div>
+
+          <!-- ==========================================================
+               SUB-PANEL 3: ANALÍTICAS CURRICULARES DE ÁREA
+               ========================================================== -->
+          <div class="admin-pane" id="docente-pane-stats" style="display: none;">
+            <div class="editorial-view-header">
+              <h2 class="view-title">Analíticas Académicas de Especialidad</h2>
+              <p class="view-subtitle">Indicadores de interés de los alumnos y desempeño de tus materias en el motor de recomendación vocacional.</p>
+            </div>
+
+            <div class="stats-editorial-grid">
+              <div class="stat-editorial-card">
+                <span class="stat-pill-label">Cursos Oferta</span>
+                <div class="stat-number" id="docente-stat-cursos">0</div>
+                <div class="stat-sublabel">Asignaturas de tu área</div>
+              </div>
+
+              <div class="stat-editorial-card">
+                <span class="stat-pill-label" style="background:#E8F88E; color:#374706;">Demanda IA</span>
+                <div class="stat-number" style="color: #2F6808;" id="docente-stat-consultas">0</div>
+                <div class="stat-sublabel">Consultas vinculadas a tus materias</div>
+              </div>
+
+              <div class="stat-editorial-card">
+                <span class="stat-pill-label" style="background:#DFDAFC; color:#32267B;">Satisfacción</span>
+                <div class="stat-number" style="color: #4C1D95;" id="docente-stat-satisfaccion">0.0</div>
+                <div class="stat-sublabel">Promedio de estrellas (1 a 5)</div>
+              </div>
+
+              <div class="stat-editorial-card">
+                <span class="stat-pill-label" style="background:#FEE1BA; color:#733E0A;">Calificaciones</span>
+                <div class="stat-number" style="color: #B45309;" id="docente-stat-calificaciones">0</div>
+                <div class="stat-sublabel">Estudiantes que calificaron</div>
+              </div>
+
+              <div class="stat-editorial-card" style="grid-column: 1 / -1;">
+                <span class="stat-pill-label" style="background:#D7F338; color:#18191E;">Materia Estrella de tu Cátedra</span>
+                <div class="stat-number" style="font-size: 1.3rem; margin-top: 0.5rem;" id="docente-stat-top-curso">-</div>
+                <div class="stat-sublabel">Asignatura con mayor número de recomendaciones efectivas en el sistema</div>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
       </main>
 
     </div>
@@ -1406,6 +1536,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts Modulares -->
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=6.4"></script>
 </body>
 </html>

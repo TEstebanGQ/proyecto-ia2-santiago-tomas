@@ -1,4 +1,5 @@
 {
+  "id": "fQ6iXeKinQs6nBVC",
   "name": "RutaIA - 02 Consulta y Recomendacion RAG",
   "nodes": [
     {
@@ -12,17 +13,24 @@
       "name": "Webhook Recomendar Cursos",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [100, 300]
+      "position": [
+        100,
+        300
+      ],
+      "webhookId": "recomendar-cursos"
     },
     {
       "parameters": {
-        "jsCode": "const body = $json.body || $json;\nconst idConsulta = body.id_consulta || body.idConsulta;\nconst pregunta = (body.pregunta || '').trim();\nconst nivel = body.nivel_experiencia || body.nivelExperiencia || 'No especificado';\nconst area = body.area_interes || body.areaInteres || 'General';\n\nif (!pregunta) {\n  throw new Error('La pregunta no puede estar vacía');\n}\n\nreturn {\n  json: {\n    id_consulta: idConsulta,\n    pregunta: pregunta,\n    nivel_experiencia: nivel,\n    area_interes: area\n  }\n};"
+        "jsCode": "const body = $json.body || $json;\nconst idConsulta = body.id_consulta || body.idConsulta;\nconst pregunta = (body.pregunta || '').trim();\nconst nivel = body.nivel_experiencia || body.nivelExperiencia || 'No especificado';\nconst area = body.area_interes || body.areaInteres || 'General';\nconst cursosPrevios = body.cursos_previos || body.cursosPrevios || [];\nconst contextoPrevio = body.contexto_previo || body.contextoPrevio || '';\n\nif (!pregunta) {\n  throw new Error('La pregunta no puede estar vac\u00eda');\n}\n\nconst queryEmbedding = cursosPrevios.length > 0 \n  ? `${pregunta} (${cursosPrevios.slice(-2).join(', ')})`\n  : pregunta;\n\nreturn {\n  json: {\n    id_consulta: idConsulta,\n    pregunta: pregunta,\n    pregunta_embedding: queryEmbedding,\n    nivel_experiencia: nivel,\n    area_interes: area,\n    cursos_previos: cursosPrevios,\n    contexto_previo: contextoPrevio\n  }\n};"
       },
       "id": "code-validate-input",
       "name": "Validar Consulta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [320, 300]
+      "position": [
+        320,
+        300
+      ]
     },
     {
       "parameters": {
@@ -33,7 +41,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.OPENROUTER_API_KEY }}"
+              "value": "Bearer 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"
             },
             {
               "name": "Content-Type",
@@ -43,13 +51,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"openai/text-embedding-3-small\",\n  \"input\": \"{{ $json.pregunta.replace(/\"/g, '\\\\\"') }}\"\n}"
+        "jsonBody": "={\n  \"model\": \"openai/text-embedding-3-small\",\n  \"input\": \"{{ ($json.pregunta_embedding || $json.pregunta).replace(/\"/g, '\\\\\"') }}\"\n}"
       },
       "id": "http-query-embedding",
       "name": "Generar Embedding Pregunta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [540, 300]
+      "position": [
+        540,
+        300
+      ]
     },
     {
       "parameters": {
@@ -63,17 +74,23 @@
       "name": "Buscar en Qdrant",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [760, 300]
+      "position": [
+        760,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const qdrantResp = $json.result || [];\nconst inputData = $('Validar Consulta').first().json;\nconst UMBRAL = (inputData && inputData.umbral != null) ? Number(inputData.umbral) : 0.40;\n\n// Filtrar por umbral de relevancia (RF 11)\nconst relevantes = qdrantResp.filter(item => (item.score || 0) >= UMBRAL);\n\nif (relevantes.length === 0) {\n  return {\n    json: {\n      id_consulta: inputData.id_consulta,\n      pregunta: inputData.pregunta,\n      respuesta: `No encontramos cursos en nuestro catálogo institucional que coincidan suficientemente con tu búsqueda (\"${inputData.pregunta}\"). Te invitamos a consultar el catálogo completo de tecnología o buscar términos relacionados con programación, desarrollo web, ciencia de datos, ciberseguridad o inteligencia artificial.`,\n      fuentes: [],\n      similitudes: [],\n      estado_final: \"Sin resultados\",\n      ejecutar_llm: false\n    }\n  };\n}\n\n// Construir fuentes normalizadas y contexto RAG (RF 12, RF 13)\nconst fuentes = relevantes.map(r => ({\n  id: r.payload.curso_id || r.id,\n  nombre: r.payload.nombre,\n  descripcion: r.payload.descripcion,\n  categoria: r.payload.categoria,\n  nivel: r.payload.nivel,\n  duracion_horas: r.payload.duracion_horas,\n  similitud: Math.round(r.score * 10000) / 10000\n}));\n\nconst similitudes = fuentes.map(f => f.similitud);\n\nconst contextoTexto = fuentes.map((f, idx) => (\n  `Curso ${idx + 1}: ${f.nombre}\n- Identificador: ${f.id}\n- Categoría: ${f.categoria} | Nivel: ${f.nivel} | Duración: ${f.duracion_horas} horas\n- Similitud Semántica: ${(f.similitud * 100).toFixed(2)}%\n- Descripción: ${f.descripcion}`\n)).join('\\n\\n');\n\nreturn {\n  json: {\n    id_consulta: inputData.id_consulta,\n    pregunta: inputData.pregunta,\n    nivel_experiencia: inputData.nivel_experiencia,\n    area_interes: inputData.area_interes,\n    contexto: contextoTexto,\n    fuentes: fuentes,\n    similitudes: similitudes,\n    ejecutar_llm: true\n  }\n};"
+        "jsCode": "const qdrantResp = $json.result || [];\nconst inputData = $('Validar Consulta').first().json;\nconst UMBRAL = 0.40;\n\n// Filtrar por umbral de relevancia (RF 11)\nconst relevantes = qdrantResp.filter(item => (item.score || 0) >= UMBRAL);\n\nif (relevantes.length === 0) {\n  return {\n    json: {\n      id_consulta: inputData.id_consulta,\n      pregunta: inputData.pregunta,\n      respuesta: `No encontramos cursos en nuestro cat\u00e1logo institucional que coincidan suficientemente con tu b\u00fasqueda (\"${inputData.pregunta}\"). Te invitamos a consultar el cat\u00e1logo completo de tecnolog\u00eda o buscar t\u00e9rminos relacionados con programaci\u00f3n, desarrollo web, ciencia de datos, ciberseguridad o inteligencia artificial.`,\n      fuentes: [],\n      similitudes: [],\n      estado_final: \"Sin resultados\",\n      ejecutar_llm: false\n    }\n  };\n}\n\n// Construir fuentes normalizadas y contexto RAG (RF 12, RF 13)\nconst fuentes = relevantes.map(r => ({\n  id: r.payload.curso_id || r.id,\n  nombre: r.payload.nombre,\n  descripcion: r.payload.descripcion,\n  categoria: r.payload.categoria,\n  nivel: r.payload.nivel,\n  duracion_horas: r.payload.duracion_horas,\n  similitud: Math.round(r.score * 10000) / 10000\n}));\n\nconst similitudes = fuentes.map(f => f.similitud);\n\nconst contextoTexto = fuentes.map((f, idx) => (\n  `Curso ${idx + 1}: ${f.nombre}\n- Identificador: ${f.id}\n- Categor\u00eda: ${f.categoria} | Nivel: ${f.nivel} | Duraci\u00f3n: ${f.duracion_horas} horas\n- Similitud Sem\u00e1ntica: ${(f.similitud * 100).toFixed(2)}%\n- Descripci\u00f3n: ${f.descripcion}`\n)).join(String.fromCharCode(10) + String.fromCharCode(10));\n\nreturn {\n  json: {\n    id_consulta: inputData.id_consulta,\n    pregunta: inputData.pregunta,\n    nivel_experiencia: inputData.nivel_experiencia,\n    area_interes: inputData.area_interes,\n    cursos_previos: inputData.cursos_previos || [],\n    contexto_previo: inputData.contexto_previo || '',\n    contexto: contextoTexto,\n    fuentes: fuentes,\n    similitudes: similitudes,\n    ejecutar_llm: true\n  }\n};"
       },
       "id": "code-evaluate-threshold",
       "name": "Evaluar Umbral y Contexto RAG",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [980, 300]
+      "position": [
+        980,
+        300
+      ]
     },
     {
       "parameters": {
@@ -100,10 +117,13 @@
         }
       },
       "id": "if-needs-llm",
-      "name": "¿Superó Umbral?",
+      "name": "\u00bfSuper\u00f3 Umbral?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1200, 300]
+      "position": [
+        1200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -114,7 +134,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.OPENROUTER_API_KEY }}"
+              "value": "Bearer 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"
             },
             {
               "name": "Content-Type",
@@ -124,23 +144,29 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{\n  JSON.stringify({\n    model: \"google/gemini-2.5-flash\",\n    max_tokens: 350,\n    temperature: 0.2,\n    messages: [\n      {\n        role: \"system\",\n        content: \"Eres RutaIA, el asesor vocacional y académico inteligente de la institución. Tu misión es orientar al estudiante recomendándole exclusivamente los cursos provistos en el CONTEXTO DEL CATÁLOGO.\\n\\nReglas estrictas:\\n1. Basa tus recomendaciones ÚNICAMENTE en los cursos listados en el contexto.\\n2. NO inventes nombres de cursos, códigos, duraciones ni contenidos que no estén en el contexto.\\n3. Si los cursos del contexto no son suficientes para cubrir la pregunta del estudiante, reconócelo explícitamente.\\n4. Presenta una recomendación motivadora, estructurada y profesional, explicando cómo cada curso seleccionado se articula con la necesidad del estudiante.\\n5. Menciona de forma destacada el nombre exacto de cada curso recomendado.\"\n      },\n      {\n        role: \"user\",\n        content: `Perfil del Estudiante:\\n- Nivel: ${$json.nivel_experiencia || 'Principiante'}\\n- Área de interés: ${$json.area_interes || 'General'}\\n\\nPregunta del Estudiante:\\n\"${$json.pregunta || ''}\"\\n\\nCONTEXTO DEL CATÁLOGO INSTITUCIONAL (Cursos recuperados por relevancia semántica):\\n${$json.contexto || ''}\\n\\nPor favor genera la recomendación fundamentada para el estudiante:`\n      }\n    ]\n  })\n}}"
+        "jsonBody": "={{\n  JSON.stringify({\n    model: \"google/gemini-2.5-flash\",\n    max_tokens: 180,\n    temperature: 0.2,\n    messages: [\n      {\n        role: \"system\",\n        content: \"Eres RutaIA, el asesor vocacional y acad\u00e9mico inteligente de la instituci\u00f3n. Tu misi\u00f3n es orientar al estudiante recomend\u00e1ndole exclusivamente los cursos provistos en el CONTEXTO DEL CAT\u00c1LOGO.\\n\\nReglas estrictas:\\n1. Basa tus recomendaciones \u00daNICAMENTE en los cursos listados en el contexto.\\n2. NO inventes nombres de cursos, c\u00f3digos, duraciones ni contenidos que no est\u00e9n en el contexto.\\n3. Si los cursos del contexto no son suficientes para cubrir la pregunta del estudiante, recon\u00f3celo expl\u00edcitamente.\\n4. Presenta una recomendaci\u00f3n motivadora, estructurada y profesional, explicando c\u00f3mo cada curso seleccionado se articula con la necesidad del estudiante.\\n5. Menciona de forma destacada el nombre exacto de cada curso recomendado.\\n6. Si el estudiante realiza preguntas de seguimiento sobre cursos previamente discutidos en la conversaci\u00f3n, resp\u00f3ndelas de forma concisa y coherente.\"\n      },\n      {\n        role: \"user\",\n        content: `Perfil del Estudiante:\\n- Nivel: ${$json.nivel_experiencia || 'Principiante'}\\n- \u00c1rea de inter\u00e9s: ${$json.area_interes || 'General'}` +\n          ($json.cursos_previos && $json.cursos_previos.length > 0 ? `\\n- Cursos explorados previamente en esta sesi\u00f3n: ${$json.cursos_previos.join(', ')}` : '') +\n          ($json.contexto_previo ? `\\n- Contexto conversacional previo: ${$json.contexto_previo}` : '') +\n          `\\n\\nPregunta del Estudiante:\\n\"${$json.pregunta || ''}\"\\n\\nCONTEXTO DEL CAT\u00c1LOGO INSTITUCIONAL (Cursos recuperados por relevancia sem\u00e1ntica):\\n${$json.contexto || ''}\\n\\nPor favor genera la recomendaci\u00f3n o respuesta fundamentada para el estudiante:`\n      }\n    ]\n  })\n}}"
       },
       "id": "http-llm-rag",
       "name": "Generar Recomendacion LLM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1440, 200]
+      "position": [
+        1440,
+        200
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const llmChoice = $json.choices && $json.choices[0] ? $json.choices[0].message.content : '';\nconst evaluacion = $('Evaluar Umbral y Contexto RAG').first().json;\n\nreturn {\n  json: {\n    id_consulta: evaluacion.id_consulta,\n    pregunta: evaluacion.pregunta,\n    respuesta: llmChoice || 'No se pudo generar la recomendación en este momento.',\n    fuentes: evaluacion.fuentes,\n    similitudes: evaluacion.similitudes,\n    estado_final: 'Respondida'\n  }\n};"
+        "jsCode": "const llmChoice = $json.choices && $json.choices[0] ? $json.choices[0].message.content : '';\nconst evaluacion = $('Evaluar Umbral y Contexto RAG').first().json;\n\nreturn {\n  json: {\n    id_consulta: evaluacion.id_consulta,\n    pregunta: evaluacion.pregunta,\n    respuesta: llmChoice || 'No se pudo generar la recomendaci\u00f3n en este momento.',\n    fuentes: evaluacion.fuentes,\n    similitudes: evaluacion.similitudes,\n    estado_final: 'Respondida'\n  }\n};"
       },
       "id": "code-format-success",
       "name": "Formatear Respuesta Respondida",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1660, 200]
+      "position": [
+        1660,
+        200
+      ]
     },
     {
       "parameters": {
@@ -154,7 +180,10 @@
       "name": "Responder a Spring Boot",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1900, 300]
+      "position": [
+        1900,
+        300
+      ]
     }
   ],
   "connections": {
@@ -206,14 +235,14 @@
       "main": [
         [
           {
-            "node": "¿Superó Umbral?",
+            "node": "\u00bfSuper\u00f3 Umbral?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "¿Superó Umbral?": {
+    "\u00bfSuper\u00f3 Umbral?": {
       "main": [
         [
           {

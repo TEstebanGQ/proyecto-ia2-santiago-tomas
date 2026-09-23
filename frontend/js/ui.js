@@ -3,6 +3,8 @@
  * Concepto: Editorial Learning Lab
  */
 
+import { state } from './state.js';
+
 export const ui = {
   // Notificaciones Toast de alta legibilidad
   showToast(mensaje, tipo = 'info') {
@@ -65,11 +67,20 @@ export const ui = {
 
     if (nameEl) nameEl.textContent = nombre;
 
-    const esAdmin = estudiante.rol === 'ADMINISTRADOR';
+    const rol = (estudiante.rol || 'ESTUDIANTE').toUpperCase();
     if (badgeEl) {
-      badgeEl.textContent = esAdmin ? 'Administrador' : 'Estudiante';
-      badgeEl.className = `user-role-badge ${esAdmin ? 'role-badge-admin' : 'role-badge-student'}`;
+      if (rol === 'ADMINISTRADOR') {
+        badgeEl.textContent = 'Administrador';
+        badgeEl.className = 'user-role-badge role-badge-admin';
+      } else if (rol === 'DOCENTE') {
+        badgeEl.textContent = 'Docente';
+        badgeEl.className = 'user-role-badge role-badge-docente';
+      } else {
+        badgeEl.textContent = 'Estudiante';
+        badgeEl.className = 'user-role-badge role-badge-student';
+      }
     }
+
     
     // Widgets del perfil en barra lateral / Bento
     if (widgetLevelEl) widgetLevelEl.textContent = estudiante.nivelExperiencia || estudiante.nivel || 'Principiante';
@@ -78,14 +89,14 @@ export const ui = {
 
   renderUsuarioHeader(usuario) {
     this.renderEstudianteActivo(usuario);
-    // Ajustar visibilidad o estilo de botones de navegación si es Administrador
+    // Ajustar visibilidad o estilo de botones de navegación según rol
     const navAdmin = document.getElementById('nav-admin-item');
+    const navDocente = document.getElementById('nav-docente-item');
     if (navAdmin) {
-      if (usuario && usuario.rol === 'ADMINISTRADOR') {
-        navAdmin.style.display = 'flex';
-      } else {
-        navAdmin.style.display = 'none';
-      }
+      navAdmin.style.display = (usuario && usuario.rol === 'ADMINISTRADOR') ? 'flex' : 'none';
+    }
+    if (navDocente) {
+      navDocente.style.display = (usuario && usuario.rol === 'DOCENTE') ? 'flex' : 'none';
     }
   },
 
@@ -208,17 +219,26 @@ export const ui = {
     });
   },
 
-  // Indicador de Carga
+  // Indicador de Carga dentro del Chat
   setLoading(isLoading, title = 'Consultando Asesor Vocacional con RAG...', desc = 'Generando embeddings semánticos, recuperando cursos de Qdrant y sintetizando orientación...') {
     const loadingBox = document.getElementById('loading-box');
     const resultBox = document.getElementById('result-card');
     const submitBtn = document.getElementById('submit-query-btn');
 
     if (loadingBox) {
-      loadingBox.style.display = isLoading ? 'flex' : 'none';
+      loadingBox.style.display = isLoading ? 'inline-flex' : 'none';
+      const titleEl = document.getElementById('loading-title');
+      const descEl = document.getElementById('loading-desc');
+      if (titleEl) titleEl.textContent = title;
+      if (descEl) descEl.textContent = desc;
+
       if (isLoading) {
-        document.getElementById('loading-title').textContent = title;
-        document.getElementById('loading-desc').textContent = desc;
+        const scrollArea = document.getElementById('chat-scroll-area');
+        if (scrollArea) {
+          setTimeout(() => {
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+          }, 30);
+        }
       }
     }
     if (resultBox && isLoading) {
@@ -229,11 +249,390 @@ export const ui = {
     }
   },
 
+  // Helper para escapar HTML seguro
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  },
+
+  // Actualizar la barra superior de sesión
+  updateChatSessionBar(turnCount, maxTurns) {
+    const turnCountEl = document.getElementById('session-turn-count');
+    const sessionBadge = document.getElementById('session-badge');
+    const limitBanner = document.getElementById('session-limit-banner');
+    const queryInput = document.getElementById('query-input');
+    const submitBtn = document.getElementById('submit-query-btn');
+    const sessionHint = document.getElementById('session-hint');
+
+    if (turnCountEl) {
+      turnCountEl.textContent = turnCount;
+    }
+
+    const isFull = turnCount >= maxTurns;
+
+    if (sessionBadge) {
+      sessionBadge.classList.toggle('badge-full', isFull);
+      if (isFull) {
+        sessionBadge.innerHTML = `Sesión: <strong>${turnCount}</strong> / ${maxTurns} completada`;
+      } else {
+        sessionBadge.innerHTML = `Sesión: <strong>${turnCount}</strong> / ${maxTurns} consultas`;
+      }
+    }
+
+    if (sessionHint) {
+      if (isFull) {
+        sessionHint.textContent = 'Has alcanzado el límite de 5 consultas en esta sesión.';
+      } else if (turnCount > 0) {
+        sessionHint.textContent = 'Puedes profundizar o hacer preguntas de seguimiento sobre los cursos anteriores.';
+      } else {
+        sessionHint.textContent = 'Conversación activa: puedes hacer hasta 5 consultas en esta sesión.';
+      }
+    }
+
+    if (limitBanner) {
+      limitBanner.style.display = isFull ? 'flex' : 'none';
+    }
+
+    if (queryInput) {
+      queryInput.disabled = isFull;
+      if (isFull) {
+        queryInput.placeholder = 'Límite de 5 consultas completado. Inicia una nueva conversación para consultar otro tema.';
+      } else {
+        queryInput.placeholder = 'Escribe tu pregunta o seguimiento aquí...';
+      }
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = isFull;
+    }
+  },
+
+  // Renderizar la sesión conversacional completa (Hilo de hasta 5 turnos - natural chat UX)
+  renderChatSession(chatSession, onCalificar) {
+    this.updateChatSessionBar(chatSession.turnCount, chatSession.maxTurns);
+
+    const welcomeState = document.getElementById('chat-welcome-state');
+    const threadContainer = document.getElementById('chat-thread-container');
+    const resultCard = document.getElementById('result-card');
+    const scrollArea = document.getElementById('chat-scroll-area');
+
+    if (!threadContainer) return;
+
+    if (threadContainer) threadContainer.style.display = 'flex';
+    if (resultCard) resultCard.style.display = 'none';
+
+    if (!chatSession.mensajes || chatSession.mensajes.length === 0) {
+      if (welcomeState) welcomeState.style.display = 'flex';
+      threadContainer.innerHTML = '';
+      return;
+    }
+
+    if (welcomeState) welcomeState.style.display = 'none';
+    if (scrollArea) scrollArea.style.display = 'flex';
+    threadContainer.innerHTML = '';
+
+    const turnos = {};
+    chatSession.mensajes.forEach(msg => {
+      const t = msg.turno || 1;
+      if (!turnos[t]) turnos[t] = {};
+      if (msg.remitente === 'usuario') {
+        turnos[t].usuario = msg;
+      } else {
+        turnos[t].ia = msg;
+      }
+    });
+
+    const activeTurnsWithIa = [];
+
+    Object.keys(turnos).sort((a, b) => Number(a) - Number(b)).forEach(turnoKey => {
+      const { usuario, ia } = turnos[turnoKey];
+      const turnBlock = document.createElement('div');
+      turnBlock.className = 'chat-turn-block';
+      turnBlock.id = `chat-turn-${turnoKey}`;
+
+      let turnHtml = '';
+
+      if (usuario) {
+        const timeStr = usuario.timestamp ? new Date(usuario.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        turnHtml += `
+          <div class="chat-turn-header">
+            <span class="chat-turn-tag">Consulta ${turnoKey} de ${chatSession.maxTurns}</span>
+            <span class="chat-turn-tag">${timeStr}</span>
+          </div>
+          <div class="chat-user-row">
+            <div class="chat-user-bubble">
+              <div class="chat-user-meta">
+                <strong>Tú</strong>
+              </div>
+              <div class="chat-user-text">${this.escapeHtml(usuario.texto)}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (ia) {
+        activeTurnsWithIa.push({ turnoKey, ia });
+        const estadoLimpio = ia.estadoFinal || 'Respondida';
+        const estadoClass = estadoLimpio.toLowerCase().includes('sin') ? 'sin-resultados' : 'respondida';
+        const esSinResultados = estadoLimpio.toLowerCase().includes('sin') || !ia.fuentes || ia.fuentes.length === 0;
+
+        turnHtml += `
+          <div class="chat-ia-wrapper">
+            <div class="chat-ia-bubble-container">
+              <div class="chat-ia-bubble-header">
+                <div class="chat-ia-brand">
+                  <div class="chat-ia-brand-avatar">✦</div>
+                  <div class="chat-ia-brand-name">RutaIA Asesor</div>
+                </div>
+                <span class="status-pill ${estadoClass}">${estadoLimpio}</span>
+              </div>
+              <div class="chat-ia-text">${this.escapeHtml(ia.texto)}</div>
+        `;
+
+        if (esSinResultados) {
+          turnHtml += `
+            <div class="fallback-bento-card" style="display: flex; margin-bottom: 0.5rem;">
+              <div class="fallback-icon-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <div class="fallback-content">
+                <h4 class="fallback-title">No encontramos cursos específicos</h4>
+                <p class="fallback-message">Prueba profundizando en tu interés o explora el catálogo académico general.</p>
+              </div>
+              <button class="btn-secondary-pill" onclick="window.navegarACatalogo && window.navegarACatalogo()">
+                Ver catálogo
+              </button>
+            </div>
+          `;
+        } else {
+          const topCourse = ia.fuentes[0];
+          const simPct = (topCourse.similitud * 100).toFixed(1);
+          const matchLabel = simPct >= 70 ? 'Alta coincidencia' : simPct >= 45 ? 'Coincidencia media' : 'Coincidencia exploratoria';
+
+          turnHtml += `
+            <div class="featured-course-card" style="margin-bottom: 0.75rem;">
+              <div class="featured-course-layout">
+                <div class="featured-course-thumb">
+                  <div class="thumb-window-bar">
+                    <span class="dot-red"></span>
+                    <span class="dot-yellow"></span>
+                    <span class="dot-green"></span>
+                  </div>
+                  <div class="thumb-code-lines">
+                    <div class="line w-80 code-accent"></div>
+                    <div class="line w-60"></div>
+                    <div class="line w-90"></div>
+                    <div class="line w-40 code-subaccent"></div>
+                  </div>
+                  <div class="thumb-badge-tag">${this.escapeHtml(topCourse.categoria || 'Curso')}</div>
+                </div>
+
+                <div class="featured-course-info">
+                  <div class="featured-header-row">
+                    <span class="match-pill-green">${matchLabel}</span>
+                  </div>
+                  <h3 class="course-headline-title">${this.escapeHtml(topCourse.nombre)}</h3>
+                  <div class="course-meta-pills">
+                    <span>Nivel: <strong>${this.escapeHtml(topCourse.nivel)}</strong></span>
+                    <span>Duración: <strong>${topCourse.duracionHoras}h</strong></span>
+                    <span>Categoría: <strong>${this.escapeHtml(topCourse.categoria)}</strong></span>
+                  </div>
+                  <p class="course-short-desc">${this.escapeHtml(topCourse.descripcion)}</p>
+                </div>
+
+                <div class="featured-course-actions">
+                  <div class="similarity-circle-badge">
+                    <span class="similarity-circle-val">${simPct}%</span>
+                    <span class="similarity-circle-txt">Similitud</span>
+                  </div>
+                  <button class="btn-course-details" onclick="window.verDetalleCursoModal('${topCourse.nombre.replace(/'/g, "\\'")}')">
+                    Ver detalles →
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+
+          if (ia.fuentes.length > 1) {
+            turnHtml += `
+              <div class="sources-bento-section" style="margin-bottom: 0.75rem;">
+                <div class="sources-section-title">
+                  <span>Otras opciones del catálogo</span>
+                  <span class="sources-counter">${ia.fuentes.length} cursos</span>
+                </div>
+                <div class="sources-list">
+            `;
+            ia.fuentes.slice(1).forEach((f, idx) => {
+              const fSim = (f.similitud * 100).toFixed(1);
+              turnHtml += `
+                <div class="source-item-row">
+                  <div class="source-item-left">
+                    <div class="source-item-name">${idx + 2}. ${this.escapeHtml(f.nombre)}</div>
+                    <div class="source-item-meta">
+                      <span>${this.escapeHtml(f.categoria)}</span> • <span>${this.escapeHtml(f.nivel)}</span> • ${f.duracionHoras} hrs
+                    </div>
+                  </div>
+                  <div class="source-item-right">
+                    <span class="source-item-sim">${fSim}%</span>
+                    <button class="source-item-action" onclick="window.verDetalleCursoModal('${f.nombre.replace(/'/g, "\\'")}')" title="Ver plan de estudios">➔</button>
+                  </div>
+                </div>
+              `;
+            });
+            turnHtml += `
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        // Calificación Inline debajo de la respuesta de la IA (RF 17)
+        if (ia.calificacionPuntuacion) {
+          turnHtml += `
+            <div class="chat-inline-rating">
+              <div class="chat-rating-confirmed">
+                <span>✓ Calificado con ${ia.calificacionPuntuacion} estrellas</span>
+                ${ia.calificacionComentario ? `<span style="color:#64748B; font-weight:normal;">• "${this.escapeHtml(ia.calificacionComentario)}"</span>` : ''}
+              </div>
+            </div>
+          `;
+        } else if (ia.recomendacionId) {
+          turnHtml += `
+            <div class="chat-inline-rating" id="chat-rating-turn-${turnoKey}">
+              <div class="chat-rating-prompt">
+                <span class="chat-rating-label">¿Qué tal te pareció esta recomendación?</span>
+                <div class="chat-star-row" id="star-row-turn-${turnoKey}">
+                  <button type="button" class="chat-star-btn" data-rating="1" data-turn="${turnoKey}" title="1 estrella">★</button>
+                  <button type="button" class="chat-star-btn" data-rating="2" data-turn="${turnoKey}" title="2 estrellas">★</button>
+                  <button type="button" class="chat-star-btn" data-rating="3" data-turn="${turnoKey}" title="3 estrellas">★</button>
+                  <button type="button" class="chat-star-btn" data-rating="4" data-turn="${turnoKey}" title="4 estrellas">★</button>
+                  <button type="button" class="chat-star-btn" data-rating="5" data-turn="${turnoKey}" title="5 estrellas">★</button>
+                </div>
+              </div>
+              <div class="chat-rating-comment-box" id="comment-box-turn-${turnoKey}" style="display: none;">
+                <input type="text" class="chat-rating-input" id="rating-input-turn-${turnoKey}" placeholder="Deja un comentario o feedback opcional..." />
+                <button type="button" class="chat-rating-submit" id="rating-submit-turn-${turnoKey}">Calificar</button>
+              </div>
+            </div>
+          `;
+        }
+
+        turnHtml += `
+            </div>
+          </div>
+        `;
+      }
+
+      turnBlock.innerHTML = turnHtml;
+      threadContainer.appendChild(turnBlock);
+    });
+
+    // Configurar listeners de calificación inline para cada turno interactivo
+    activeTurnsWithIa.forEach(({ turnoKey, ia }) => {
+      if (!ia.calificacionPuntuacion && ia.recomendacionId) {
+        this.setupInlineRatingListeners(turnoKey, ia, onCalificar);
+      }
+    });
+
+    // Auto-scroll al fondo del área de chat
+    if (scrollArea) {
+      setTimeout(() => {
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+      }, 50);
+    }
+  },
+
+  // Helper para listeners de calificación inline en cada turno
+  setupInlineRatingListeners(turnoKey, ia, onCalificar) {
+    const starRow = document.getElementById(`star-row-turn-${turnoKey}`);
+    const commentBox = document.getElementById(`comment-box-turn-${turnoKey}`);
+    const inputField = document.getElementById(`rating-input-turn-${turnoKey}`);
+    const submitBtn = document.getElementById(`rating-submit-turn-${turnoKey}`);
+    const ratingContainer = document.getElementById(`chat-rating-turn-${turnoKey}`);
+
+    if (!starRow || !ratingContainer) return;
+
+    let selectedRating = 0;
+    const starBtns = starRow.querySelectorAll('.chat-star-btn');
+
+    starBtns.forEach(btn => {
+      const r = parseInt(btn.dataset.rating, 10);
+      btn.addEventListener('mouseenter', () => {
+        starBtns.forEach(s => {
+          s.classList.toggle('hovered', parseInt(s.dataset.rating, 10) <= r);
+        });
+      });
+      btn.addEventListener('mouseleave', () => {
+        starBtns.forEach(s => {
+          s.classList.remove('hovered');
+        });
+      });
+      btn.addEventListener('click', () => {
+        selectedRating = r;
+        starBtns.forEach(s => {
+          s.classList.toggle('selected', parseInt(s.dataset.rating, 10) <= selectedRating);
+        });
+        if (commentBox) {
+          commentBox.style.display = 'flex';
+          if (inputField) inputField.focus();
+        }
+      });
+    });
+
+    if (submitBtn) {
+      submitBtn.addEventListener('click', async () => {
+        if (!selectedRating || selectedRating < 1 || selectedRating > 5) {
+          this.showToast('Por favor selecciona entre 1 y 5 estrellas', 'error');
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando...';
+        const comment = inputField ? inputField.value.trim() : '';
+        try {
+          if (onCalificar && ia.recomendacionId) {
+            await onCalificar(ia.recomendacionId, selectedRating, comment);
+          }
+          ia.calificacionPuntuacion = selectedRating;
+          ia.calificacionComentario = comment;
+          ratingContainer.innerHTML = `
+            <div class="chat-rating-confirmed">
+              <span>✓ Calificado con ${selectedRating} estrellas</span>
+              ${comment ? `<span style="color:#64748B; font-weight:normal;">• "${this.escapeHtml(comment)}"</span>` : ''}
+            </div>
+          `;
+          this.showToast('¡Gracias por calificar la recomendación!', 'success');
+        } catch (err) {
+          this.showToast(err.message || 'Error al guardar la calificación', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Calificar';
+        }
+      });
+    }
+  },
+
   // Renderizado del Resultado RAG (Estilo Editorial Bento)
   renderResultadoRecomendacion(rec, onCalificar) {
     const resultCard = document.getElementById('result-card');
+    const scrollArea = document.getElementById('chat-scroll-area');
+    const welcomeState = document.getElementById('chat-welcome-state');
+    const threadContainer = document.getElementById('chat-thread-container');
+    const loadingBox = document.getElementById('loading-box');
+
     if (!resultCard) return;
 
+    if (scrollArea) scrollArea.style.display = 'flex';
+    if (welcomeState) welcomeState.style.display = 'none';
+    if (threadContainer) threadContainer.style.display = 'none';
+    if (loadingBox) loadingBox.style.display = 'none';
     resultCard.style.display = 'block';
 
     // Status Badge
@@ -374,8 +773,12 @@ export const ui = {
       if (ratingCard) ratingCard.style.display = 'none';
     }
 
-    // Desplazar suavemente a la tarjeta de resultados
-    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Desplazar suavemente al inicio del área scrollable
+    if (scrollArea) {
+      setTimeout(() => {
+        scrollArea.scrollTop = 0;
+      }, 30);
+    }
   },
 
   // Componente Interactivo de Estrellas para Calificación (Editorial)
@@ -470,7 +873,7 @@ export const ui = {
     if (!grid) return;
 
     grid.innerHTML = '';
-    if (cursos.length === 0) {
+    if (!cursos || cursos.length === 0) {
       grid.innerHTML = `
         <div style="grid-column: 1/-1; text-align: center; padding: 3.5rem; background: var(--bg-card); border-radius: var(--radius-xl); border: 1px dashed var(--border-medium); color: var(--text-muted);">
           No se encontraron cursos que coincidan con los filtros seleccionados.
@@ -482,7 +885,7 @@ export const ui = {
     const esAdmin = usuario && usuario.rol === 'ADMINISTRADOR';
 
     const getCatClass = (cat = '') => {
-      const c = cat.toLowerCase();
+      const c = (cat || '').toLowerCase();
       if (c.includes('web')) return 'cat-web';
       if (c.includes('java') || c.includes('spring')) return 'cat-java';
       if (c.includes('datos') || c.includes('data')) return 'cat-data';
@@ -497,22 +900,52 @@ export const ui = {
       card.className = 'course-editorial-card';
       const catClass = getCatClass(curso.categoria);
 
+      const esEstudiante = state.esEstudiante ? state.esEstudiante() : true;
+      const estaInscrito = curso.id && state.estaInscrito ? state.estaInscrito(curso.id) : false;
+
+      let botonInscripcion = '';
+      if (esEstudiante) {
+        if (estaInscrito) {
+          botonInscripcion = `
+            <span class="badge-enrolled-mini" title="Ya te encuentras matriculado en este curso">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Inscrito</span>
+            </span>
+          `;
+        } else {
+          botonInscripcion = `
+            <button type="button" class="btn-enroll-mini" data-curso-id="${curso.id}" title="Inscribirme oficialmente a este curso">
+              <span>Inscribirme</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+            </button>
+          `;
+        }
+      }
+
+      const cursoNombre = this.escapeHtml(curso.nombre || '');
+      const cursoDesc = this.escapeHtml(curso.descripcion || 'Formación académica especializada.');
+      const cursoCat = this.escapeHtml(curso.categoria || 'Tecnología');
+      const cursoNivel = this.escapeHtml(curso.nivel || 'Intermedio');
+      const cursoHoras = curso.duracionHoras || 40;
+      const prerreqs = curso.prerrequisitos ? this.escapeHtml(curso.prerrequisitos) : '';
+
       card.innerHTML = `
         <div class="course-editorial-header">
           <div class="course-editorial-badges">
-            <span class="badge-cat ${catClass}">${curso.categoria}</span>
-            <span class="badge-level">${curso.nivel}</span>
+            <span class="badge-cat ${catClass}">${cursoCat}</span>
+            <span class="badge-level">${cursoNivel}</span>
           </div>
-          <h3 class="course-editorial-title">${curso.nombre}</h3>
-          <p class="course-editorial-desc">${curso.descripcion}</p>
-          ${curso.prerrequisitos ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; background: var(--bg-card-subtle); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border-left: 2px solid var(--accent-lime);"><strong>Prerrequisitos:</strong> ${curso.prerrequisitos}</div>` : ''}
+          <h3 class="course-editorial-title" style="cursor: pointer;" title="Ver ficha técnica del curso">${cursoNombre}</h3>
+          <p class="course-editorial-desc">${cursoDesc}</p>
+          ${prerreqs ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; background: var(--bg-card-subtle); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border-left: 2px solid var(--accent-lime);"><strong>Prerrequisitos:</strong> ${prerreqs}</div>` : ''}
         </div>
         <div class="course-editorial-footer">
           <span class="course-editorial-hours">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            ${curso.duracionHoras} Horas
+            ${cursoHoras}h
           </span>
           <div class="course-card-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+            ${botonInscripcion}
             ${esAdmin ? `
               <div class="course-rating-avg-badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; padding: 0.4rem 0.75rem; border-radius: 9999px; font-weight: 700; font-size: 0.82rem; border: 1px solid rgba(245, 158, 11, 0.3); display: inline-flex; align-items: center; gap: 0.35rem;" title="Promedio de calificaciones para administradores">
                 <span>⭐</span> ${curso.promedioCalificaciones ? curso.promedioCalificaciones.toFixed(1) : 'Sin votos'} ${curso.totalCalificaciones ? `(${curso.totalCalificaciones})` : ''}
@@ -522,12 +955,65 @@ export const ui = {
                 ⭐ Calificar
               </button>
             `}
-            <button class="btn-ask-course" onclick="window.consultarCursoSemantico('${curso.nombre.replace(/'/g, "\\'")}')">
+            <button type="button" class="btn-ask-course" title="Preguntar al Asesor RAG">
               Orientar →
+            </button>
+            <button type="button" class="btn-details-icon" title="Ver ficha técnica del curso" aria-label="Ver detalles">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             </button>
           </div>
         </div>
       `;
+
+      // Listeners seguros sin strings inline
+      const enrollBtn = card.querySelector('.btn-enroll-mini');
+      if (enrollBtn) {
+        enrollBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.inscribirseACurso) {
+            window.inscribirseACurso(curso.id, enrollBtn);
+          }
+        });
+      }
+
+      const askBtn = card.querySelector('.btn-ask-course');
+      if (askBtn) {
+        askBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.consultarCursoSemantico) {
+            window.consultarCursoSemantico(curso.nombre);
+          }
+        });
+      }
+
+      const detailsBtn = card.querySelector('.btn-details-icon');
+      if (detailsBtn) {
+        detailsBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.verDetalleCursoModal) {
+            window.verDetalleCursoModal(curso.nombre);
+          }
+        });
+      }
+
+      const titleEl = card.querySelector('.course-editorial-title');
+      if (titleEl) {
+        titleEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.verDetalleCursoModal) {
+            window.verDetalleCursoModal(curso.nombre);
+          }
+        });
+      }
+
+      card.addEventListener('click', (e) => {
+        if (!e.target.closest('button')) {
+          if (window.verDetalleCursoModal) {
+            window.verDetalleCursoModal(curso.nombre);
+          }
+        }
+      });
+
       grid.appendChild(card);
     });
   },
@@ -752,13 +1238,49 @@ export const ui = {
   },
 
   // Modal con Detalle Completo del Curso
-  mostrarModalDetalleCurso(curso) {
+  mostrarModalDetalleCurso(curso, onInscribir) {
     let modal = document.getElementById('course-details-modal');
     if (!modal) {
       modal = document.createElement('div');
       modal.id = 'course-details-modal';
       modal.className = 'modal-overlay';
       document.body.appendChild(modal);
+    }
+
+    if ((!curso.id || curso.id === 0) && state.cursos && state.cursos.length > 0) {
+      const found = state.cursos.find(c => c.nombre && curso.nombre && c.nombre.toLowerCase().trim() === curso.nombre.toLowerCase().trim());
+      if (found) {
+        curso = { ...found, ...curso, id: found.id };
+      }
+    }
+
+    const esEstudiante = state.esEstudiante ? state.esEstudiante() : true;
+    const estaInscrito = curso.id && state.estaInscrito ? state.estaInscrito(curso.id) : false;
+
+    let enrollmentBtnHtml = '';
+    if (esEstudiante) {
+      if (estaInscrito) {
+        enrollmentBtnHtml = `
+          <button type="button" class="btn-enrolled-badge" disabled title="Ya te encuentras matriculado en este curso">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Ya estás inscrito</span>
+          </button>
+        `;
+      } else {
+        enrollmentBtnHtml = `
+          <button type="button" class="btn-enroll-course" id="modal-enroll-course-btn" onclick="window.inscribirseACurso(${curso.id}, this)" title="Inscribirme oficialmente a este curso">
+            <span>Inscribirme al Curso</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><path d="M12 5v14M5 12h14"></path></svg>
+          </button>
+        `;
+      }
+    } else {
+      enrollmentBtnHtml = `
+        <span class="enroll-role-notice" title="Solo los estudiantes pueden inscribirse a los cursos">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px; vertical-align: -2px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <span>Solo estudiantes pueden inscribirse</span>
+        </span>
+      `;
     }
 
     modal.innerHTML = `
@@ -789,6 +1311,7 @@ export const ui = {
         </div>
 
         <div class="modal-course-footer">
+          ${enrollmentBtnHtml}
           <button class="btn-primary-lime" id="modal-ask-rag-btn">
             <span>Orientar con Asesor RAG</span>
             <span class="btn-arrow">➔</span>
@@ -805,6 +1328,7 @@ export const ui = {
     const closeBtn = document.getElementById('close-course-modal-btn');
     const closeBtn2 = document.getElementById('modal-close-course-btn');
     const askBtn = document.getElementById('modal-ask-rag-btn');
+    const enrollBtn = document.getElementById('modal-enroll-course-btn');
 
     if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
     if (closeBtn2) closeBtn2.onclick = () => modal.style.display = 'none';
@@ -812,6 +1336,16 @@ export const ui = {
       askBtn.onclick = () => {
         modal.style.display = 'none';
         window.consultarCursoSemantico(curso.nombre);
+      };
+    }
+    if (enrollBtn) {
+      enrollBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (typeof window.inscribirseACurso === 'function') {
+          window.inscribirseACurso(curso.id, enrollBtn);
+        } else if (onInscribir) {
+          onInscribir(curso, enrollBtn);
+        }
       };
     }
   },
@@ -919,7 +1453,10 @@ export const ui = {
       if (idInput) idInput.value = curso.id;
       if (nombreInput) nombreInput.value = curso.nombre || '';
       if (descInput) descInput.value = curso.descripcion || '';
-      if (catInput) catInput.value = curso.categoria || '';
+      if (catInput) {
+        catInput.value = curso.categoria || '';
+        catInput.readOnly = false;
+      }
       if (nivelInput) nivelInput.value = (curso.nivel === 'Básico' ? 'Principiante' : curso.nivel) || 'Principiante';
       if (durInput) durInput.value = curso.duracionHoras || 40;
       if (prereqInput) prereqInput.value = curso.prerrequisitos || '';
@@ -929,7 +1466,10 @@ export const ui = {
       if (idInput) idInput.value = '';
       if (nombreInput) nombreInput.value = '';
       if (descInput) descInput.value = '';
-      if (catInput) catInput.value = '';
+      if (catInput) {
+        catInput.value = '';
+        catInput.readOnly = false;
+      }
       if (nivelInput) nivelInput.value = 'Principiante';
       if (durInput) durInput.value = 40;
       if (prereqInput) prereqInput.value = '';
@@ -1245,6 +1785,297 @@ export const ui = {
     }
 
     container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  },
+
+  // ==========================================================
+  // Renderizado del Panel Docente (Supervisión Curricular e Inscritos)
+  // ==========================================================
+  renderDocenteCursos(cursos, docente, onVerInscritos) {
+    const badgeEl = document.getElementById('docente-badge-area');
+    const subtitleEl = document.getElementById('docente-view-subtitle');
+    const totalEl = document.getElementById('docente-count-total');
+    const activosEl = document.getElementById('docente-count-activos');
+    const matriculadosEl = document.getElementById('docente-count-matriculados');
+    const tbody = document.getElementById('docente-courses-tbody');
+
+    const area = docente ? (docente.areaEspecialidad || docente.area || 'Programación') : 'Especialidad';
+    if (badgeEl) badgeEl.textContent = `Especialidad: ${area}`;
+    if (subtitleEl) subtitleEl.textContent = `Supervisa la oferta académica de tu especialidad (${area}) y consulta los estudiantes inscritos en cada materia.`;
+
+    const total = cursos ? cursos.length : 0;
+    const activos = cursos ? cursos.filter(c => c.activo).length : 0;
+    const totalMatriculados = cursos ? cursos.reduce((acc, c) => acc + (c.totalInscritos || 0), 0) : 0;
+
+    if (totalEl) totalEl.textContent = total;
+    if (activosEl) activosEl.textContent = activos;
+    if (matriculadosEl) matriculadosEl.textContent = totalMatriculados;
+
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!cursos || cursos.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 2.5rem; color: #64748B;">
+            No hay cursos asignados en tu especialidad (${area}).
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    cursos.forEach(curso => {
+      const tr = document.createElement('tr');
+      tr.className = 'docente-row-clickable';
+      const isActivo = curso.activo !== false;
+
+      // Estado LIMPIO: Solo "Activo" o "Inactivo", sin nada entre paréntesis
+      const statusBadge = isActivo
+        ? '<span class="status-badge status-badge-active"><span class="status-dot"></span> Activo</span>'
+        : '<span class="status-badge status-badge-inactive"><span class="status-dot"></span> Inactivo</span>';
+
+      const prereqBadge = curso.prerrequisitos
+        ? `<span class="badge-prereq" title="${curso.prerrequisitos}" style="font-size: 0.8rem; background: #F1F5F9; padding: 3px 8px; border-radius: 6px; border: 1px solid #E2E8F0; color: #334155;">📚 ${curso.prerrequisitos}</span>`
+        : '<span class="text-muted" style="font-size: 0.8rem; color: #94A3B8;">Sin prerrequisitos</span>';
+
+      const numInscritos = curso.totalInscritos || 0;
+
+      tr.innerHTML = `
+        <td>
+          <div class="course-table-title" style="font-weight: 700; color: #0F172A; font-size: 0.95rem;">${curso.nombre}</div>
+          <div class="course-table-prereq" style="font-size: 0.82rem; color: #64748B; margin-top: 3px; max-width: 440px; line-height: 1.4;">
+            ${curso.descripcion ? curso.descripcion.substring(0, 95) + '...' : ''}
+          </div>
+        </td>
+        <td><span class="badge-level badge-level-${(curso.nivel || 'Intermedio').toLowerCase()}">${curso.nivel || 'Intermedio'}</span></td>
+        <td><span style="font-size: 0.88rem; font-weight: 600; color: #1E293B;">${curso.duracionHoras || 40}h</span></td>
+        <td>${prereqBadge}</td>
+        <td>${statusBadge}</td>
+        <td style="text-align: right; white-space: nowrap;">
+          <div style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+            <span class="badge-inscritos" title="${numInscritos} ${numInscritos === 1 ? 'inscrito' : 'inscritos'}">
+              👥 <strong>${numInscritos}</strong>
+            </span>
+            <button type="button" class="btn-ver-inscritos btn-docente-ver-inscritos" data-id="${curso.id}" title="Ver lista de inscritos">
+              <span>Ver inscritos</span> ➔
+            </button>
+          </div>
+        </td>
+      `;
+
+      // Al hacer clic en el botón o en la fila se abre el detalle con inscritos
+      const verBtn = tr.querySelector('.btn-docente-ver-inscritos');
+      if (verBtn) {
+        verBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (onVerInscritos) onVerInscritos(curso);
+        });
+      }
+
+      tr.addEventListener('click', () => {
+        if (onVerInscritos) onVerInscritos(curso);
+      });
+
+      tbody.appendChild(tr);
+    });
+  },
+
+  // Modal para visualizar los estudiantes inscritos en una materia
+  mostrarModalInscritosDocente(curso, inscritos) {
+    let modal = document.getElementById('docente-inscritos-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'docente-inscritos-modal';
+      modal.className = 'modal-overlay';
+      document.body.appendChild(modal);
+    }
+
+    const total = (inscritos || []).length;
+    let studentsHtml = '';
+
+    if (!inscritos || inscritos.length === 0) {
+      studentsHtml = `
+        <div style="text-align: center; padding: 2.8rem 1.5rem; background: #F8FAFC; border-radius: 12px; border: 1px dashed #CBD5E1;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">👨‍🎓</div>
+          <p style="font-weight: 700; color: #1E293B; font-size: 1rem; margin-bottom: 0.35rem;">Aún no hay estudiantes inscritos en esta materia</p>
+          <p style="font-size: 0.85rem; color: #64748B; max-width: 440px; margin: 0 auto;">
+            Tan pronto los alumnos seleccionen esta asignatura o reciban su plan vocacional con IA, aparecerán registrados en esta nómina.
+          </p>
+        </div>
+      `;
+    } else {
+      studentsHtml = `
+        <div class="admin-table-container" style="max-height: 380px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 12px;">
+          <table class="admin-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="background: #F8FAFC;">Estudiante</th>
+                <th style="background: #F8FAFC;">Correo Institucional</th>
+                <th style="background: #F8FAFC;">Nivel</th>
+                <th style="background: #F8FAFC;">Fecha Matrícula</th>
+                <th style="background: #F8FAFC; text-align: right;">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${inscritos.map(ins => {
+                const nombre = ins.estudianteNombre || 'Estudiante';
+                const initials = nombre
+                  .split(' ')
+                  .filter(n => n.length > 0)
+                  .map(n => n[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase();
+                const fecha = ins.fechaInscripcion
+                  ? new Date(ins.fechaInscripcion).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' })
+                  : 'Reciente';
+                return `
+                  <tr>
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 0.65rem;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: #E0E7FF; color: #4338CA; font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                          ${initials}
+                        </div>
+                        <div>
+                          <div style="font-weight: 600; color: #0F172A; font-size: 0.88rem;">${nombre}</div>
+                          <div style="font-size: 0.75rem; color: #64748B;">Interés: ${ins.estudianteAreaInteres || 'Tecnología'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="color: #475569; font-size: 0.85rem;">${ins.estudianteCorreo || '-'}</td>
+                    <td><span class="badge-level badge-level-${(ins.estudianteNivel || 'Principiante').toLowerCase()}" style="font-size: 0.75rem;">${ins.estudianteNivel || 'Principiante'}</span></td>
+                    <td style="color: #64748B; font-size: 0.82rem;">${fecha}</td>
+                    <td style="text-align: right;">
+                      <span class="status-badge status-badge-active" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+                        <span class="status-dot"></span> ${ins.estado || 'Inscrito'}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    modal.innerHTML = `
+      <div class="modal-editorial-card modal-course-card" style="max-width: 720px; width: 94%;">
+        <div class="modal-header" style="margin-bottom: 0.75rem;">
+          <div class="course-modal-badges">
+            <span class="badge-cat">${curso.categoria || 'Especialidad'}</span>
+            <span class="badge-level badge-level-${(curso.nivel || 'Intermedio').toLowerCase()}">${curso.nivel || 'Intermedio'}</span>
+            <span class="badge-inscritos" style="background: #E0E7FF; color: #4338CA; border-color: #C7D2FE;">👥 ${total} matriculado${total === 1 ? '' : 's'}</span>
+          </div>
+          <button class="modal-close-btn" id="close-inscritos-modal-btn">✕</button>
+        </div>
+        
+        <h3 class="modal-course-title" style="font-size: 1.35rem; margin-bottom: 0.35rem; color: #0F172A;">${curso.nombre}</h3>
+        <p class="modal-course-desc" style="margin-bottom: 1.25rem; font-size: 0.88rem; color: #64748B;">
+          Nómina oficial de estudiantes inscritos en esta materia académica (${curso.duracionHoras || 40} horas lectivas).
+        </p>
+
+        ${studentsHtml}
+
+        <div class="modal-course-footer" style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+          <button class="btn-secondary-pill" id="btn-close-inscritos-footer">
+            Cerrar Nómina
+          </button>
+        </div>
+      </div>
+    `;
+
+    modal.style.display = 'flex';
+    const closeBtn = document.getElementById('close-inscritos-modal-btn');
+    const closeBtnFooter = document.getElementById('btn-close-inscritos-footer');
+    if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
+    if (closeBtnFooter) closeBtnFooter.onclick = () => modal.style.display = 'none';
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    };
+  },
+
+  renderDocenteFeedback(feedbackList) {
+    const container = document.getElementById('docente-feedback-container');
+    if (!container) return;
+
+    if (!feedbackList || feedbackList.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state-editorial" style="text-align: center; padding: 3rem 1.5rem; background: #FFFFFF; border-radius: 16px; border: 1px dashed #CBD5E1; margin-top: 1rem;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">💬</div>
+          <h4 style="font-size: 1.1rem; color: #1E293B; margin-bottom: 0.25rem;">Aún no hay feedback registrado sobre tus materias</h4>
+          <p style="color: #64748B; font-size: 0.9rem; max-width: 480px; margin: 0 auto;">
+            Cuando los estudiantes consulten al Asesor Vocacional con IA y se les recomiende un curso de tu especialidad, aquí verás sus preguntas, porcentaje de afinidad y las calificaciones con estrellas que otorguen.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = '';
+    feedbackList.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'docente-feedback-card';
+      card.style.cssText = 'background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);';
+
+      const fechaStr = item.fecha ? new Date(item.fecha).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : 'Reciente';
+      const simPercent = item.similitud ? (item.similitud * 100).toFixed(1) + '%' : 'N/A';
+
+      const stars = item.puntuacion
+        ? '★'.repeat(item.puntuacion) + '☆'.repeat(5 - item.puntuacion)
+        : '<span style="color: #94A3B8; font-size: 0.85rem;">Sin calificar aún</span>';
+
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 700; color: #0F172A; font-size: 0.95rem;">${item.estudianteNombre || 'Estudiante'}</span>
+              <span class="badge-level" style="font-size: 0.75rem; padding: 2px 8px;">${item.estudianteNivel || 'Estudiante'}</span>
+              <span style="font-size: 0.8rem; color: #64748B;">• ${fechaStr}</span>
+            </div>
+            <div style="margin-top: 6px; font-size: 0.92rem; color: #334155; font-style: italic; background: #F8FAFC; padding: 8px 12px; border-left: 3px solid #D7F338; border-radius: 4px;">
+              "${item.pregunta || 'Consulta académica'}"
+            </div>
+          </div>
+          <div style="text-align: right; min-width: 140px;">
+            <div style="color: #F59E0B; font-size: 1.1rem; letter-spacing: 2px;">${stars}</div>
+            <div style="font-size: 0.78rem; color: #64748B; margin-top: 2px;">Afinidad IA: <strong>${simPercent}</strong></div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #F1F5F9; border-radius: 8px; padding: 8px 14px; margin-top: 0.6rem;">
+          <div style="font-size: 0.85rem; color: #1E293B;">
+            📖 Curso sugerido: <strong>${item.cursoNombre || 'Asignatura'}</strong> <span style="color: #64748B;">(${item.cursoCategoria || 'Especialidad'})</span>
+          </div>
+          ${item.comentario ? `<div style="font-size: 0.85rem; color: #047857; font-weight: 500;">💬 "${item.comentario}"</div>` : ''}
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  },
+
+  renderDocenteEstadisticas(stats) {
+    if (!stats) return;
+    const cursosEl = document.getElementById('docente-stat-cursos');
+    const consultasEl = document.getElementById('docente-stat-consultas');
+    const satisfaccionEl = document.getElementById('docente-stat-satisfaccion');
+    const calificacionesEl = document.getElementById('docente-stat-calificaciones');
+    const topCursoEl = document.getElementById('docente-stat-top-curso');
+
+    if (cursosEl) cursosEl.textContent = stats.totalCursosEspecialidad || 0;
+    if (consultasEl) consultasEl.textContent = stats.totalConsultasRelacionadas || 0;
+    if (satisfaccionEl) {
+      satisfaccionEl.textContent = (stats.promedioCalificacionCursos !== null && stats.promedioCalificacionCursos !== undefined)
+        ? `★ ${Number(stats.promedioCalificacionCursos).toFixed(1)}`
+        : 'N/A';
+    }
+    if (calificacionesEl) calificacionesEl.textContent = stats.totalCalificacionesRecibidas || 0;
+    if (topCursoEl) {
+      topCursoEl.textContent = (!stats.cursoMasDemandado || stats.cursoMasDemandado === 'Ninguno aún')
+        ? 'Sin recomendaciones registradas aún en tu especialidad'
+        : stats.cursoMasDemandado;
+    }
   },
 
   renderEstadisticasAdmin(data) {

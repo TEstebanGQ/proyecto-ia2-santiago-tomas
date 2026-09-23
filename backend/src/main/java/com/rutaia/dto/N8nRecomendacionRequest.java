@@ -2,6 +2,8 @@ package com.rutaia.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 public class N8nRecomendacionRequest {
 
     @JsonProperty("id_consulta")
@@ -15,23 +17,74 @@ public class N8nRecomendacionRequest {
     @JsonProperty("area_interes")
     private String areaInteres;
 
+    @JsonProperty("cursos_previos")
+    private List<String> cursosPrevios;
+
+    @JsonProperty("contexto_previo")
+    private String contextoPrevio;
+
     private Double umbral;
 
     public N8nRecomendacionRequest() {
     }
 
-    public N8nRecomendacionRequest(Long idConsulta, String pregunta, String nivelExperiencia, String areaInteres) {
+    public N8nRecomendacionRequest(
+            Long idConsulta,
+            String pregunta,
+            String nivelExperiencia,
+            String areaInteres
+    ) {
         this.idConsulta = idConsulta;
         this.pregunta = pregunta;
         this.nivelExperiencia = nivelExperiencia;
         this.areaInteres = areaInteres;
     }
 
-    public N8nRecomendacionRequest(Long idConsulta, String pregunta, String nivelExperiencia, String areaInteres, Double umbral) {
+    public N8nRecomendacionRequest(
+            Long idConsulta,
+            String pregunta,
+            String nivelExperiencia,
+            String areaInteres,
+            List<String> cursosPrevios,
+            String contextoPrevio
+    ) {
         this.idConsulta = idConsulta;
         this.pregunta = pregunta;
         this.nivelExperiencia = nivelExperiencia;
         this.areaInteres = areaInteres;
+        this.cursosPrevios = cursosPrevios;
+        this.contextoPrevio = contextoPrevio;
+    }
+
+    public N8nRecomendacionRequest(
+            Long idConsulta,
+            String pregunta,
+            String nivelExperiencia,
+            String areaInteres,
+            Double umbral
+    ) {
+        this.idConsulta = idConsulta;
+        this.pregunta = pregunta;
+        this.nivelExperiencia = nivelExperiencia;
+        this.areaInteres = areaInteres;
+        this.umbral = umbral;
+    }
+
+    public N8nRecomendacionRequest(
+            Long idConsulta,
+            String pregunta,
+            String nivelExperiencia,
+            String areaInteres,
+            List<String> cursosPrevios,
+            String contextoPrevio,
+            Double umbral
+    ) {
+        this.idConsulta = idConsulta;
+        this.pregunta = pregunta;
+        this.nivelExperiencia = nivelExperiencia;
+        this.areaInteres = areaInteres;
+        this.cursosPrevios = cursosPrevios;
+        this.contextoPrevio = contextoPrevio;
         this.umbral = umbral;
     }
 
@@ -65,6 +118,22 @@ public class N8nRecomendacionRequest {
 
     public void setAreaInteres(String areaInteres) {
         this.areaInteres = areaInteres;
+    }
+
+    public List<String> getCursosPrevios() {
+        return cursosPrevios;
+    }
+
+    public void setCursosPrevios(List<String> cursosPrevios) {
+        this.cursosPrevios = cursosPrevios;
+    }
+
+    public String getContextoPrevio() {
+        return contextoPrevio;
+    }
+
+    public void setContextoPrevio(String contextoPrevio) {
+        this.contextoPrevio = contextoPrevio;
     }
 
     public Double getUmbral() {

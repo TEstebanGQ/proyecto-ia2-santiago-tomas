@@ -12,17 +12,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     ui.renderUsuarioHeader(state.usuario);
   }
 
+  window.navegarACatalogo = () => cambiarVista('catalogo');
+
   initNavigation();
   initMobileNavigation();
   initPastelTiles();
   initTestChips();
   initQueryForm();
+  initChatControls();
   initCatalogFilters();
   initStudentModal();
   initQuickSearch();
   initAuthModal();
   initAdminPanel();
+  initDocentePanel();
   initRegisterView();
+
+  ui.renderChatSession(state.chatSession, onCalificarHandler);
 
   await cargarDatosIniciales();
 });
@@ -228,6 +234,9 @@ export function cambiarVista(viewId) {
     cargarEstudiantesAdmin();
     cargarUmbralAdmin();
   }
+  if (viewId === 'docente') {
+    cargarPanelDocente();
+  }
   
   // Desplazar al tope del contenido
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -299,6 +308,29 @@ function initQueryForm() {
   }
 }
 
+// Manejador centralizado de calificaciones
+const onCalificarHandler = async (recId, puntuacion, comentario) => {
+  const resCal = await api.calificarRecomendacion(recId, puntuacion, comentario);
+  state.guardarCalificacionEnMensaje(recId, puntuacion, comentario);
+  cargarEstadisticas();
+  return resCal;
+};
+
+// Controles de Sesión de Chat (Reiniciar conversación)
+function initChatControls() {
+  const resetBtn = document.getElementById('btn-reset-chat');
+  const resetBtnFromLimit = document.getElementById('btn-new-chat-from-limit');
+
+  const reiniciarHandler = () => {
+    state.reiniciarChat();
+    ui.renderChatSession(state.chatSession, onCalificarHandler);
+    ui.showToast('Sesión de conversación reiniciada. ¡Listo para una nueva consulta!', 'info');
+  };
+
+  if (resetBtn) resetBtn.addEventListener('click', reiniciarHandler);
+  if (resetBtnFromLimit) resetBtnFromLimit.addEventListener('click', reiniciarHandler);
+}
+
 async function ejecutarConsulta(pregunta) {
   if (!pregunta) {
     ui.showToast('Por favor escribe tu duda o consulta vocacional.', 'error');
@@ -311,19 +343,38 @@ async function ejecutarConsulta(pregunta) {
     return;
   }
 
+  // Validar si superó el límite de 5 consultas en esta sesión (Ventana deslizante)
+  if (!state.puedeEnviarMensaje()) {
+    ui.showToast('Has completado el límite de 5 consultas en esta sesión. Inicia una nueva conversación para continuar.', 'warning');
+    return;
+  }
+
   // Asegurar que estamos en la vista de Asesor
   cambiarVista('asesor');
+
+  // Obtener contexto de cursos previos para enriquecer al LLM sin gastar tokens en respuestas largas
+  const contexto = state.obtenerContextoCompacto();
+
+  // Agregar turno del estudiante inmediatamente a la interfaz (0 tokens gastados)
+  state.agregarMensajeUsuario(pregunta);
+  ui.renderChatSession(state.chatSession, onCalificarHandler);
+
+  const textarea = document.getElementById('query-input');
+  if (textarea) textarea.value = '';
+
   ui.setLoading(true);
 
   try {
-    const resultado = await api.solicitarRecomendacion(state.estudianteActivo.id, pregunta);
+    const resultado = await api.solicitarRecomendacion(
+      state.estudianteActivo.id,
+      pregunta,
+      contexto.cursosPrevios,
+      contexto.contextoPrevio
+    );
     state.setUltimaRecomendacion(resultado);
+    state.agregarRespuestaIA(resultado);
 
-    ui.renderResultadoRecomendacion(resultado, async (recId, puntuacion, comentario) => {
-      const resCal = await api.calificarRecomendacion(recId, puntuacion, comentario);
-      cargarEstadisticas();
-      return resCal;
-    });
+    ui.renderChatSession(state.chatSession, onCalificarHandler);
 
     if (resultado.estadoFinal === 'Sin resultados') {
       ui.showToast('No se identificaron cursos del catálogo para esta consulta.', 'info');
@@ -368,23 +419,23 @@ function initCatalogFilters() {
   const levelSelect = document.getElementById('catalog-level');
 
   const aplicarFiltros = () => {
-    const searchVal = (searchInput.value || '').toLowerCase().trim();
-    const catVal = categorySelect ? categorySelect.value : '';
-    const levelVal = levelSelect ? levelSelect.value : '';
+    const searchVal = (searchInput && searchInput.value ? searchInput.value : '').toLowerCase().trim();
+    const catVal = (categorySelect ? categorySelect.value : '').toLowerCase().trim();
+    const levelVal = (levelSelect ? levelSelect.value : '').toLowerCase().trim();
 
     let filtrados = state.cursos || [];
 
     if (catVal) {
-      filtrados = filtrados.filter(c => c.categoria.toLowerCase() === catVal.toLowerCase());
+      filtrados = filtrados.filter(c => (c.categoria || '').toLowerCase() === catVal);
     }
     if (levelVal) {
-      filtrados = filtrados.filter(c => c.nivel.toLowerCase() === levelVal.toLowerCase());
+      filtrados = filtrados.filter(c => (c.nivel || '').toLowerCase() === levelVal);
     }
     if (searchVal) {
       filtrados = filtrados.filter(c =>
-        c.nombre.toLowerCase().includes(searchVal) ||
-        c.descripcion.toLowerCase().includes(searchVal) ||
-        c.categoria.toLowerCase().includes(searchVal)
+        (c.nombre || '').toLowerCase().includes(searchVal) ||
+        (c.descripcion || '').toLowerCase().includes(searchVal) ||
+        (c.categoria || '').toLowerCase().includes(searchVal)
       );
     }
 
@@ -455,6 +506,7 @@ function initStudentModal() {
     const est = e.detail;
     state.setEstudianteActivo(est);
     ui.renderEstudianteActivo(est);
+    ui.renderChatSession(state.chatSession, onCalificarHandler);
     ui.showToast(`Perfil activo: ${est.nombreCompleto}`, 'info');
     if (modal) modal.style.display = 'none';
     actualizarHistorialesEstudiante();
@@ -471,34 +523,39 @@ function abrirModalEstudiantes() {
 
 // 9. Cargas de Datos y Conexión con Spring Boot
 async function cargarDatosIniciales() {
+  // 1. Cargar catálogo de cursos prioritariamente (ruta pública)
+  try {
+    const cursos = await api.getCursos();
+    state.setCursos(cursos || []);
+    poblarCategoriasSelect(cursos || []);
+  } catch (err) {
+    console.warn('No se pudo precargar cursos:', err.message);
+  }
+
+  // 2. Cargar lista de estudiantes y perfil activo
   try {
     const estudiantes = await api.getEstudiantes();
-    state.setEstudiantes(estudiantes);
+    state.setEstudiantes(estudiantes || []);
 
-    // Inicializar estado de usuario y header
     if (state.usuario) {
       ui.renderUsuarioHeader(state.usuario);
     } else if (state.estudianteActivo) {
       ui.renderEstudianteActivo(state.estudianteActivo);
     }
 
-    const cursos = await api.getCursos();
-    state.setCursos(cursos);
-    poblarCategoriasSelect(cursos);
-
     if (state.estudianteActivo) {
       actualizarHistorialesEstudiante();
     }
   } catch (err) {
-    console.warn('Backend aún conectándose:', err.message);
+    console.warn('Backend aún conectándose a estudiantes:', err.message);
   }
 }
 
 function poblarCategoriasSelect(cursos) {
   const select = document.getElementById('catalog-category');
-  if (!select) return;
+  if (!select || !Array.isArray(cursos)) return;
 
-  const categorias = [...new Set(cursos.map(c => c.categoria))].sort();
+  const categorias = [...new Set(cursos.map(c => c.categoria).filter(Boolean))].sort();
   select.innerHTML = '<option value="">Todas las categorías</option>';
   categorias.forEach(cat => {
     const opt = document.createElement('option');
@@ -510,9 +567,21 @@ function poblarCategoriasSelect(cursos) {
 
 async function cargarCatalogo() {
   try {
-    const cursos = await api.getCursos();
-    state.setCursos(cursos);
-    ui.renderCatalogo(cursos);
+    let cursos = state.cursos;
+    if (!cursos || cursos.length === 0) {
+      cursos = await api.getCursos();
+      state.setCursos(cursos || []);
+      poblarCategoriasSelect(cursos || []);
+    } else {
+      // Refrescar en background para tener siempre los datos más recientes
+      api.getCursos().then(nuevos => {
+        if (nuevos && nuevos.length > 0) {
+          state.setCursos(nuevos);
+          poblarCategoriasSelect(nuevos);
+        }
+      }).catch(e => console.warn('Sync background cursos:', e));
+    }
+    ui.renderCatalogo(cursos || []);
   } catch (err) {
     ui.showToast('Error al cargar el catálogo de cursos: ' + err.message, 'error');
   }
@@ -526,8 +595,13 @@ async function actualizarHistorialesEstudiante() {
     
     // Renderizar widget de historial rápido
     ui.renderHistorialRapido(historial, (item) => mostrarDetalleHistorial(item));
+
+    if (state.esEstudiante()) {
+      const inscripciones = await api.getInscripcionesEstudiante(state.estudianteActivo.id);
+      state.setInscripciones(inscripciones);
+    }
   } catch (err) {
-    console.warn('No se pudo actualizar historial rápido:', err.message);
+    console.warn('No se pudo actualizar historial o inscripciones:', err.message);
   }
 }
 
@@ -596,6 +670,12 @@ async function cargarEstadisticas() {
   }
 }
 
+// Utilidad global para volver desde el detalle de historial a la conversación activa
+window.volverAlChatActivo = () => {
+  cambiarVista('asesor');
+  ui.renderChatSession(state.chatSession, onCalificarHandler);
+};
+
 // Utilidad global invocada desde tarjetas de curso en el catálogo
 window.consultarCursoSemantico = (nombreCurso) => {
   const textarea = document.getElementById('query-input');
@@ -606,17 +686,89 @@ window.consultarCursoSemantico = (nombreCurso) => {
   }
 };
 
-// Modal con detalles del curso
+// Modal con detalles del curso y matriculación
 window.verDetalleCursoModal = (nombreCurso) => {
   const curso = state.cursos.find(c => c.nombre.toLowerCase().trim() === nombreCurso.toLowerCase().trim()) || {
+    id: null,
     nombre: nombreCurso,
     categoria: 'Tecnología',
     nivel: 'Intermedio',
     duracionHoras: 40,
     descripcion: 'Formación académica especializada con estándares de la industria, orientada a la adquisición de competencias profesionales.'
   };
-  ui.mostrarModalDetalleCurso(curso);
+  ui.mostrarModalDetalleCurso(curso, handleInscribirmeEnCurso);
 };
+
+// Matricular estudiante a un curso (Exclusivo para el rol ESTUDIANTE)
+window.inscribirseACurso = async (cursoId, btnEl) => {
+  if (!state.esEstudiante()) {
+    ui.showToast('Solo los estudiantes pueden inscribirse a los cursos.', 'warning');
+    return;
+  }
+  let estudianteId = state.estudianteActivo ? state.estudianteActivo.id : (state.usuario ? state.usuario.id : null);
+  if (!estudianteId && state.estudiantes && state.estudiantes.length > 0) {
+    estudianteId = state.estudiantes[0].id;
+  }
+  if (!estudianteId) {
+    estudianteId = 1;
+  }
+
+  const curso = state.cursos.find(c => c.id == cursoId || (c.nombre && String(cursoId) === c.nombre.toLowerCase().trim()));
+  const cId = curso ? curso.id : (Number(cursoId) || 1);
+  const cNombre = curso ? curso.nombre : 'el curso seleccionado';
+
+  try {
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.dataset.original = btnEl.innerHTML;
+      btnEl.innerHTML = `<span>Inscribiendo...</span> <svg class="spin-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>`;
+    }
+    await api.inscribirCurso(estudianteId, cId);
+    state.agregarInscripcion(cId);
+    ui.showToast(`Inscripción exitosa: te has matriculado en "${cNombre}".`, 'success');
+
+    const renderEnrolledState = (targetBtn) => {
+      if (targetBtn.classList.contains('btn-enroll-mini')) {
+        targetBtn.className = 'badge-enrolled-mini';
+        targetBtn.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Inscrito</span>
+        `;
+        targetBtn.disabled = true;
+      } else {
+        targetBtn.className = 'btn-enrolled-badge';
+        targetBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Ya estás inscrito</span>
+        `;
+        targetBtn.disabled = true;
+      }
+    };
+
+    if (btnEl) {
+      renderEnrolledState(btnEl);
+    }
+
+    // Actualizar botones de este curso en todo el DOM
+    document.querySelectorAll(`button[data-curso-id="${cId}"], button[onclick*="inscribirseACurso(${cId}"]`).forEach(b => {
+      if (b !== btnEl) {
+        renderEnrolledState(b);
+      }
+    });
+
+  } catch (err) {
+    ui.showToast(err.message || 'Error al procesar la inscripción.', 'error');
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = btnEl.dataset.original || `<span>Inscribirme</span> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>`;
+    }
+  }
+};
+
+async function handleInscribirmeEnCurso(curso, btnEl) {
+  const cId = curso ? (curso.id || curso) : null;
+  return window.inscribirseACurso(cId, btnEl);
+}
 
 // ==========================================================================
 // 10. MODAL DE AUTENTICACIÓN Y ROLES (GOOGLE / ESTUDIANTE / ADMIN)
@@ -843,17 +995,30 @@ function initAdminPanel() {
       const cursoData = { nombre, descripcion, categoria, nivel, duracionHoras, prerrequisitos };
 
       try {
+        const isDocente = state.usuario && state.usuario.rol === 'DOCENTE';
         if (id) {
-          await api.actualizarCurso(id, cursoData);
+          if (isDocente) {
+            await api.actualizarDocenteCurso(id, cursoData, state.usuario ? state.usuario.email : null);
+          } else {
+            await api.actualizarCurso(id, cursoData);
+          }
           ui.showToast(`Curso #${id} actualizado correctamente.`, 'success');
         } else {
-          await api.crearCurso(cursoData);
+          if (isDocente) {
+            await api.crearDocenteCurso(cursoData, state.usuario ? state.usuario.email : null);
+          } else {
+            await api.crearCurso(cursoData);
+          }
           ui.showToast(`Curso "${nombre}" creado y registrado en el catálogo.`, 'success');
         }
 
         if (modal) modal.style.display = 'none';
         form.reset();
-        await cargarCursosAdmin();
+        if (isDocente) {
+          await cargarPanelDocente();
+        } else {
+          await cargarCursosAdmin();
+        }
         await cargarCatalogo();
       } catch (err) {
         ui.showToast('Error al procesar el curso: ' + err.message, 'error');
@@ -1185,6 +1350,134 @@ function actualizarEtiquetaVisualUmbral(pct) {
     badgeStatus.className = 'status-pill';
     badgeStatus.style.background = '#FEF3C7';
     badgeStatus.style.color = '#92400E';
+  }
+}
+
+// ==========================================================================
+// 13. PANEL DOCENTE: GESTIÓN DE ESPECIALIDAD, FEEDBACK Y ANALÍTICAS
+// ==========================================================================
+function initDocentePanel() {
+  const openNewBtn = document.getElementById('btn-open-docente-new-course');
+  const subtabCourses = document.getElementById('subtab-docente-courses');
+  const subtabFeedback = document.getElementById('subtab-docente-feedback');
+  const subtabStats = document.getElementById('subtab-docente-stats');
+
+  const paneCourses = document.getElementById('docente-pane-courses');
+  const paneFeedback = document.getElementById('docente-pane-feedback');
+  const paneStats = document.getElementById('docente-pane-stats');
+
+  const switchDocenteTab = (targetTab) => {
+    if (subtabCourses) subtabCourses.classList.toggle('active', targetTab === 'courses');
+    if (subtabFeedback) subtabFeedback.classList.toggle('active', targetTab === 'feedback');
+    if (subtabStats) subtabStats.classList.toggle('active', targetTab === 'stats');
+
+    if (paneCourses) paneCourses.style.display = (targetTab === 'courses') ? 'block' : 'none';
+    if (paneFeedback) paneFeedback.style.display = (targetTab === 'feedback') ? 'block' : 'none';
+    if (paneStats) paneStats.style.display = (targetTab === 'stats') ? 'block' : 'none';
+  };
+
+  if (subtabCourses) subtabCourses.addEventListener('click', () => switchDocenteTab('courses'));
+  if (subtabFeedback) subtabFeedback.addEventListener('click', () => switchDocenteTab('feedback'));
+  if (subtabStats) subtabStats.addEventListener('click', () => switchDocenteTab('stats'));
+
+  if (openNewBtn) {
+    openNewBtn.addEventListener('click', () => {
+      const area = state.docentePerfil ? state.docentePerfil.areaEspecialidad : (state.usuario ? state.usuario.area : 'Programación');
+      abrirModalCursoDocente(null, area);
+    });
+  }
+}
+
+function abrirModalCursoDocente(curso = null, areaEspecialidad = 'Programación') {
+  const modal = document.getElementById('course-modal');
+  const title = document.getElementById('course-modal-title');
+  const subtitle = document.getElementById('course-modal-subtitle');
+  const form = document.getElementById('course-admin-form');
+  const catInput = document.getElementById('course-form-categoria');
+
+  if (!modal || !form) return;
+  form.reset();
+
+  const area = areaEspecialidad || (state.docentePerfil ? state.docentePerfil.areaEspecialidad : 'Programación');
+
+  if (curso) {
+    if (title) title.textContent = `Editar Asignatura: ${curso.nombre}`;
+    if (subtitle) subtitle.textContent = `Actualiza las competencias y prerrequisitos dentro de tu cátedra (${area}):`;
+    document.getElementById('course-form-id').value = curso.id;
+    document.getElementById('course-form-nombre').value = curso.nombre || '';
+    document.getElementById('course-form-descripcion').value = curso.descripcion || '';
+    if (catInput) {
+      catInput.value = area;
+      catInput.readOnly = true;
+    }
+    document.getElementById('course-form-nivel').value = (curso.nivel === 'Básico' ? 'Principiante' : curso.nivel) || 'Intermedio';
+    document.getElementById('course-form-duracion').value = curso.duracionHoras || 40;
+    document.getElementById('course-form-prerrequisitos').value = curso.prerrequisitos || '';
+  } else {
+    if (title) title.textContent = `Registrar Nueva Asignatura en ${area}`;
+    if (subtitle) subtitle.textContent = `Define los contenidos curriculares y prerrequisitos de tu especialidad:`;
+    document.getElementById('course-form-id').value = '';
+    if (catInput) {
+      catInput.value = area;
+      catInput.readOnly = true;
+    }
+    document.getElementById('course-form-nivel').value = 'Principiante';
+    document.getElementById('course-form-duracion').value = 40;
+  }
+
+  modal.style.display = 'flex';
+}
+
+async function toggleActivoDocenteCurso(id, activar) {
+  try {
+    const email = state.usuario ? state.usuario.email : null;
+    if (activar) {
+      await api.activarDocenteCurso(id, email);
+      ui.showToast('Curso reactivado y vector reindexado en Qdrant.', 'success');
+    } else {
+      await api.desactivarDocenteCurso(id, email);
+      ui.showToast('Curso desactivado y vector removido de Qdrant.', 'info');
+    }
+    await cargarPanelDocente();
+    await cargarCatalogo();
+  } catch (err) {
+    ui.showToast('Error al cambiar estado del curso: ' + err.message, 'error');
+  }
+}
+
+async function cargarPanelDocente() {
+  try {
+    const email = state.usuario ? state.usuario.email : null;
+    const perfil = await api.getDocentePerfil(email);
+    state.setDocentePerfil(perfil);
+
+    const [cursos, feedback, stats] = await Promise.all([
+      api.getDocenteCursos(email),
+      api.getDocenteFeedback(email),
+      api.getDocenteEstadisticas(email)
+    ]);
+
+    state.setCursosDocente(cursos);
+    state.setDocenteFeedback(feedback);
+    state.setDocenteEstadisticas(stats);
+
+    ui.renderDocenteCursos(
+      cursos,
+      perfil,
+      async (curso) => {
+        try {
+          const currentEmail = state.usuario ? state.usuario.email : null;
+          const inscritos = await api.getDocenteInscritosCurso(curso.id, currentEmail);
+          ui.mostrarModalInscritosDocente(curso, inscritos);
+        } catch (err) {
+          ui.showToast('Error al consultar inscritos: ' + err.message, 'error');
+        }
+      }
+    );
+    ui.renderDocenteFeedback(feedback);
+    ui.renderDocenteEstadisticas(stats);
+  } catch (err) {
+    ui.showToast('Error al cargar panel docente: ' + err.message, 'error');
   }
 }
 

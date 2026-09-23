@@ -54,4 +54,24 @@ public class EstudianteController {
     public ResponseEntity<List<HistorialConsultaDTO>> obtenerHistorial(@PathVariable Long id) {
         return ResponseEntity.ok(estudianteService.obtenerHistorial(id));
     }
+
+    @PostMapping("/{estudianteId}/inscribir/{cursoId}")
+    @Operation(summary = "Inscribir un estudiante a un curso (exclusivo para estudiantes)")
+    public ResponseEntity<com.rutaia.dto.InscripcionResponseDTO> inscribir(
+            @PathVariable Long estudianteId,
+            @PathVariable Long cursoId,
+            org.springframework.security.core.Authentication authentication) {
+        String role = null;
+        if (authentication != null && authentication.getAuthorities() != null && !authentication.getAuthorities().isEmpty()) {
+            role = authentication.getAuthorities().iterator().next().getAuthority();
+        }
+        com.rutaia.dto.InscripcionResponseDTO inscripcion = estudianteService.inscribirEstudiante(estudianteId, cursoId, role);
+        return ResponseEntity.status(HttpStatus.CREATED).body(inscripcion);
+    }
+
+    @GetMapping("/{estudianteId}/inscripciones")
+    @Operation(summary = "Consultar los cursos en los que un estudiante está matriculado")
+    public ResponseEntity<List<com.rutaia.dto.InscripcionResponseDTO>> listarInscripciones(@PathVariable Long estudianteId) {
+        return ResponseEntity.ok(estudianteService.listarInscripcionesPorEstudiante(estudianteId));
+    }
 }

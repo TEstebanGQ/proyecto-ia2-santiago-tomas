@@ -79,7 +79,7 @@ class EstadisticaServiceTest {
         when(calificacionRepository.obtenerPromedioPuntuacionPorEstudiante(estudianteId)).thenReturn(4.5);
         
         Object[] row = new Object[]{"Desarrollo Backend con Spring Boot", 2L};
-        when(cursoRepository.findCursoMasRecomendadoPorEstudiante(estudianteId)).thenReturn(List.<Object[]>of(row));
+        when(cursoRepository.findCursoMasRecomendadoPorEstudiante(estudianteId)).thenReturn(Collections.singletonList(row));
 
         EstadisticasDTO dto = estadisticaService.obtenerEstadisticas(estudianteId);
 

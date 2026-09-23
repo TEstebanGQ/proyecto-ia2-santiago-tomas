@@ -168,8 +168,8 @@ public class CursoService {
         }
     }
 
-    private CursoResponseDTO mapToResponse(Curso c) {
-        CursoResponseDTO response = new CursoResponseDTO(
+    public CursoResponseDTO mapToResponse(Curso c) {
+        return new CursoResponseDTO(
                 c.getId(),
                 c.getNombre(),
                 c.getDescripcion(),
