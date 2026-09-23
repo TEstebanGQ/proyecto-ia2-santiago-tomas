@@ -1377,7 +1377,7 @@ export const ui = {
     if (!cursos || cursos.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" style="text-align: center; padding: 2.5rem; color: #64748B;">
+          <td colspan="6" style="text-align: center; padding: 2.5rem; color: #64748B;">
             No hay cursos asignados en tu especialidad (${area}).
           </td>
         </tr>
@@ -1412,15 +1412,15 @@ export const ui = {
         <td><span style="font-size: 0.88rem; font-weight: 600; color: #1E293B;">${curso.duracionHoras || 40}h</span></td>
         <td>${prereqBadge}</td>
         <td>${statusBadge}</td>
-        <td>
-          <span class="badge-inscritos">
-            👥 <strong>${numInscritos}</strong> ${numInscritos === 1 ? 'alumno' : 'alumnos'}
-          </span>
-        </td>
         <td style="text-align: right; white-space: nowrap;">
-          <button type="button" class="btn-ver-inscritos btn-docente-ver-inscritos" data-id="${curso.id}" title="Ver lista de inscritos">
-            <span>Ver Inscritos</span> ➔
-          </button>
+          <div style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+            <span class="badge-inscritos" title="${numInscritos} ${numInscritos === 1 ? 'inscrito' : 'inscritos'}">
+              👥 <strong>${numInscritos}</strong>
+            </span>
+            <button type="button" class="btn-ver-inscritos btn-docente-ver-inscritos" data-id="${curso.id}" title="Ver lista de inscritos">
+              <span>Ver inscritos</span> ➔
+            </button>
+          </div>
         </td>
       `;
 
