@@ -5,6 +5,8 @@
 -- ==========================================================
 
 -- Limpieza si existen tablas previas
+DROP TABLE IF EXISTS auditoria CASCADE;
+DROP TABLE IF EXISTS calificaciones_curso CASCADE;
 DROP TABLE IF EXISTS calificaciones CASCADE;
 DROP TABLE IF EXISTS fuentes CASCADE;
 DROP TABLE IF EXISTS recomendaciones CASCADE;
@@ -97,6 +99,37 @@ CREATE TABLE calificaciones (
 );
 
 CREATE INDEX idx_calificaciones_recomendacion ON calificaciones(recomendacion_id);
+
+-- ----------------------------------------------------------
+-- 6b. TABLA: calificaciones_curso (Calificaciones de Cursos por Estudiantes)
+-- ----------------------------------------------------------
+CREATE TABLE calificaciones_curso (
+    id BIGSERIAL PRIMARY KEY,
+    curso_id BIGINT NOT NULL REFERENCES cursos(id) ON DELETE CASCADE,
+    puntuacion INT NOT NULL CHECK (puntuacion BETWEEN 1 AND 5),
+    comentario TEXT NULL,
+    estudiante_id BIGINT NULL REFERENCES estudiantes(id) ON DELETE SET NULL,
+    fecha TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_calificaciones_curso_curso ON calificaciones_curso(curso_id);
+
+-- ----------------------------------------------------------
+-- 7. TABLA: auditoria (Bitácora de Ingresos y Registros)
+-- ----------------------------------------------------------
+CREATE TABLE auditoria (
+    id BIGSERIAL PRIMARY KEY,
+    tipo_evento VARCHAR(50) NOT NULL, -- 'INGRESO', 'REGISTRO'
+    usuario_email VARCHAR(150) NOT NULL,
+    usuario_nombre VARCHAR(150),
+    rol VARCHAR(50) NOT NULL, -- 'ESTUDIANTE', 'ADMINISTRADOR'
+    detalle TEXT,
+    fecha TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_auditoria_fecha ON auditoria(fecha DESC);
+CREATE INDEX idx_auditoria_tipo ON auditoria(tipo_evento);
+CREATE INDEX idx_auditoria_usuario ON auditoria(usuario_email);
 
 -- ==========================================================
 -- DATOS SEMILLA (SEED DATA)
@@ -384,4 +417,24 @@ INSERT INTO calificaciones (recomendacion_id, puntuacion, comentario, fecha) VAL
 (7, 5, 'Muy precisa la relación entre Docker y Kubernetes para comenzar a desplegar microservicios.', NOW() - INTERVAL '1 day 15 hours');
 
 SELECT setval('calificaciones_id_seq', (SELECT MAX(id) FROM calificaciones));
+
+-- ----------------------------------------------------------
+-- REGISTROS INICIALES DE AUDITORÍA (INGRESOS Y REGISTROS)
+-- ----------------------------------------------------------
+INSERT INTO auditoria (tipo_evento, usuario_email, usuario_nombre, rol, detalle, fecha) VALUES
+('REGISTRO', 'santiago.gomez@universidad.edu.co', 'Santiago Gómez Morales', 'ESTUDIANTE', 'Registro inicial de cuenta de estudiante', NOW() - INTERVAL '6 days'),
+('INGRESO', 'santiago.gomez@universidad.edu.co', 'Santiago Gómez Morales', 'ESTUDIANTE', 'Inicio de sesión exitoso (local)', NOW() - INTERVAL '5 days 10 hours'),
+('REGISTRO', 'admin@universidad.edu.co', 'Administrador Académico', 'ADMINISTRADOR', 'Inicialización de cuenta administrativa', NOW() - INTERVAL '5 days 8 hours'),
+('INGRESO', 'admin@universidad.edu.co', 'Administrador Académico', 'ADMINISTRADOR', 'Inicio de sesión panel administrador', NOW() - INTERVAL '5 days 7 hours'),
+('REGISTRO', 'ana.martinez@universidad.edu.co', 'Ana María Martínez', 'ESTUDIANTE', 'Registro de nuevo estudiante institucional', NOW() - INTERVAL '4 days 20 hours'),
+('INGRESO', 'ana.martinez@universidad.edu.co', 'Ana María Martínez', 'ESTUDIANTE', 'Inicio de sesión exitoso (local)', NOW() - INTERVAL '4 days 18 hours'),
+('REGISTRO', 'carlos.rodriguez@universidad.edu.co', 'Carlos Eduardo Rodríguez', 'ESTUDIANTE', 'Registro de cuenta institucional', NOW() - INTERVAL '4 days 5 hours'),
+('INGRESO', 'carlos.rodriguez@universidad.edu.co', 'Carlos Eduardo Rodríguez', 'ESTUDIANTE', 'Inicio de sesión con Google', NOW() - INTERVAL '4 days 2 hours'),
+('REGISTRO', 'laura.herrera@universidad.edu.co', 'Laura Sofía Herrera', 'ESTUDIANTE', 'Registro de nuevo estudiante', NOW() - INTERVAL '3 days 14 hours'),
+('INGRESO', 'admin@universidad.edu.co', 'Administrador Académico', 'ADMINISTRADOR', 'Inicio de sesión panel administrador', NOW() - INTERVAL '2 days 12 hours'),
+('INGRESO', 'santiago.gomez@universidad.edu.co', 'Santiago Gómez Morales', 'ESTUDIANTE', 'Inicio de sesión exitoso (local)', NOW() - INTERVAL '1 day 6 hours'),
+('INGRESO', 'admin@universidad.edu.co', 'Administrador Académico', 'ADMINISTRADOR', 'Inicio de sesión panel administrador', NOW() - INTERVAL '2 hours');
+
+SELECT setval('auditoria_id_seq', (SELECT MAX(id) FROM auditoria));
+
 

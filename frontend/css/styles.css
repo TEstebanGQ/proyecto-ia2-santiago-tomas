@@ -1668,10 +1668,9 @@ button, input, select, textarea {
   line-height: 1.55;
   margin-bottom: 1.5rem;
   flex: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: block;
+  overflow: visible;
+  white-space: normal;
 }
 
 .course-editorial-footer {

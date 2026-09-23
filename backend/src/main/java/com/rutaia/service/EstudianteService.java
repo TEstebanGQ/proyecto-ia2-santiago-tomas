@@ -33,15 +33,29 @@ public class EstudianteService {
     private final ConsultaRepository consultaRepository;
     private final InscripcionRepository inscripcionRepository;
     private final CursoRepository cursoRepository;
+    private final AuditoriaService auditoriaService;
 
-    public EstudianteService(EstudianteRepository estudianteRepository,
-                             ConsultaRepository consultaRepository,
-                             InscripcionRepository inscripcionRepository,
-                             CursoRepository cursoRepository) {
+    public EstudianteService(
+            EstudianteRepository estudianteRepository,
+            ConsultaRepository consultaRepository,
+            InscripcionRepository inscripcionRepository,
+            CursoRepository cursoRepository,
+            AuditoriaService auditoriaService
+    ) {
         this.estudianteRepository = estudianteRepository;
         this.consultaRepository = consultaRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.cursoRepository = cursoRepository;
+        this.auditoriaService = auditoriaService;
+    }
+
+    private final AuditoriaService auditoriaService;
+
+    public EstudianteService(EstudianteRepository estudianteRepository, ConsultaRepository consultaRepository, AuditoriaService auditoriaService) {
+        this.estudianteRepository = estudianteRepository;
+        this.consultaRepository = consultaRepository;
+        this.auditoriaService = auditoriaService;
+
     }
 
     @Transactional
@@ -58,12 +72,33 @@ public class EstudianteService {
         );
 
         Estudiante guardado = estudianteRepository.save(estudiante);
+
+        auditoriaService.registrarEvento(
+                "REGISTRO",
+                guardado.getCorreoElectronico(),
+                guardado.getNombreCompleto(),
+                "ESTUDIANTE",
+                "Registro de nuevo estudiante (" + guardado.getAreaInteres() + " - " + guardado.getNivelExperiencia() + ")"
+        );
+
         return mapToResponse(guardado);
     }
 
     @Transactional(readOnly = true)
     public List<EstudianteResponseDTO> listarTodos() {
         return estudianteRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<EstudianteResponseDTO> buscarPorNombre(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return listarTodos();
+        }
+        String q = query.trim();
+        return estudianteRepository.findByNombreCompletoContainingIgnoreCaseOrCorreoElectronicoContainingIgnoreCase(q, q)
+                .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

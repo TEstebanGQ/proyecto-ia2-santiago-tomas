@@ -13,6 +13,8 @@ public class CursoResponseDTO {
     private String prerrequisitos;
     private Boolean activo;
     private LocalDateTime fechaCreacion;
+    private Double promedioCalificaciones;
+    private Long totalCalificaciones;
 
     public CursoResponseDTO() {
     }
@@ -102,7 +104,7 @@ public class CursoResponseDTO {
     }
 
     public void setFechaCreacion(LocalDateTime fechaCreacion) {
-        this.fechaCreacion = fechaCreacion;
+    this.fechaCreacion = fechaCreacion;
     }
 
     private Integer totalInscritos = 0;
@@ -113,5 +115,22 @@ public class CursoResponseDTO {
 
     public void setTotalInscritos(Integer totalInscritos) {
         this.totalInscritos = totalInscritos;
+    }
+
+    public Double getPromedioCalificaciones() {
+        return promedioCalificaciones;
+    }
+
+    public void setPromedioCalificaciones(Double promedioCalificaciones) {
+        this.promedioCalificaciones = promedioCalificaciones;
+    }
+
+    public Long getTotalCalificaciones() {
+        return totalCalificaciones;
+    }
+
+    public void setTotalCalificaciones(Long totalCalificaciones) {
+        this.totalCalificaciones = totalCalificaciones;
+    }
     }
 }

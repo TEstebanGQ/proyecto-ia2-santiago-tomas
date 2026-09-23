@@ -1,4 +1,4 @@
-# RutaIA: Sistema Inteligente de Orientación Académica y Recomendación Curricular (RAG + JWT + Redis)
+# RutaIA: Sistema Inteligente de Orientación Académica y Recomendación Curricular (RAG + JWT + Redis + Umbral Dinámico)
 
 [![Java](https://img.shields.io/badge/Java-21_LTS-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4.3-brightgreen.svg)](https://spring.io/projects/spring-boot)
@@ -26,10 +26,12 @@ En entornos académicos y tecnológicos universitarios, los estudiantes se enfre
 ### 2.2 Solución: RutaIA
 **RutaIA** es una plataforma web enterprise que implementa una arquitectura **RAG (Retrieval-Augmented Generation)** fundamentada exclusivamente en la oferta académica real de la institución:
 - **Asesor Vocacional Inteligente**: Procesa consultas en lenguaje natural, recupera cursos mediante similitud semántica en **Qdrant** utilizando embeddings de alta dimensión (`openai/text-embedding-3-small`, 1536 dimensiones) y sintetiza recomendaciones fundamentadas citando fuentes oficiales con su porcentaje de afinidad.
-- **Umbral Estricto de Confianza (0.65)**: Si una consulta está fuera del catálogo institucional (por ejemplo, *"cocina italiana"* o *"mantenimiento aeronáutico"*), el motor rechaza inventar información y reporta con honestidad *"Sin resultados curriculares aplicables"*.
-- **Autenticación Empresarial JWT + Redis**: Sesiones protegidas por tokens firmados criptográficamente (HMAC-SHA256) validados en tiempo real en un cluster de **Redis**, impidiendo el almacenamiento inseguro de tokens en el `localStorage` o caché del navegador mediante **HttpOnly Cookies**.
-- **Sincronización Automática Base Relacional ⟷ Qdrant**: Cada operación administrativa sobre cursos (alta, modificación o reactivación) reindexa su vector semántico en Qdrant en tiempo real. **Al desactivar un curso, su vector se elimina de inmediato de Qdrant** para evitar que el asistente RAG recomiende materias no ofertadas.
-- **Panel Administrativo con Directorio e Inspección de Estudiantes**: Consulta de alumnos por identificador, fichas académicas con historial de consultas previas y calificaciones recibidas, y manejo adecuado de estados de error (HTTP 404).
+- **Umbral de Confianza Dinámico (Configurable en Admin)**: Permite ajustar en tiempo real el umbral de similitud semántica para las búsquedas RAG (por defecto 0.65). Si la afinidad de una consulta está por debajo del umbral configurado (por ejemplo, *"cocina italiana"* o *"mantenimiento aeronáutico"*), el motor rechaza inventar información y reporta con honestidad *"Sin resultados curriculares aplicables"*.
+- **Módulo de Analíticas e Indicadores Institucionales**: Panel de control con métricas avanzadas en tiempo real (total de estudiantes registrados, volumen de consultas realizadas, promedio de calificaciones de respuestas, distribución de ratings y ranking de cursos más consultados).
+- **Directorio y Búsqueda Flexible de Estudiantes**: Permite consultar alumnos por nombre completo, correo electrónico o identificador numérico (ID), mostrando la ficha del estudiante con su historial completo de interacciones y valoraciones RAG.
+- **Gestión Curricular Completa con Prerrequisitos**: Administración de cursos con soporte para asignaturas prerrequisito, categorización jerárquica por nivel (*Principiante*, *Intermedio*, *Avanzado*) y visualización de descripciones sin truncamiento.
+- **Autenticación Empresarial JWT + Redis**: Sesiones protegidas por tokens firmados criptográficamente (HMAC-SHA256) validados en tiempo real en un cluster de **Redis**, impidiendo el almacenamiento inseguro de tokens en `localStorage` mediante **HttpOnly Cookies**.
+- **Sincronización Automática Base Relacional ⟷ Qdrant**: Cada operación administrativa sobre cursos (alta, modificación o reactivación) reindexa su vector semántico en Qdrant en tiempo real. **Al desactivar un curso, su vector se elimina de inmediato de Qdrant** para evitar recomendaciones obsoletas.
 
 ---
 
@@ -42,7 +44,7 @@ En entornos académicos y tecnológicos universitarios, los estudiantes se enfre
                       ┌───────────────────────┴───────────────────────┐
                       ▼                                               ▼
               [ login.html ]                                   [ index.html ]
-          (Portal Split-Screen)                             (Dashboard / Panel Admin)
+          (Portal Split-Screen)                     (Dashboard / Panel Admin / Analíticas)
                       │                                               │
                       │  HTTP REST + HttpOnly Cookie                  │
                       └───────────────────────┬───────────────────────┘
@@ -50,21 +52,17 @@ En entornos académicos y tecnológicos universitarios, los estudiantes se enfre
                                  [ SPRING BOOT 3.4.3 BACKEND ]
                                     (http://localhost:8080)
                                               │
-                    ┌─────────────────────────┼─────────────────────────┐
-                    ▼                         ▼                         ▼
-            [ Spring Security ]       [ CursoService ]         [ N8nOrquestador ]
-                    │                         │                         │
-                    ▼ (Valida Token)          ▼ (Upsert / Delete)       ▼ (Webhook RAG)
-             [ REDIS 7 DB ]        [ QDRANT VECTOR DB ]         [ n8n WORKFLOW ]
-               (Puerto 6379)          (Puerto 6333)              (Puerto 5678)
-                    ▲                         ▲                         │
-                    │                         │ (Vector Search)         ▼
-            [ auth:token:... ]       [ cursos_academicos ]       [ OPENROUTER AI ]
-                                                               (Embeddings & LLM)
-                                              │
-                                              ▼
-                                     [ POSTGRESQL 16 DB ]
-                                       (Puerto 5432)
+       ┌──────────────────────┬───────────────┼───────────────┬──────────────────────┐
+       ▼                      ▼               ▼               ▼                      ▼
+[ Spring Security ]  [ CursoService ] [ ConfiguracionService ] [ EstadisticaService ] [ N8nOrquestador ]
+       │                      │               │               │                      │
+       ▼ (Valida Token)       ▼ (Sync Vector) ▼ (Umbral RAG)  ▼ (Métricas)           ▼ (Webhook)
+ [ REDIS 7 DB ]      [ QDRANT VECTOR DB ] └──────────────┬──┘                 [ n8n WORKFLOW ]
+  (Puerto 6379)        (Puerto 6333)                    │                     (Puerto 5678)
+       ▲                      ▲                         ▼                            │
+       │                      │                 [ POSTGRESQL DB ]                    ▼
+[ auth:token:... ]   [ cursos_academicos ]        (Puerto 5432)                [ OPENROUTER AI ]
+                                                                            (Embeddings & LLM)
 ```
 
 ---
@@ -156,7 +154,7 @@ El proyecto necesita tu clave de **OpenRouter** para que el modelo generativo y 
 
 ### Paso 3: Levantar los Servicios con Docker Compose
 El archivo [`docker/docker-compose.yml`](docker/docker-compose.yml) orquesta de manera automatizada los 4 servicios de infraestructura:
-- **`rutaia_postgres`** (Puerto `5432`): Base de datos relacional PostgreSQL 16. Al iniciar por primera vez, ejecuta automáticamente el script [`database/init.sql`](database/init.sql) creando el esquema DDL y poblando los **22 cursos oficiales semilla** e información institucional.
+- **`rutaia_postgres`** (Puerto `5432`): Base de datos relacional PostgreSQL 16. Al iniciar por primera vez, ejecuta automáticamente el script [`database/init.sql`](database/init.sql) creando el esquema DDL y poblando los **22 cursos oficiales semilla** con sus prerrequisitos e información institucional.
 - **`rutaia_qdrant`** (Puerto `6333`): Motor de base de datos vectorial de alto rendimiento donde se guardan los embeddings de los cursos.
 - **`rutaia_redis`** (Puerto `6379`): Base de datos en memoria ultrarrápida encargada de gestionar los tokens JWT activos y permitir revocación instantánea (cierre de sesión seguro sin depender del almacenamiento del navegador).
 - **`rutaia_n8n`** (Puerto `5678`): Plataforma de orquestación visual que conecta los webhooks de consulta con el motor RAG.
@@ -206,7 +204,7 @@ Para cargar los embeddings de los 22 cursos semilla de PostgreSQL en Qdrant, dis
 **Comprobación Visual en Qdrant**:
 Abre en tu navegador el panel de Qdrant:
 👉 **`http://localhost:6333/dashboard`**
-Ingresa a la colección `cursos_academicos`. Observarás los **22 vectores semánticos** listados con sus metadatos (título, descripción, nivel, créditos y categoría).
+Ingresa a la colección `cursos_academicos`. Observarás los **22 vectores semánticos** listados con sus metadatos (título, descripción, nivel, créditos, categoría y prerrequisitos).
 
 ---
 
@@ -233,7 +231,7 @@ Ingresa a la colección `cursos_academicos`. Observarás los **22 vectores semá
 4. **Comprobación de la API (Swagger UI)**:
    Abre en tu navegador la documentación interactiva:
    👉 **`http://localhost:8080/swagger-ui/index.html`**
-   Allí podrás ver todos los controladores documentados (`AuthController`, `CursoController`, `EstudianteController`, `ConsultaController`).
+   Allí podrás ver todos los controladores documentados (`AuthController`, `CursoController`, `EstudianteController`, `ConsultaController`, `ConfiguracionController`, `EstadisticaController`, `CalificacionController`).
 
 ---
 
@@ -258,8 +256,8 @@ La plataforma cuenta con separación estricta de responsabilidades por rol:
 
 | Rol | Correo de Prueba | Contraseña | Permisos y Capacidades |
 | :--- | :--- | :--- | :--- |
-| **Estudiante** | `santiago.gomez@universidad.edu.co` | `password123` | Descubrir cursos con el Asesor RAG en lenguaje natural, ver fuentes y score de similitud, calificar con estrellas, consultar historial académico y filtrar catálogo. |
-| **Administrador** | `admin@universidad.edu.co` | `password123` | Gestión CRUD completa de cursos (alta, edición, activación y desactivación con borrado vectorial en Qdrant), Directorio de Estudiantes y consulta por ID. |
+| **Estudiante** | `santiago.gomez@universidad.edu.co` | `password123` | Descubrir cursos con el Asesor RAG en lenguaje natural, ver fuentes y score de similitud, calificar con estrellas, consultar historial académico y explorar catálogo con prerrequisitos. |
+| **Administrador** | `admin@universidad.edu.co` | `password123` | Gestión CRUD completa de cursos (alta, edición, activación/desactivación con borrado vectorial en Qdrant), **Configuración del Umbral RAG**, **Analíticas y Métricas Institucionales** y **Búsqueda General de Estudiantes (Nombre/Correo/ID)**. |
 | **Nuevo Estudiante** | *Registro libre en pantalla de Login* | *Definida por el usuario* | Registro inmediato en PostgreSQL con inicio de sesión automático y generación de token seguro en Redis. |
 | **Google Sign-In** | Botón *"Continuar con Google"* | *OAuth2 Simulado* | Acceso instantáneo con perfil institucional verificado. |
 
@@ -274,12 +272,12 @@ La plataforma cuenta con separación estricta de responsabilidades por rol:
 2. **Asesor Vocacional RAG (Pantalla Principal)**:
    - En la sección **Inicio / Asesor**, escribe en lenguaje natural tus intereses, dudas o metas vocacionales (ejemplo: *"Quiero aprender a crear aplicaciones web interactivas con React"*).
    - Haz clic en **Consultar Asesor**.
-   - El sistema invoca el webhook de n8n, busca los cursos más afines en Qdrant mediante similitud de cosenos y redacta una respuesta pedagógica estructurada.
-   - Debajo de la respuesta, verás las **Fuentes Verificables Oficiales**: tarjetas con el título del curso, código de asignatura, número de créditos y porcentaje de afinidad semántica.
+   - El sistema invoca el webhook de n8n pasando la consulta y el **umbral dinámico activo**, busca los cursos más afines en Qdrant mediante similitud de cosenos y redacta una respuesta pedagógica estructurada.
+   - Debajo de la respuesta, verás las **Fuentes Verificables Oficiales**: tarjetas con el título del curso, código de asignatura, número de créditos, prerrequisitos y porcentaje de afinidad semántica.
 3. **Calificación y Retroalimentación**:
    - Puedes calificar la recomendación de 1 a 5 estrellas y dejar un comentario opcional para evaluar la calidad del asesor.
 4. **Catálogo Completo de Cursos**:
-   - Haz clic en **Catálogo** en el menú superior/lateral para explorar los 22 cursos disponibles, con filtros interactivos por nivel (*Principiante*, *Intermedio*, *Avanzado*) y área de conocimiento.
+   - Haz clic en **Catálogo** en el menú superior/lateral para explorar los 22 cursos disponibles, con descripciones completas, prerrequisitos y filtros interactivos por nivel (*Principiante*, *Intermedio*, *Avanzado*) y área de conocimiento.
 5. **Historial Académico Personal**:
    - En la pestaña **Historial**, consulta el registro histórico de todas tus consultas previas, fecha, cursos sugeridos y la calificación que otorgaste.
 
@@ -288,14 +286,19 @@ La plataforma cuenta con separación estricta de responsabilidades por rol:
 ### B. Experiencia del Administrador
 1. **Acceso**:
    - En `http://localhost:3000/login.html`, haz clic en la pestaña **Administrador** e ingresa con `admin@universidad.edu.co` (`password123`).
-2. **Botón Exclusivo de Gestión**:
-   - En el menú lateral se habilitará la opción **Panel Administrador** (invisible para estudiantes).
-3. **Sub-panel 1: Directorio y Consulta de Estudiantes (RF 02)**:
-   - **Búsqueda por Identificador**: Ingresa un ID (ejemplo: `1`) y presiona Enter o clic en `Consultar`. Se cargará la ficha del estudiante con sus datos de contacto y la línea de tiempo de todas sus consultas e interacciones RAG.
-   - **Manejo de Errores (HTTP 404)**: Si buscas un ID que no existe (ejemplo: `9999`), el sistema no colapsa; despliega un banner de alerta amigable indicando que el estudiante no fue encontrado.
-4. **Sub-panel 2: Gestión y Sincronización de Cursos**:
-   - **Crear Curso**: Pulsa `+ Nuevo Curso`. Completa los datos curriculares. Al guardar, el backend genera el vector y lo indexa automáticamente en Qdrant.
-   - **Desactivar Curso**: Al pulsar `Desactivar`, el curso pasa a inactivo en PostgreSQL y **su vector semántico es eliminado de inmediato de Qdrant**, impidiendo que el asesor RAG lo recomiende.
+2. **Navegación del Panel Administrador**:
+   - En el menú lateral se habilitan las herramientas exclusivas de administración:
+3. **Sub-panel 1: Analíticas y Métricas Institucionales**:
+   - Tarjetas informativas con métricas globales en tiempo real: Total de Estudiantes, Total de Consultas, Promedio de Calificación, Gráficos de distribución de estrellas y Cursos más consultados.
+4. **Sub-panel 2: Directorio y Búsqueda de Estudiantes**:
+   - **Búsqueda Flexible**: Permite buscar estudiantes ingresando su **Nombre**, **Correo** o **ID numérico**.
+   - **Ficha Académica Integrada**: Al seleccionar un estudiante, se despliega su perfil con datos de contacto e historial cronológico completo de consultas RAG y calificaciones emitidas.
+   - **Manejo de Errores (HTTP 404)**: Si no existen coincidencias, el sistema muestra un mensaje amigable indicando que no se encontraron resultados.
+5. **Sub-panel 3: Configuración del Umbral RAG**:
+   - **Ajuste Dinámico del Umbral**: Permite modificar el nivel de exigencia de similitud semántica (entre `0.00` y `1.00`). Cambios aplicados aquí surten efecto inmediato en las siguientes recomendaciones del Asesor.
+6. **Sub-panel 4: Gestión y Sincronización de Cursos**:
+   - **Crear/Editar Curso**: Incluye campos de código, nombre, nivel, créditos, categoría, descripción extendida y **prerrequisitos**. Al guardar, el backend reindexa el vector en Qdrant de forma automática.
+   - **Desactivar Curso**: Al pulsar `Desactivar`, el curso pasa a inactivo en PostgreSQL y **su vector semántico es eliminado de inmediato de Qdrant**.
    - **Reactivar Curso**: Al reactivar el curso, se reindexa en Qdrant en milisegundos.
 
 ---
@@ -334,17 +337,19 @@ El servicio [`QdrantSyncService.java`](backend/src/main/java/com/rutaia/service/
 
 ## 11. Matriz de Consultas de Prueba Recomendadas
 
-Puedes ensayar los siguientes casos utilizando el asistente RAG:
+Puedes ensayar los siguientes casos utilizando el asistente RAG y las funciones del sistema:
 
-| Caso de Prueba | Consulta del Estudiante | Comportamiento Esperado del Sistema |
+| Caso de Prueba | Entrada / Acción | Comportamiento Esperado del Sistema |
 | :--- | :--- | :--- |
 | **1. Desarrollo Web** | *"Quiero aprender a crear páginas web modernas con frontend y backend."* | Recomienda Fundamentos de HTML5/CSS/JS, React.js y APIs REST con Spring Boot. |
 | **2. Inteligencia Artificial** | *"¿Qué cursos tienen para aprender machine learning y redes neuronales?"* | Sugiere Machine Learning con Python, Deep Learning y Modelos del Lenguaje. |
 | **3. Análisis de Datos** | *"Me interesa analizar datos y crear reportes empresariales."* | Sugiere Análisis de Datos con Pandas y Power BI. |
 | **4. DevOps y Cloud** | *"Quiero aprender a desplegar aplicaciones en contenedores."* | Sugiere Docker, Kubernetes y Cloud Computing. |
-| **5. Fuera de Dominio** | *"Quiero aprender cocina italiana y preparar pastas."* | **Similitud < 0.65**. Responde *"Sin resultados curriculares aplicables"*. **NO inventa cursos**. |
-| **6. Pregunta Vacía** | *Enviar consulta sin texto* | Validación local y rechazo HTTP 400 antes de invocar a n8n. |
-| **7. Alumno Inexistente** | *Buscar ID `9999` en panel admin* | Respuesta adecuada HTTP 404 con tarjeta explicativa visual. |
+| **5. Fuera de Dominio** | *"Quiero aprender cocina italiana y preparar pastas."* | **Similitud < Umbral (0.65)**. Responde *"Sin resultados curriculares aplicables"*. **NO inventa cursos**. |
+| **6. Umbral Personalizado** | Cambiar Umbral a `0.85` en Panel Admin y realizar consulta limite | El filtro se vuelve más estricto, descartando asignaturas con afinidad menor a 85%. |
+| **7. Búsqueda de Estudiante** | Escribir *"Santiago"* o *"santiago.gomez"* en Panel Admin | Despliega los resultados de coincidencia con ficha detallada e historial. |
+| **8. Pregunta Vacía** | *Enviar consulta sin texto* | Validación local y rechazo HTTP 400 antes de invocar a n8n. |
+| **9. Alumno Inexistente** | *Buscar `estudiante_fantasma` en panel admin* | Respuesta adecuada HTTP 404 con tarjeta explicativa visual de "No encontrado". |
 
 ---
 
@@ -354,39 +359,44 @@ Puedes ensayar los siguientes casos utilizando el asistente RAG:
 proyecto-IA2-SANTIAGO-TOMAS/
 ├── backend/                              # Backend en Spring Boot 3.4.3
 │   ├── src/main/java/com/rutaia/
-│   │   ├── config/SecurityConfig.java    # Configuración Spring Security y CORS
-│   │   ├── controller/                   # Endpoints REST (Auth, Cursos, Estudiantes, Consultas)
-│   │   ├── dto/                          # Objetos de transferencia de datos
-│   │   ├── entity/                       # Entidades JPA (Estudiante, Curso, Consulta, etc.)
-│   │   ├── repository/                   # Repositorios Spring Data JPA
+│   │   ├── config/SecurityConfig.java    # Configuración Spring Security, CORS y Endpoints Protegidos
+│   │   ├── controller/                   # Controllers (Auth, Cursos, Estudiantes, Consultas, Configuracion, Estadistica)
+│   │   ├── dto/                          # DTOs (UmbralConfigDTO, N8nRecomendacionRequest, CursoDTO, etc.)
+│   │   ├── entity/                       # Entidades JPA (Estudiante, Curso, Consulta, Configuracion, Calificacion)
+│   │   ├── repository/                   # Repositorios JPA (ConfiguracionRepository, EstudianteRepository, etc.)
 │   │   ├── security/                     # JwtUtil y JwtAuthFilter
-│   │   └── service/                      # Lógica de negocio, RedisTokenService, QdrantSyncService
+│   │   └── service/                      # Lógica de negocio (ConfiguracionService, EstadisticaService, QdrantSyncService)
 │   ├── src/main/resources/
-│   │   └── application.properties        # Configuración DB, Redis, JWT y Qdrant
-│   └── build.gradle                      # Dependencias del proyecto
+│   │   └── application.properties        # Configuración DB, Redis, JWT, Qdrant y rag.threshold.default
+│   └── build.gradle                      # Dependencias y construcción con Gradle
 ├── frontend/                             # Aplicación Web Frontend
 │   ├── css/
-│   │   ├── styles.css                    # Sistema de diseño, split-screen login y tema visual
-│   │   └── variables.css                 # Paleta de colores, tipografía y tokens
+│   │   ├── styles.css                    # Sistema de diseño, modales admin, tarjetas de analíticas
+│   │   └── variables.css                 # Paleta de colores, tipografía y tokens CSS
 │   ├── js/
-│   │   ├── api.js                        # Cliente HTTP REST con credentials include
-│   │   ├── app.js                        # Lógica principal del dashboard y eventos
-│   │   ├── login.js                      # Controlador de la pantalla de login y registro
-│   │   ├── state.js                      # Estado global reactivo sin tokens en localStorage
-│   │   └── ui.js                         # Renderizado de componentes DOM, tablas y fichas
-│   ├── index.html                        # Dashboard principal institucional
-│   └── login.html                        # Pantalla de acceso split-screen enterprise
+│   │   ├── api.js                        # Cliente HTTP REST con endpoints de configuración y estadísticas
+│   │   ├── app.js                        # Lógica del dashboard, gráficos de analíticas y eventos
+│   │   ├── login.js                      # Controlador de inicio de sesión y registro
+│   │   ├── state.js                      # Estado global reactivo de la aplicación
+│   │   └── ui.js                         # Renderizado de componentes DOM, modales y tablas
+│   ├── index.html                        # Dashboard principal institucional y panel admin
+│   ├── login.html                        # Pantalla de acceso split-screen enterprise
+│   ├── robots.txt                        # Directivas SEO para indexación
+│   └── sitemap.xml                       # Mapa del sitio estructurado
 ├── database/
-│   └── init.sql                          # Esquema DDL + 22 cursos semilla detallados
+│   └── init.sql                          # Esquema DDL + 22 cursos semilla con prerrequisitos
 ├── docker/
 │   ├── docker-compose.yml                # postgres, qdrant, redis, n8n
 │   └── .env                              # Variables de entorno de contenedores
 ├── n8n/
 │   └── workflows/
 │       ├── indexacion_cursos.json        # Flujo de carga inicial vectorial
-│       └── rag_recomendacion.json        # Flujo de consulta semántica RAG
+│       └── rag_recomendacion.json        # Flujo RAG con evaluación dinámica del umbral
 ├── scripts/
-│   └── serve_frontend.js                 # Servidor HTTP estático de desarrollo
+│   ├── check_health.js                   # Verificación de salud de la infraestructura
+│   ├── indexar_cursos.py                 # Script de indexación directa a Qdrant
+│   ├── serve_frontend.js                 # Servidor HTTP estático de desarrollo
+│   └── test_query_score.js               # Script de prueba de puntuaciones de similitud RAG
 ├── .env.example                          # Plantilla de variables de entorno
 ├── .gitignore                            # Archivos excluidos del control de versiones
 └── README.md                             # Documentación maestra del proyecto
@@ -400,4 +410,5 @@ proyecto-IA2-SANTIAGO-TOMAS/
 - **Error de Docker Desktop**: Asegúrate de que Docker Desktop esté encendido antes de correr `docker compose up -d`. Si un contenedor falla, revisa sus logs con `docker logs rutaia_postgres` o `docker logs rutaia_redis`.
 - **OpenRouter sin créditos o error 401**: Verifica que tu variable `OPENROUTER_API_KEY` en `.env` tenga créditos disponibles y sea válida.
 - **La cookie de sesión no se envía**: Asegúrate de abrir el frontend a través de un servidor HTTP local (`http://localhost:3000`), no abriendo directamente el archivo como `file:///...`, ya que los navegadores restringen las cookies sobre el protocolo de archivo local.
+- **El umbral configurado no filtra correctamente**: Comprueba que el workflow `02 RAG Recomendacion de Cursos` en n8n esté activo (`Active`) y reciba el campo `umbralSimilitud` enviado por el backend.
 

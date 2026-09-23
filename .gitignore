@@ -13,6 +13,7 @@ docker/!.env.example
 
 # Logs & Temporary files
 *.log
+cookie.txt
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

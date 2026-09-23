@@ -35,34 +35,50 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Peticiones Pre-flight OPTIONS
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Peticiones Pre-flight OPTIONS
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Rutas públicas de Autenticación, Registro de Estudiantes, Documentación y Catálogo Básico
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/estudiantes").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/estudiantes").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/cursos").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/estadisticas").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/", "/api").permitAll()
+                // Rutas públicas
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/estudiantes").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/estudiantes").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/cursos").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/cursos/*/calificaciones").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/estadisticas/**").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/", "/api").permitAll()
 
-                        // Inscripción a cursos y consulta de inscripciones
-                        .requestMatchers(HttpMethod.POST, "/api/estudiantes/*/inscribir/*").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/estudiantes/*/inscripciones").permitAll()
+                // Inscripción a cursos
+                .requestMatchers(HttpMethod.POST, "/api/estudiantes/*/inscribir/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/estudiantes/*/inscripciones").permitAll()
 
-                        // Operaciones del rol DOCENTE (Gestión de su especialidad, feedback, analíticas de área)
-                        .requestMatchers("/api/docentes/**").hasAnyRole("DOCENTE", "ADMINISTRADOR")
+                // Operaciones del rol DOCENTE
+                .requestMatchers("/api/docentes/**")
+                .hasAnyRole("DOCENTE", "ADMINISTRADOR")
 
-                        // Operaciones Administrativas de Cursos
-                        .requestMatchers(HttpMethod.GET, "/api/cursos/admin").hasAnyRole("ADMINISTRADOR", "DOCENTE")
-                        .requestMatchers(HttpMethod.POST, "/api/cursos").hasAnyRole("ADMINISTRADOR", "DOCENTE")
-                        .requestMatchers(HttpMethod.PUT, "/api/cursos/**").hasAnyRole("ADMINISTRADOR", "DOCENTE")
-                        .requestMatchers(HttpMethod.PATCH, "/api/cursos/**").hasAnyRole("ADMINISTRADOR", "DOCENTE")
+                // Administración de cursos
+                .requestMatchers(HttpMethod.GET, "/api/cursos/admin")
+                .hasAnyRole("ADMINISTRADOR", "DOCENTE")
 
-                        // Resto de operaciones (consultas RAG, calificaciones, gestión estudiantes) requieren autenticación
-                        .anyRequest().authenticated()
-                )
+                .requestMatchers(HttpMethod.POST, "/api/cursos")
+                .hasAnyRole("ADMINISTRADOR", "DOCENTE")
+
+                .requestMatchers(HttpMethod.PUT, "/api/cursos/**")
+                .hasAnyRole("ADMINISTRADOR", "DOCENTE")
+
+                .requestMatchers(HttpMethod.PATCH, "/api/cursos/**")
+                .hasAnyRole("ADMINISTRADOR", "DOCENTE")
+
+                // Configuración del umbral RAG
+                .requestMatchers(HttpMethod.PUT, "/api/configuracion/**")
+                .hasRole("ADMINISTRADOR")
+
+                .requestMatchers(HttpMethod.GET, "/api/configuracion/**")
+                .permitAll()
+
+                // Resto de operaciones requieren autenticación
+                .anyRequest().authenticated()
+        )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

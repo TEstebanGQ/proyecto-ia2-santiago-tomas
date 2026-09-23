@@ -1,10 +1,12 @@
 package com.rutaia.service;
 
+import com.rutaia.dto.EstadisticasAdminDTO;
 import com.rutaia.dto.EstadisticasDTO;
+import com.rutaia.repository.AuditoriaRepository;
 import com.rutaia.repository.CalificacionRepository;
 import com.rutaia.repository.ConsultaRepository;
 import com.rutaia.repository.CursoRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.rutaia.repository.EstudianteRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +31,15 @@ class EstadisticaServiceTest {
 
     @Mock
     private CursoRepository cursoRepository;
+
+    @Mock
+    private EstudianteRepository estudianteRepository;
+
+    @Mock
+    private AuditoriaRepository auditoriaRepository;
+
+    @Mock
+    private AuditoriaService auditoriaService;
 
     @InjectMocks
     private EstadisticaService estadisticaService;
@@ -99,5 +110,29 @@ class EstadisticaServiceTest {
         assertEquals(8, dto.getConsultasSinResultados());
         assertEquals(2, dto.getConsultasError());
         assertEquals(4.8, dto.getPromedioCalificaciones());
+    }
+
+    @Test
+    @DisplayName("obtenerEstadisticasAdminGlobales debe estructurar métricas de usuarios y auditoría")
+    void testEstadisticasAdminGlobales() {
+        when(consultaRepository.count()).thenReturn(10L);
+        when(consultaRepository.countByEstado("Respondida")).thenReturn(8L);
+        when(consultaRepository.countByEstado("Sin resultados")).thenReturn(1L);
+        when(consultaRepository.countByEstado("Error")).thenReturn(1L);
+        when(calificacionRepository.obtenerPromedioPuntuacion()).thenReturn(4.7);
+        when(cursoRepository.findCursoMasRecomendado()).thenReturn(Collections.emptyList());
+        when(estudianteRepository.count()).thenReturn(5L);
+        when(auditoriaService.obtenerTodos()).thenReturn(Collections.emptyList());
+        when(estudianteRepository.findAll()).thenReturn(Collections.emptyList());
+
+        EstadisticasAdminDTO adminDto = estadisticaService.obtenerEstadisticasAdminGlobales();
+
+        assertNotNull(adminDto);
+        assertEquals(6, adminDto.getTotalUsuarios()); // 5 estudiantes + 1 admin
+        assertEquals(10, adminDto.getTotalConsultas());
+        assertEquals(4.7, adminDto.getPromedioCalificaciones());
+        assertNotNull(adminDto.getAccionesPorUsuario());
+        assertNotNull(adminDto.getAccionesPorDia());
+        assertNotNull(adminDto.getAuditoria());
     }
 }

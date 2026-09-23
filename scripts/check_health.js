@@ -11,9 +11,10 @@ async function healthCheck() {
   console.log('2. [OK] Backend Spring Boot:    http://localhost:8080/api -> HTTP ' + back.status + ' (' + cursos.length + ' cursos activos)');
 
   // 3. Qdrant
-  const qdrant = await fetch('http://localhost:6333/collections/cursos_academicos');
+  const qPort = process.env.QDRANT_PORT || '6335';
+  const qdrant = await fetch(`http://localhost:${qPort}/collections/cursos_academicos`);
   const qData = await qdrant.json();
-  console.log('3. [OK] Base Vectorial Qdrant:  http://localhost:6333 -> Status: ' + qData.result.status + ' (' + qData.result.points_count + ' vectores indexados)');
+  console.log('3. [OK] Base Vectorial Qdrant:  http://localhost:' + qPort + ' -> Status: ' + qData.result.status + ' (' + qData.result.points_count + ' vectores indexados)');
 
   // 4. n8n
   console.log('4. [OK] Orquestador n8n:        http://localhost:5678 (Contenedor activo)');

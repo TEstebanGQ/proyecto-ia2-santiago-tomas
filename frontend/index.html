@@ -784,6 +784,21 @@
               </svg>
               <span>Consulta de Estudiantes</span>
             </button>
+            <button type="button" class="admin-subtab" id="subtab-admin-config" data-admintab="config">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              <span>Configuración del Umbral RAG</span>
+            </button>
+            <button type="button" class="admin-subtab" id="subtab-admin-stats" data-admintab="stats">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+              <span>Estadísticas Globales y Auditoría</span>
+            </button>
           </div>
 
           <!-- ==========================================================
@@ -895,7 +910,7 @@
               </div>
             </div>
 
-            <!-- Barra de Consulta por Identificador -->
+            <!-- Barra de Consulta General por Nombre -->
             <div class="admin-student-search-card">
               <div class="student-search-header">
                 <div class="search-icon-circle">
@@ -905,18 +920,18 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="student-search-title">Consultar Estudiante por Identificador (ID)</h3>
-                  <p class="student-search-desc">Ingresa el ID único para consultar su perfil académico y su historial de consultas RAG. Si no existe, el sistema reportará el estado adecuadamente.</p>
+                  <h3 class="student-search-title">Consulta General de Estudiantes por Nombre</h3>
+                  <p class="student-search-desc">Ingresa el nombre o correo electrónico del estudiante para consultar su perfil académico y su historial de consultas RAG. El sistema traerá todos los nombres y correos coincidentes.</p>
                 </div>
               </div>
 
               <form id="admin-student-search-form" class="student-search-form">
                 <div class="student-search-input-wrap">
-                  <span class="id-prefix">#ID</span>
-                  <input type="number" id="admin-student-id-input" placeholder="Ej: 1, 2, 5, 999..." min="1" required />
+                  <span class="id-prefix">👤</span>
+                  <input type="text" id="admin-student-name-input" placeholder="Ingresa nombre o correo del estudiante (ej: Santiago, Ana, carlos@...)" required />
                 </div>
-                <button type="submit" class="btn-primary-lime" id="btn-search-student-id">
-                  <span>Consultar por ID</span>
+                <button type="submit" class="btn-primary-lime" id="btn-search-student-name">
+                  <span>Consultar por Nombre</span>
                   <span class="btn-arrow">➔</span>
                 </button>
               </form>
@@ -974,6 +989,204 @@
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <!-- ==========================================================
+               SUB-PANEL 3: CONFIGURACIÓN DE UMBRAL RAG
+               ========================================================== -->
+          <div class="admin-pane" id="admin-pane-config" style="display: none;">
+            <div class="editorial-view-header admin-header-flex">
+              <div>
+                <div class="admin-badge-tag">Parámetros RAG</div>
+                <h2 class="view-title">Configuración del Umbral de Similitud Vectorial</h2>
+                <p class="view-subtitle">Ajusta el porcentaje de coincidencia semántica mínimo requerido para que los cursos sean recomendados por el asistente vocacional RAG.</p>
+              </div>
+            </div>
+
+            <!-- Tarjeta Principal de Configuración del Umbral -->
+            <div class="admin-student-search-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 2rem;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 280px;">
+                  <h3 style="font-size: 1.2rem; font-weight: 800; color: #18191E; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>⚙️ Umbral de Relevancia Semántica</span>
+                    <span class="status-pill respondida" id="admin-umbral-badge-status" style="font-size: 0.78rem;">Equilibrado</span>
+                  </h3>
+                  <p style="color: #4B5563; font-size: 0.9rem; line-height: 1.55;">
+                    El umbral determina la exigencia del motor vectorial Qdrant. Un porcentaje menor a 35% incrementa la cobertura recomendando más cursos; un valor superior a 65% restringe los resultados a coincidencias muy estrictas.
+                  </p>
+                </div>
+                
+                <div style="background: #FAF8F2; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.25rem; text-align: center; min-width: 180px;">
+                  <span style="display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Valor Actual</span>
+                  <span id="admin-umbral-display-value" style="font-size: 2.2rem; font-weight: 900; color: #18191E; line-height: 1.1; display: block; margin: 0.3rem 0;">40.0%</span>
+                  <span id="admin-umbral-decimal-value" style="font-size: 0.8rem; color: #6B7280; font-family: monospace;">(0.4000)</span>
+                </div>
+              </div>
+
+              <form id="admin-threshold-form" style="margin-top: 2rem; border-top: 1px solid #F1F5F9; padding-top: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                  <div style="flex: 1; min-width: 220px;">
+                    <label for="admin-threshold-slider" style="display: block; font-weight: 700; font-size: 0.88rem; color: #18191E; margin-bottom: 0.5rem;">
+                      Porcentaje de Umbral (0% - 100%)
+                    </label>
+                    <input type="range" id="admin-threshold-slider" min="0" max="100" step="1" value="40" style="width: 100%; height: 8px; accent-color: #7C3AED; cursor: pointer;" />
+                  </div>
+                  <div style="width: 110px;">
+                    <label for="admin-threshold-number-input" style="display: block; font-weight: 700; font-size: 0.85rem; color: #18191E; margin-bottom: 0.5rem;">
+                      Porcentaje %
+                    </label>
+                    <input type="number" id="admin-threshold-number-input" min="0" max="100" step="0.5" value="40" style="width: 100%; padding: 0.55rem; border: 1px solid #CBD5E1; border-radius: 8px; font-weight: 800; text-align: center; font-size: 1rem;" required />
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                  <div style="font-size: 0.82rem; color: #6B7280;">
+                    💡 <em>Nota: El nuevo umbral se aplicará inmediatamente a todas las consultas RAG entrantes.</em>
+                  </div>
+                  <button type="submit" class="btn-primary-lime" id="btn-save-threshold" style="padding: 0.65rem 1.4rem;">
+                    <span>Guardar Configuración de Umbral</span>
+                    <span class="btn-arrow">➔</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ==========================================================
+               SUB-PANEL 4: ESTADÍSTICAS GLOBALES Y AUDITORÍA
+               ========================================================== -->
+          <div class="admin-pane" id="admin-pane-stats" style="display: none;">
+            <div class="editorial-view-header admin-header-flex">
+              <div>
+                <div class="admin-badge-tag">Auditoría y Análisis Institucional</div>
+                <h2 class="view-title">Estadísticas Globales y Panel de Auditoría</h2>
+                <p class="view-subtitle">Consolidado general del sistema: medición de usuarios totales, activos, acciones por usuario, actividad diaria y bitácora de auditoría para cada ingreso y registro.</p>
+              </div>
+              <div class="admin-header-cta">
+                <button type="button" class="btn-refresh-pill" id="btn-admin-refresh-stats" title="Actualizar estadísticas globales">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  <span>Refrescar Métricas</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Métricas KPI Globales -->
+            <div class="admin-summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 2rem;">
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Total Usuarios</span>
+                <span class="admin-card-number" id="global-stat-total-usuarios">0</span>
+                <span class="admin-card-note">Estudiantes + Admins</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Usuarios Activos</span>
+                <span class="admin-card-number text-success" id="global-stat-usuarios-activos">0</span>
+                <span class="admin-card-note">Con sesiones/acciones</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Total Consultas</span>
+                <span class="admin-card-number text-warning" id="global-stat-total-consultas">0</span>
+                <span class="admin-card-note">Búsquedas vocacionales</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Satisfacción</span>
+                <span class="admin-card-number" style="color:#7C3AED;" id="global-stat-promedio-calificacion">0.0</span>
+                <span class="admin-card-note">Calificación promedio</span>
+              </div>
+            </div>
+
+            <!-- Sección Acciones por Día y Curso Más Popular -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
+              <div class="admin-student-search-card" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem;">
+                <h3 style="font-size:1.1rem; font-weight:800; color:#18191E; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+                  <span>📅 Acciones y Actividad por Día</span>
+                </h3>
+                <div id="admin-actions-per-day-container">
+                  <!-- Renderizado dinámico de días -->
+                </div>
+              </div>
+
+              <div class="admin-student-search-card" style="background:#FAF8F2; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem;">
+                <h3 style="font-size:1.1rem; font-weight:800; color:#18191E; margin-bottom:0.8rem;">🏆 Curso Más Recomendado</h3>
+                <div id="global-stat-curso-top" style="font-size:1.05rem; font-weight:700; color:#374151; line-height:1.4;">Cargando...</div>
+                <p style="font-size:0.82rem; color:#6B7280; margin-top:0.8rem;">Generado por el motor de recomendaciones vectoriales RAG.</p>
+              </div>
+            </div>
+
+            <!-- Sección Acciones por Usuario -->
+            <div class="admin-student-search-card" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem; margin-bottom:2rem;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;">
+                <h3 style="font-size:1.1rem; font-weight:800; color:#18191E; display:flex; align-items:center; gap:0.5rem;">
+                  <span>👥 Acciones Realizadas por Usuario</span>
+                </h3>
+                <div class="admin-search-box" style="max-width:280px;">
+                  <input type="text" id="admin-user-actions-filter" placeholder="Filtrar por nombre o email..." />
+                </div>
+              </div>
+              <div class="admin-table-container">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Correo Electrónico</th>
+                      <th>Rol</th>
+                      <th style="text-align:right;">Total Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-user-actions-tbody">
+                    <!-- Renderizado dinámico -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Sección Panel de Auditoría (Ingresos y Registros) -->
+            <div class="admin-student-search-card" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.2rem; flex-wrap:wrap; gap:1rem;">
+                <div>
+                  <h3 style="font-size:1.2rem; font-weight:800; color:#18191E; display:flex; align-items:center; gap:0.5rem;">
+                    <span>🛡️ Bitácora y Panel de Auditoría</span>
+                    <span class="status-pill respondida" style="font-size:0.75rem;">En vivo</span>
+                  </h3>
+                  <p style="font-size:0.85rem; color:#6B7280; margin-top:0.2rem;">
+                    Historial auditado de cada ingreso y registro realizado por cualquier estudiante o administrador.
+                  </p>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap;">
+                  <select id="admin-audit-type-filter" style="padding:0.45rem 0.8rem; border:1px solid #CBD5E1; border-radius:8px; font-weight:700; font-size:0.85rem;">
+                    <option value="TODOS">Todos los Eventos</option>
+                    <option value="INGRESO">Solo Ingresos (Logins)</option>
+                    <option value="REGISTRO">Solo Registros</option>
+                  </select>
+                  <div class="admin-search-box" style="max-width:240px;">
+                    <input type="text" id="admin-audit-search" placeholder="Buscar en auditoría..." />
+                  </div>
+                </div>
+              </div>
+
+              <div class="admin-table-container">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th style="width:50px;">ID</th>
+                      <th>Fecha y Hora</th>
+                      <th>Tipo Evento</th>
+                      <th>Usuario</th>
+                      <th>Correo Electrónico</th>
+                      <th>Rol</th>
+                      <th>Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-audit-tbody">
+                    <!-- Renderizado dinámico -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </section>
 
