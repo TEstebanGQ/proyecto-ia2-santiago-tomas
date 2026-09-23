@@ -465,7 +465,7 @@ export const ui = {
   },
 
   // Renderizado del Catálogo de Cursos (RF 04)
-  renderCatalogo(cursos) {
+  renderCatalogo(cursos, usuario = null) {
     const grid = document.getElementById('courses-grid');
     if (!grid) return;
 
@@ -478,6 +478,8 @@ export const ui = {
       `;
       return;
     }
+
+    const esAdmin = usuario && usuario.rol === 'ADMINISTRADOR';
 
     const getCatClass = (cat = '') => {
       const c = cat.toLowerCase();
@@ -510,13 +512,112 @@ export const ui = {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             ${curso.duracionHoras} Horas
           </span>
-          <button class="btn-ask-course" onclick="window.consultarCursoSemantico('${curso.nombre.replace(/'/g, "\\'")}')">
-            Orientar sobre este curso →
-          </button>
+          <div class="course-card-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+            ${esAdmin ? `
+              <div class="course-rating-avg-badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; padding: 0.4rem 0.75rem; border-radius: 9999px; font-weight: 700; font-size: 0.82rem; border: 1px solid rgba(245, 158, 11, 0.3); display: inline-flex; align-items: center; gap: 0.35rem;" title="Promedio de calificaciones para administradores">
+                <span>⭐</span> ${curso.promedioCalificaciones ? curso.promedioCalificaciones.toFixed(1) : 'Sin votos'} ${curso.totalCalificaciones ? `(${curso.totalCalificaciones})` : ''}
+              </div>
+            ` : `
+              <button class="btn-rate-course" onclick="window.abrirModalCalificarCurso(${curso.id}, '${curso.nombre.replace(/'/g, "\\'")}')" style="background: #F59E0B; color: #FFFFFF; border: none; padding: 0.45rem 0.85rem; border-radius: 9999px; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.35rem;">
+                ⭐ Calificar
+              </button>
+            `}
+            <button class="btn-ask-course" onclick="window.consultarCursoSemantico('${curso.nombre.replace(/'/g, "\\'")}')">
+              Orientar →
+            </button>
+          </div>
         </div>
       `;
       grid.appendChild(card);
     });
+  },
+
+  // Modal para Calificar un Curso por Estudiantes
+  mostrarModalCalificarCurso(cursoId, nombreCurso, onEnviar) {
+    let modal = document.getElementById('modal-calificar-curso');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modal-calificar-curso';
+      modal.className = 'modal-overlay';
+      document.body.appendChild(modal);
+    }
+
+    let selectedStars = 5;
+
+    modal.innerHTML = `
+      <div class="modal-editorial-card" style="max-width: 460px; padding: 2rem; background: var(--bg-card); border-radius: var(--radius-xl); border: 1px solid var(--border-medium); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h3 class="modal-title" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin: 0;">⭐ Calificar Curso</h3>
+          <button class="modal-close-btn" id="close-rate-course-modal-btn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">✕</button>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.4;">
+          Indica tu valoración para el curso <strong style="color: var(--text-primary);">${nombreCurso}</strong>:
+        </p>
+
+        <div class="star-rating-container" style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.25rem;">
+          ${[1, 2, 3, 4, 5].map(star => `
+            <button type="button" class="star-btn active" data-star="${star}" style="font-size: 2.2rem; background: none; border: none; cursor: pointer; transition: transform 0.15s ease; color: #F59E0B;">
+              ★
+            </button>
+          `).join('')}
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label for="rate-course-comment" style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--text-secondary);">Comentario u opinión (opcional):</label>
+          <textarea id="rate-course-comment" rows="3" style="width: 100%; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-medium); background: var(--bg-card-subtle); color: var(--text-primary); font-family: inherit; resize: vertical;" placeholder="Escribe tu opinión sobre el curso..."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+          <button type="button" class="btn-secondary-pill" id="cancel-rate-course-btn" style="padding: 0.5rem 1rem; border-radius: 9999px; border: 1px solid var(--border-medium); background: transparent; cursor: pointer; font-weight: 600;">Cancelar</button>
+          <button type="button" class="btn-primary-lime" id="submit-rate-course-btn" style="padding: 0.5rem 1.2rem; border-radius: 9999px; border: none; background: #F59E0B; color: white; cursor: pointer; font-weight: 700;">Enviar Calificación</button>
+        </div>
+      </div>
+    `;
+
+    modal.style.display = 'flex';
+
+    const starBtns = modal.querySelectorAll('.star-btn');
+    starBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedStars = parseInt(btn.getAttribute('data-star'));
+        starBtns.forEach(sb => {
+          const val = parseInt(sb.getAttribute('data-star'));
+          if (val <= selectedStars) {
+            sb.style.color = '#F59E0B';
+            sb.classList.add('active');
+          } else {
+            sb.style.color = '#D1D5DB';
+            sb.classList.remove('active');
+          }
+        });
+      });
+    });
+
+    const closeBtn = modal.querySelector('#close-rate-course-modal-btn');
+    const cancelBtn = modal.querySelector('#cancel-rate-course-btn');
+    const submitBtn = modal.querySelector('#submit-rate-course-btn');
+
+    const cerrar = () => modal.style.display = 'none';
+    if (closeBtn) closeBtn.onclick = cerrar;
+    if (cancelBtn) cancelBtn.onclick = cerrar;
+
+    if (submitBtn) {
+      submitBtn.onclick = async () => {
+        const comentario = modal.querySelector('#rate-course-comment').value;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando...';
+        try {
+          if (onEnviar) {
+            await onEnviar(cursoId, selectedStars, comentario);
+          }
+          cerrar();
+        } catch (err) {
+          alert(err.message || 'Error al guardar la calificación');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Enviar Calificación';
+        }
+      };
+    }
   },
 
   // Renderizado del Historial Rápido en el Widget Lateral de la Pantalla Principal
@@ -1144,5 +1245,159 @@ export const ui = {
     }
 
     container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  },
+
+  renderEstadisticasAdmin(data) {
+    if (!data) return;
+
+    // KPI Cards
+    const totalEst = document.getElementById('global-stat-total-usuarios');
+    const activosEst = document.getElementById('global-stat-usuarios-activos');
+    const totalCons = document.getElementById('global-stat-total-consultas');
+    const promSat = document.getElementById('global-stat-promedio-calificacion');
+    const cursoTop = document.getElementById('global-stat-curso-top');
+
+    if (totalEst) totalEst.textContent = data.totalUsuarios || 0;
+    if (activosEst) activosEst.textContent = data.usuariosActivos || 0;
+    if (totalCons) totalCons.textContent = data.totalConsultas || 0;
+    if (promSat) {
+      promSat.textContent = (data.promedioCalificaciones !== null && data.promedioCalificaciones !== undefined)
+        ? `★ ${Number(data.promedioCalificaciones).toFixed(1)}`
+        : 'N/A';
+    }
+    if (cursoTop) {
+      cursoTop.textContent = data.cursoMasRecomendado && data.cursoMasRecomendado !== 'Ninguno aún'
+        ? data.cursoMasRecomendado
+        : 'Sin recomendaciones registradas';
+    }
+
+    // Acciones por Día
+    const daysContainer = document.getElementById('admin-actions-per-day-container');
+    if (daysContainer) {
+      const dias = data.accionesPorDia || [];
+      if (dias.length === 0) {
+        daysContainer.innerHTML = `<div style="color:#6B7280; font-size:0.88rem;">Sin registros de actividad por día.</div>`;
+      } else {
+        const maxVal = Math.max(...dias.map(d => d.totalAcciones || 1), 1);
+        daysContainer.innerHTML = dias.map(d => {
+          const pct = Math.min(100, Math.round(((d.totalAcciones || 0) / maxVal) * 100));
+          return `
+            <div style="margin-bottom:0.75rem;">
+              <div style="display:flex; justify-content:space-between; font-size:0.82rem; font-weight:700; color:#374151; margin-bottom:0.25rem;">
+                <span>📅 ${d.fecha}</span>
+                <span>${d.totalAcciones} acción(es)</span>
+              </div>
+              <div style="background:#F1F5F9; border-radius:6px; height:8px; overflow:hidden;">
+                <div style="background:linear-gradient(90deg, #7C3AED, #A855F7); width:${pct}%; height:100%; border-radius:6px;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Acciones por Usuario
+    const userTbody = document.getElementById('admin-user-actions-tbody');
+    if (userTbody) {
+      const users = data.accionesPorUsuario || [];
+      const filterInput = document.getElementById('admin-user-actions-filter');
+      const q = filterInput ? filterInput.value.toLowerCase().trim() : '';
+
+      const filteredUsers = users.filter(u => {
+        if (!q) return true;
+        return (u.nombre && u.nombre.toLowerCase().includes(q)) ||
+               (u.email && u.email.toLowerCase().includes(q));
+      });
+
+      if (filteredUsers.length === 0) {
+        userTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#6B7280; padding:1.5rem;">No hay usuarios coincidentes.</td></tr>`;
+      } else {
+        userTbody.innerHTML = filteredUsers.map(u => {
+          const isAdm = u.rol === 'ADMINISTRADOR';
+          const badgeClass = isAdm ? 'background:#FEE2E2; color:#991B1B;' : 'background:#E0E7FF; color:#3730A3;';
+          return `
+            <tr>
+              <td style="font-weight:700; color:#18191E;">
+                <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#F1F5F9; margin-right:0.5rem; font-size:0.78rem;">
+                  ${isAdm ? '🛡️' : '👤'}
+                </span>
+                ${u.nombre || 'Usuario'}
+              </td>
+              <td style="color:#4B5563; font-family:monospace; font-size:0.85rem;">${u.email || '-'}</td>
+              <td>
+                <span style="font-size:0.75rem; font-weight:800; padding:0.25rem 0.6rem; border-radius:12px; ${badgeClass}">
+                  ${u.rol || 'ESTUDIANTE'}
+                </span>
+              </td>
+              <td style="text-align:right; font-weight:800; color:#18191E;">
+                ${u.totalAcciones}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // Auditoría
+    this.renderTablaAuditoria(data.auditoria || []);
+  },
+
+  renderTablaAuditoria(list) {
+    const tbody = document.getElementById('admin-audit-tbody');
+    if (!tbody) return;
+
+    const searchInput = document.getElementById('admin-audit-search');
+    const typeSelect = document.getElementById('admin-audit-type-filter');
+
+    const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const eventType = typeSelect ? typeSelect.value : 'TODOS';
+
+    const filtered = list.filter(item => {
+      if (eventType !== 'TODOS' && item.tipoEvento !== eventType) {
+        return false;
+      }
+      if (q) {
+        const text = `${item.usuarioEmail} ${item.usuarioNombre} ${item.detalle} ${item.tipoEvento} ${item.rol}`.toLowerCase();
+        if (!text.includes(q)) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#6B7280; padding:2rem;">No se encontraron registros de auditoría que coincidan con el filtro.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(item => {
+      const isIngreso = item.tipoEvento === 'INGRESO';
+      const badgeEventStyle = isIngreso ? 'background:#DCFCE7; color:#166534;' : 'background:#FEF08A; color:#854D0E;';
+      const isAdm = item.rol === 'ADMINISTRADOR';
+      const badgeRolStyle = isAdm ? 'background:#FEE2E2; color:#991B1B;' : 'background:#E0E7FF; color:#3730A3;';
+
+      const fechaFmt = item.fecha ? new Date(item.fecha).toLocaleString('es-CO', {
+        dateStyle: 'short',
+        timeStyle: 'medium'
+      }) : '-';
+
+      return `
+        <tr>
+          <td style="font-weight:700; color:#64748B;">#${item.id}</td>
+          <td style="font-size:0.83rem; color:#334155; white-space:nowrap;">${fechaFmt}</td>
+          <td>
+            <span style="font-size:0.75rem; font-weight:800; padding:0.25rem 0.65rem; border-radius:12px; ${badgeEventStyle}">
+              ${isIngreso ? '🔑 INGRESO' : '📝 REGISTRO'}
+            </span>
+          </td>
+          <td style="font-weight:700; color:#1E293B;">${item.usuarioNombre || 'Usuario'}</td>
+          <td style="font-family:monospace; font-size:0.83rem; color:#475569;">${item.usuarioEmail}</td>
+          <td>
+            <span style="font-size:0.75rem; font-weight:800; padding:0.25rem 0.6rem; border-radius:12px; ${badgeRolStyle}">
+              ${item.rol}
+            </span>
+          </td>
+          <td style="font-size:0.85rem; color:#475569;">${item.detalle || '-'}</td>
+        </tr>
+      `;
+    }).join('');
   }
 };

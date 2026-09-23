@@ -566,14 +566,31 @@ function mostrarDetalleHistorial(item) {
   });
 }
 
+let cacheStatsAdmin = null;
+
+async function cargarEstadisticasAdmin() {
+  try {
+    const data = await api.getEstadisticasAdmin();
+    cacheStatsAdmin = data;
+    ui.renderEstadisticasAdmin(data);
+  } catch (err) {
+    console.error('Error al cargar estadísticas admin:', err);
+    ui.showToast('Error al cargar estadísticas globales y auditoría: ' + err.message, 'error');
+  }
+}
+
 async function cargarEstadisticas() {
   try {
+    const isAdmin = state.usuario && state.usuario.rol === 'ADMINISTRADOR';
     const estudianteId = (state.usuario && state.usuario.rol === 'ESTUDIANTE')
       ? (state.usuario.id || (state.estudianteActivo ? state.estudianteActivo.id : null))
       : null;
-    const stats = await api.getEstadisticas(estudianteId);
+    const stats = await api.getEstadisticas(isAdmin ? null : estudianteId);
     state.setEstadisticas(stats);
     ui.renderEstadisticas(stats, state.usuario);
+    if (isAdmin) {
+      cargarEstadisticasAdmin();
+    }
   } catch (err) {
     ui.showToast('Error al cargar estadísticas: ' + err.message, 'error');
   }
@@ -845,47 +862,83 @@ function initAdminPanel() {
   }
 
   // ==========================================================
-  // PESTAÑAS SUB-PANEL ADMIN (CURSOS, ESTUDIANTES Y CONFIGURACIÓN UMBRAL)
+  // PESTAÑAS SUB-PANEL ADMIN (CURSOS, ESTUDIANTES, CONFIGURACIÓN UMBRAL Y ESTADÍSTICAS/AUDITORÍA)
   // ==========================================================
   const subtabCourses = document.getElementById('subtab-admin-courses');
   const subtabStudents = document.getElementById('subtab-admin-students');
   const subtabConfig = document.getElementById('subtab-admin-config');
+  const subtabStats = document.getElementById('subtab-admin-stats');
   const paneCourses = document.getElementById('admin-pane-courses');
   const paneStudents = document.getElementById('admin-pane-students');
   const paneConfig = document.getElementById('admin-pane-config');
+  const paneStats = document.getElementById('admin-pane-stats');
 
-  if (subtabCourses && subtabStudents) {
+  const deactivateAllSubtabs = () => {
+    [subtabCourses, subtabStudents, subtabConfig, subtabStats].forEach(t => t && t.classList.remove('active'));
+    [paneCourses, paneStudents, paneConfig, paneStats].forEach(p => p && (p.style.display = 'none'));
+  };
+
+  if (subtabCourses) {
     subtabCourses.addEventListener('click', () => {
+      deactivateAllSubtabs();
       subtabCourses.classList.add('active');
-      subtabStudents.classList.remove('active');
-      if (subtabConfig) subtabConfig.classList.remove('active');
       if (paneCourses) paneCourses.style.display = 'block';
-      if (paneStudents) paneStudents.style.display = 'none';
-      if (paneConfig) paneConfig.style.display = 'none';
       cargarCursosAdmin();
     });
-
+  }
+  if (subtabStudents) {
     subtabStudents.addEventListener('click', () => {
+      deactivateAllSubtabs();
       subtabStudents.classList.add('active');
-      subtabCourses.classList.remove('active');
-      if (subtabConfig) subtabConfig.classList.remove('active');
       if (paneStudents) paneStudents.style.display = 'block';
-      if (paneCourses) paneCourses.style.display = 'none';
-      if (paneConfig) paneConfig.style.display = 'none';
       cargarEstudiantesAdmin();
     });
+  }
+  if (subtabConfig) {
+    subtabConfig.addEventListener('click', () => {
+      deactivateAllSubtabs();
+      subtabConfig.classList.add('active');
+      if (paneConfig) paneConfig.style.display = 'block';
+      cargarUmbralAdmin();
+    });
+  }
+  if (subtabStats) {
+    subtabStats.addEventListener('click', () => {
+      deactivateAllSubtabs();
+      subtabStats.classList.add('active');
+      if (paneStats) paneStats.style.display = 'block';
+      cargarEstadisticasAdmin();
+    });
+  }
 
-    if (subtabConfig) {
-      subtabConfig.addEventListener('click', () => {
-        subtabConfig.classList.add('active');
-        subtabCourses.classList.remove('active');
-        subtabStudents.classList.remove('active');
-        if (paneConfig) paneConfig.style.display = 'block';
-        if (paneCourses) paneCourses.style.display = 'none';
-        if (paneStudents) paneStudents.style.display = 'none';
-        cargarUmbralAdmin();
-      });
-    }
+  // Eventos para filtros y refresco de estadísticas globales y auditoría
+  const btnRefreshStats = document.getElementById('btn-admin-refresh-stats');
+  if (btnRefreshStats) {
+    btnRefreshStats.addEventListener('click', () => {
+      cargarEstadisticasAdmin();
+      ui.showToast('Métricas globales y bitácora de auditoría actualizadas', 'info');
+    });
+  }
+
+  const userActionsFilter = document.getElementById('admin-user-actions-filter');
+  if (userActionsFilter) {
+    userActionsFilter.addEventListener('input', () => {
+      if (cacheStatsAdmin) ui.renderEstadisticasAdmin(cacheStatsAdmin);
+    });
+  }
+
+  const auditSearch = document.getElementById('admin-audit-search');
+  if (auditSearch) {
+    auditSearch.addEventListener('input', () => {
+      if (cacheStatsAdmin) ui.renderTablaAuditoria(cacheStatsAdmin.auditoria || []);
+    });
+  }
+
+  const auditTypeFilter = document.getElementById('admin-audit-type-filter');
+  if (auditTypeFilter) {
+    auditTypeFilter.addEventListener('change', () => {
+      if (cacheStatsAdmin) ui.renderTablaAuditoria(cacheStatsAdmin.auditoria || []);
+    });
   }
 
   // Sincronización del Slider e Input Numérico de Umbral
