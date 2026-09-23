@@ -4496,3 +4496,57 @@ button, input, select, textarea {
   width: 100%;
 }
 
+/* ==========================================================
+   BOTONES Y ESTILOS DE INSCRIPCIÓN EXCLUSIVA DE ESTUDIANTES
+   ========================================================== */
+.btn-enroll-course {
+  background: #0F172A;
+  color: #FFFFFF;
+  font-weight: 700;
+  padding: 0.75rem 1.4rem;
+  border-radius: 9999px;
+  border: 1px solid #1E293B;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-enroll-course:hover {
+  background: #2563EB;
+  border-color: #1D4ED8;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.btn-enrolled-badge {
+  background: #ECFDF5 !important;
+  color: #047857 !important;
+  border: 1px solid #6EE7B7 !important;
+  font-weight: 700 !important;
+  padding: 0.75rem 1.4rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  cursor: default !important;
+  opacity: 1 !important;
+}
+
+.enroll-role-notice {
+  font-size: 0.82rem;
+  color: #64748B;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  padding: 0.55rem 1rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+

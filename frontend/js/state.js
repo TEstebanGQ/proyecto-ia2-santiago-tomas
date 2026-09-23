@@ -15,6 +15,7 @@ export const state = {
   cursosDocente: [],
   docenteFeedback: [],
   docenteEstadisticas: null,
+  inscripcionesCursoIds: new Set(),
 
   initUsuario() {
     try {
@@ -77,6 +78,27 @@ export const state = {
 
   getRol() {
     return this.usuario ? this.usuario.rol : 'ESTUDIANTE';
+  },
+
+  esEstudiante() {
+    return this.getRol() === 'ESTUDIANTE';
+  },
+
+  setInscripciones(lista) {
+    this.inscripcionesCursoIds = new Set(
+      (lista || []).map(ins => ins.cursoId || ins.idCurso || (ins.curso ? ins.curso.id : null) || ins).filter(Boolean)
+    );
+  },
+
+  estaInscrito(cursoId) {
+    if (!cursoId) return false;
+    return this.inscripcionesCursoIds.has(Number(cursoId)) || this.inscripcionesCursoIds.has(String(cursoId));
+  },
+
+  agregarInscripcion(cursoId) {
+    if (cursoId) {
+      this.inscripcionesCursoIds.add(Number(cursoId));
+    }
   },
 
   setEstudiantes(lista) {

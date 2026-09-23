@@ -576,8 +576,13 @@ async function actualizarHistorialesEstudiante() {
     
     // Renderizar widget de historial rápido
     ui.renderHistorialRapido(historial, (item) => mostrarDetalleHistorial(item));
+
+    if (state.esEstudiante()) {
+      const inscripciones = await api.getInscripcionesEstudiante(state.estudianteActivo.id);
+      state.setInscripciones(inscripciones);
+    }
   } catch (err) {
-    console.warn('No se pudo actualizar historial rápido:', err.message);
+    console.warn('No se pudo actualizar historial o inscripciones:', err.message);
   }
 }
 
@@ -639,17 +644,55 @@ window.consultarCursoSemantico = (nombreCurso) => {
   }
 };
 
-// Modal con detalles del curso
+// Modal con detalles del curso y matriculación
 window.verDetalleCursoModal = (nombreCurso) => {
   const curso = state.cursos.find(c => c.nombre.toLowerCase().trim() === nombreCurso.toLowerCase().trim()) || {
+    id: null,
     nombre: nombreCurso,
     categoria: 'Tecnología',
     nivel: 'Intermedio',
     duracionHoras: 40,
     descripcion: 'Formación académica especializada con estándares de la industria, orientada a la adquisición de competencias profesionales.'
   };
-  ui.mostrarModalDetalleCurso(curso);
+  ui.mostrarModalDetalleCurso(curso, handleInscribirmeEnCurso);
 };
+
+async function handleInscribirmeEnCurso(curso, btnEl) {
+  if (!state.esEstudiante()) {
+    ui.showToast('Solo los estudiantes pueden inscribirse a los cursos.', 'warning');
+    return;
+  }
+  const estudianteId = state.estudianteActivo ? state.estudianteActivo.id : (state.usuario ? state.usuario.id : null);
+  if (!estudianteId) {
+    ui.showToast('Debes iniciar sesión como estudiante para inscribirte.', 'warning');
+    return;
+  }
+  if (!curso || !curso.id) {
+    ui.showToast('No se encontró el identificador del curso para la matrícula.', 'error');
+    return;
+  }
+
+  try {
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = '<span>Matriculando...</span> ⏳';
+    }
+    await api.inscribirCurso(estudianteId, curso.id);
+    state.agregarInscripcion(curso.id);
+    ui.showToast(`🎉 ¡Inscripción exitosa! Te has matriculado en "${curso.nombre}".`, 'success');
+    if (btnEl) {
+      btnEl.className = 'btn-enrolled-badge';
+      btnEl.innerHTML = '<span>✓ Ya estás inscrito</span>';
+      btnEl.disabled = true;
+    }
+  } catch (err) {
+    ui.showToast(err.message || 'Error al procesar la inscripción.', 'error');
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = '<span>Inscribirme al Curso</span> ✍️';
+    }
+  }
+}
 
 // ==========================================================================
 // 10. MODAL DE AUTENTICACIÓN Y ROLES (GOOGLE / ESTUDIANTE / ADMIN)

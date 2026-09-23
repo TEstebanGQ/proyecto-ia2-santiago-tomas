@@ -925,13 +925,39 @@ export const ui = {
   },
 
   // Modal con Detalle Completo del Curso
-  mostrarModalDetalleCurso(curso) {
+  mostrarModalDetalleCurso(curso, onInscribir) {
     let modal = document.getElementById('course-details-modal');
     if (!modal) {
       modal = document.createElement('div');
       modal.id = 'course-details-modal';
       modal.className = 'modal-overlay';
       document.body.appendChild(modal);
+    }
+
+    const esEstudiante = state.esEstudiante ? state.esEstudiante() : ((state.usuario?.rol || 'ESTUDIANTE') === 'ESTUDIANTE');
+    const estaInscrito = curso.id && state.estaInscrito ? state.estaInscrito(curso.id) : false;
+
+    let enrollmentBtnHtml = '';
+    if (esEstudiante) {
+      if (estaInscrito) {
+        enrollmentBtnHtml = `
+          <button type="button" class="btn-enrolled-badge" disabled title="Ya te encuentras matriculado en este curso">
+            <span>✓ Ya estás inscrito</span>
+          </button>
+        `;
+      } else {
+        enrollmentBtnHtml = `
+          <button type="button" class="btn-enroll-course" id="modal-enroll-course-btn" data-id="${curso.id || ''}" title="Inscribirme oficialmente a este curso">
+            <span>Inscribirme al Curso</span> ✍️
+          </button>
+        `;
+      }
+    } else {
+      enrollmentBtnHtml = `
+        <span class="enroll-role-notice" title="Solo los estudiantes pueden inscribirse a los cursos">
+          🔒 Solo estudiantes pueden inscribirse
+        </span>
+      `;
     }
 
     modal.innerHTML = `
@@ -962,6 +988,7 @@ export const ui = {
         </div>
 
         <div class="modal-course-footer">
+          ${enrollmentBtnHtml}
           <button class="btn-primary-lime" id="modal-ask-rag-btn">
             <span>Orientar con Asesor RAG</span>
             <span class="btn-arrow">➔</span>
@@ -978,6 +1005,7 @@ export const ui = {
     const closeBtn = document.getElementById('close-course-modal-btn');
     const closeBtn2 = document.getElementById('modal-close-course-btn');
     const askBtn = document.getElementById('modal-ask-rag-btn');
+    const enrollBtn = document.getElementById('modal-enroll-course-btn');
 
     if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
     if (closeBtn2) closeBtn2.onclick = () => modal.style.display = 'none';
@@ -986,6 +1014,9 @@ export const ui = {
         modal.style.display = 'none';
         window.consultarCursoSemantico(curso.nombre);
       };
+    }
+    if (enrollBtn && onInscribir) {
+      enrollBtn.onclick = () => onInscribir(curso, enrollBtn);
     }
   },
 

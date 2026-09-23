@@ -46,6 +46,10 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/", "/api").permitAll()
 
+                        // Inscripción a cursos: Exclusiva para el rol ESTUDIANTE
+                        .requestMatchers(HttpMethod.POST, "/api/estudiantes/*/inscribir/*").hasRole("ESTUDIANTE")
+                        .requestMatchers(HttpMethod.GET, "/api/estudiantes/*/inscripciones").authenticated()
+
                         // Operaciones del rol DOCENTE (Gestión de su especialidad, feedback, analíticas de área)
                         .requestMatchers("/api/docentes/**").hasAnyRole("DOCENTE", "ADMINISTRADOR")
 

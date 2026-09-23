@@ -66,6 +66,37 @@ export const api = {
     return await res.json();
   },
 
+  async inscribirCurso(estudianteId, cursoId) {
+    const res = await fetch(`${API_BASE_URL}/estudiantes/${estudianteId}/inscribir/${cursoId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include'
+    });
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (e) {
+      data = { mensaje: res.statusText || 'Error en la respuesta' };
+    }
+    if (!res.ok) {
+      throw new Error(data.mensaje || `Error al inscribirse en el curso (${res.status})`);
+    }
+    return data;
+  },
+
+  async getInscripcionesEstudiante(estudianteId) {
+    const res = await fetch(`${API_BASE_URL}/estudiantes/${estudianteId}/inscripciones`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) return [];
+    try {
+      return await res.json();
+    } catch (e) {
+      return [];
+    }
+  },
+
   // Cursos (Catálogo público)
   async getCursos(categoria = '', nivel = '') {
     const params = new URLSearchParams();

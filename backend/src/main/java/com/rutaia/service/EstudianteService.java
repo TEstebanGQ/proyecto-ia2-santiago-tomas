@@ -17,6 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.rutaia.dto.InscripcionResponseDTO;
+import com.rutaia.entity.Curso;
+import com.rutaia.entity.Inscripcion;
+import com.rutaia.exception.BusinessRuleException;
+import com.rutaia.repository.CursoRepository;
+import com.rutaia.repository.InscripcionRepository;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,10 +31,17 @@ public class EstudianteService {
 
     private final EstudianteRepository estudianteRepository;
     private final ConsultaRepository consultaRepository;
+    private final InscripcionRepository inscripcionRepository;
+    private final CursoRepository cursoRepository;
 
-    public EstudianteService(EstudianteRepository estudianteRepository, ConsultaRepository consultaRepository) {
+    public EstudianteService(EstudianteRepository estudianteRepository,
+                             ConsultaRepository consultaRepository,
+                             InscripcionRepository inscripcionRepository,
+                             CursoRepository cursoRepository) {
         this.estudianteRepository = estudianteRepository;
         this.consultaRepository = consultaRepository;
+        this.inscripcionRepository = inscripcionRepository;
+        this.cursoRepository = cursoRepository;
     }
 
     @Transactional
@@ -104,6 +118,78 @@ public class EstudianteService {
         }
 
         return historial;
+    }
+
+    @Transactional
+    public InscripcionResponseDTO inscribirEstudiante(Long estudianteId, Long cursoId, String roleAutenticado) {
+        if (roleAutenticado != null && !"ROLE_ESTUDIANTE".equals(roleAutenticado) && !"ESTUDIANTE".equals(roleAutenticado)) {
+            throw new BusinessRuleException("Solo los estudiantes pueden inscribirse a los cursos.");
+        }
+
+        Estudiante estudiante = estudianteRepository.findById(estudianteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudiante no encontrado con ID: " + estudianteId));
+
+        Curso curso = cursoRepository.findById(cursoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Curso no encontrado con ID: " + cursoId));
+
+        if (curso.getActivo() != null && !curso.getActivo()) {
+            throw new BusinessRuleException("No es posible inscribirse a un curso inactivo.");
+        }
+
+        Optional<Inscripcion> existente = inscripcionRepository.findByEstudianteIdAndCursoId(estudianteId, cursoId);
+        if (existente.isPresent()) {
+            Inscripcion ins = existente.get();
+            return new InscripcionResponseDTO(
+                    ins.getId(),
+                    estudiante.getId(),
+                    estudiante.getNombreCompleto(),
+                    estudiante.getCorreoElectronico(),
+                    estudiante.getNivelExperiencia(),
+                    estudiante.getAreaInteres(),
+                    curso.getId(),
+                    curso.getNombre(),
+                    ins.getFechaInscripcion(),
+                    ins.getEstado()
+            );
+        }
+
+        Inscripcion nueva = new Inscripcion(estudiante, curso, "Inscrito", java.time.LocalDateTime.now());
+        Inscripcion guardada = inscripcionRepository.save(nueva);
+
+        return new InscripcionResponseDTO(
+                guardada.getId(),
+                estudiante.getId(),
+                estudiante.getNombreCompleto(),
+                estudiante.getCorreoElectronico(),
+                estudiante.getNivelExperiencia(),
+                estudiante.getAreaInteres(),
+                curso.getId(),
+                curso.getNombre(),
+                guardada.getFechaInscripcion(),
+                guardada.getEstado()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<InscripcionResponseDTO> listarInscripcionesPorEstudiante(Long estudianteId) {
+        if (!estudianteRepository.existsById(estudianteId)) {
+            throw new ResourceNotFoundException("Estudiante no encontrado con ID: " + estudianteId);
+        }
+        return inscripcionRepository.findByEstudianteIdOrderByFechaInscripcionDesc(estudianteId)
+                .stream()
+                .map(ins -> new InscripcionResponseDTO(
+                        ins.getId(),
+                        ins.getEstudiante().getId(),
+                        ins.getEstudiante().getNombreCompleto(),
+                        ins.getEstudiante().getCorreoElectronico(),
+                        ins.getEstudiante().getNivelExperiencia(),
+                        ins.getEstudiante().getAreaInteres(),
+                        ins.getCurso().getId(),
+                        ins.getCurso().getNombre(),
+                        ins.getFechaInscripcion(),
+                        ins.getEstado()
+                ))
+                .collect(Collectors.toList());
     }
 
     private EstudianteResponseDTO mapToResponse(Estudiante estudiante) {
