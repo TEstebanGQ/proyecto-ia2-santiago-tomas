@@ -769,26 +769,49 @@ export const ui = {
       card.className = 'course-editorial-card';
       const catClass = getCatClass(curso.categoria);
 
+      const esEstudiante = state.esEstudiante ? state.esEstudiante() : true;
+      const estaInscrito = curso.id && state.estaInscrito ? state.estaInscrito(curso.id) : false;
+
+      let botonInscripcion = '';
+      if (esEstudiante) {
+        if (estaInscrito) {
+          botonInscripcion = `<span class="badge-enrolled-mini" title="Ya te encuentras matriculado en este curso">✓ Inscrito</span>`;
+        } else {
+          botonInscripcion = `<button type="button" class="btn-enroll-mini" onclick="event.stopPropagation(); window.inscribirseACurso(${curso.id}, this)" title="Inscribirme oficialmente a este curso"><span>Inscribirme</span> ✍️</button>`;
+        }
+      }
+
       card.innerHTML = `
         <div class="course-editorial-header">
           <div class="course-editorial-badges">
             <span class="badge-cat ${catClass}">${curso.categoria}</span>
             <span class="badge-level">${curso.nivel}</span>
           </div>
-          <h3 class="course-editorial-title">${curso.nombre}</h3>
+          <h3 class="course-editorial-title" style="cursor: pointer;" onclick="event.stopPropagation(); window.verDetalleCursoModal('${curso.nombre.replace(/'/g, "\\'")}')" title="Ver ficha técnica del curso">${curso.nombre}</h3>
           <p class="course-editorial-desc">${curso.descripcion}</p>
           ${curso.prerrequisitos ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; background: var(--bg-card-subtle); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border-left: 2px solid var(--accent-lime);"><strong>Prerrequisitos:</strong> ${curso.prerrequisitos}</div>` : ''}
         </div>
-        <div class="course-editorial-footer">
+        <div class="course-editorial-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <span class="course-editorial-hours">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            ${curso.duracionHoras} Horas
+            ${curso.duracionHoras}h
           </span>
-          <button class="btn-ask-course" onclick="window.consultarCursoSemantico('${curso.nombre.replace(/'/g, "\\'")}')">
-            Orientar sobre este curso →
-          </button>
+          <div style="display: inline-flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+            ${botonInscripcion}
+            <button class="btn-ask-course" onclick="event.stopPropagation(); window.consultarCursoSemantico('${curso.nombre.replace(/'/g, "\\'")}')" title="Preguntar al Asesor RAG">
+              Orientar →
+            </button>
+            <button type="button" class="btn-details-icon" onclick="event.stopPropagation(); window.verDetalleCursoModal('${curso.nombre.replace(/'/g, "\\'")}')" title="Ver ficha técnica del curso">
+              ℹ️
+            </button>
+          </div>
         </div>
       `;
+      card.onclick = (e) => {
+        if (!e.target.closest('button')) {
+          window.verDetalleCursoModal(curso.nombre);
+        }
+      };
       grid.appendChild(card);
     });
   },
@@ -934,7 +957,14 @@ export const ui = {
       document.body.appendChild(modal);
     }
 
-    const esEstudiante = state.esEstudiante ? state.esEstudiante() : ((state.usuario?.rol || 'ESTUDIANTE') === 'ESTUDIANTE');
+    if ((!curso.id || curso.id === 0) && state.cursos && state.cursos.length > 0) {
+      const found = state.cursos.find(c => c.nombre && curso.nombre && c.nombre.toLowerCase().trim() === curso.nombre.toLowerCase().trim());
+      if (found) {
+        curso = { ...found, ...curso, id: found.id };
+      }
+    }
+
+    const esEstudiante = state.esEstudiante ? state.esEstudiante() : true;
     const estaInscrito = curso.id && state.estaInscrito ? state.estaInscrito(curso.id) : false;
 
     let enrollmentBtnHtml = '';
@@ -947,7 +977,7 @@ export const ui = {
         `;
       } else {
         enrollmentBtnHtml = `
-          <button type="button" class="btn-enroll-course" id="modal-enroll-course-btn" data-id="${curso.id || ''}" title="Inscribirme oficialmente a este curso">
+          <button type="button" class="btn-enroll-course" id="modal-enroll-course-btn" onclick="window.inscribirseACurso(${curso.id}, this)" title="Inscribirme oficialmente a este curso">
             <span>Inscribirme al Curso</span> ✍️
           </button>
         `;
@@ -1015,8 +1045,15 @@ export const ui = {
         window.consultarCursoSemantico(curso.nombre);
       };
     }
-    if (enrollBtn && onInscribir) {
-      enrollBtn.onclick = () => onInscribir(curso, enrollBtn);
+    if (enrollBtn) {
+      enrollBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (typeof window.inscribirseACurso === 'function') {
+          window.inscribirseACurso(curso.id, enrollBtn);
+        } else if (onInscribir) {
+          onInscribir(curso, enrollBtn);
+        }
+      };
     }
   },
 

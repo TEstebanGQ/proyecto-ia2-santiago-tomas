@@ -73,15 +73,22 @@ export const state = {
   },
 
   esAdmin() {
-    return this.usuario && this.usuario.rol === 'ADMINISTRADOR';
+    const r = (this.getRol() || '').toUpperCase();
+    return r === 'ADMINISTRADOR' || r === 'ADMIN' || r === 'ROLE_ADMINISTRADOR';
+  },
+
+  esDocente() {
+    const r = (this.getRol() || '').toUpperCase();
+    return r === 'DOCENTE' || r === 'ROLE_DOCENTE' || r === 'PROFESOR';
   },
 
   getRol() {
-    return this.usuario ? this.usuario.rol : 'ESTUDIANTE';
+    return this.usuario ? (this.usuario.rol || 'ESTUDIANTE') : 'ESTUDIANTE';
   },
 
   esEstudiante() {
-    return this.getRol() === 'ESTUDIANTE';
+    if (this.esAdmin() || this.esDocente()) return false;
+    return true;
   },
 
   setInscripciones(lista) {

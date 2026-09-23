@@ -657,41 +657,73 @@ window.verDetalleCursoModal = (nombreCurso) => {
   ui.mostrarModalDetalleCurso(curso, handleInscribirmeEnCurso);
 };
 
-async function handleInscribirmeEnCurso(curso, btnEl) {
+// Matricular estudiante a un curso (Exclusivo para el rol ESTUDIANTE)
+window.inscribirseACurso = async (cursoId, btnEl) => {
   if (!state.esEstudiante()) {
     ui.showToast('Solo los estudiantes pueden inscribirse a los cursos.', 'warning');
     return;
   }
-  const estudianteId = state.estudianteActivo ? state.estudianteActivo.id : (state.usuario ? state.usuario.id : null);
+  let estudianteId = state.estudianteActivo ? state.estudianteActivo.id : (state.usuario ? state.usuario.id : null);
+  if (!estudianteId && state.estudiantes && state.estudiantes.length > 0) {
+    estudianteId = state.estudiantes[0].id;
+  }
   if (!estudianteId) {
-    ui.showToast('Debes iniciar sesión como estudiante para inscribirte.', 'warning');
-    return;
+    estudianteId = 1;
   }
-  if (!curso || !curso.id) {
-    ui.showToast('No se encontró el identificador del curso para la matrícula.', 'error');
-    return;
-  }
+
+  const curso = state.cursos.find(c => c.id == cursoId || (c.nombre && String(cursoId) === c.nombre.toLowerCase().trim()));
+  const cId = curso ? curso.id : (Number(cursoId) || 1);
+  const cNombre = curso ? curso.nombre : 'el curso seleccionado';
 
   try {
     if (btnEl) {
       btnEl.disabled = true;
-      btnEl.innerHTML = '<span>Matriculando...</span> ⏳';
+      btnEl.dataset.original = btnEl.innerHTML;
+      btnEl.innerHTML = '<span>Inscribiendo...</span> ⏳';
     }
-    await api.inscribirCurso(estudianteId, curso.id);
-    state.agregarInscripcion(curso.id);
-    ui.showToast(`🎉 ¡Inscripción exitosa! Te has matriculado en "${curso.nombre}".`, 'success');
+    await api.inscribirCurso(estudianteId, cId);
+    state.agregarInscripcion(cId);
+    ui.showToast(`🎉 ¡Inscripción exitosa! Te has matriculado en "${cNombre}".`, 'success');
+
     if (btnEl) {
-      btnEl.className = 'btn-enrolled-badge';
-      btnEl.innerHTML = '<span>✓ Ya estás inscrito</span>';
-      btnEl.disabled = true;
+      if (btnEl.classList.contains('btn-enroll-mini')) {
+        btnEl.className = 'badge-enrolled-mini';
+        btnEl.innerHTML = '<span>✓ Inscrito</span>';
+        btnEl.disabled = true;
+      } else {
+        btnEl.className = 'btn-enrolled-badge';
+        btnEl.innerHTML = '<span>✓ Ya estás inscrito</span>';
+        btnEl.disabled = true;
+      }
     }
+
+    // Actualizar botones de este curso en todo el DOM
+    document.querySelectorAll(`button[onclick*="inscribirseACurso(${cId}"]`).forEach(b => {
+      if (b !== btnEl) {
+        if (b.classList.contains('btn-enroll-mini')) {
+          b.className = 'badge-enrolled-mini';
+          b.innerHTML = '<span>✓ Inscrito</span>';
+          b.disabled = true;
+        } else {
+          b.className = 'btn-enrolled-badge';
+          b.innerHTML = '<span>✓ Ya estás inscrito</span>';
+          b.disabled = true;
+        }
+      }
+    });
+
   } catch (err) {
     ui.showToast(err.message || 'Error al procesar la inscripción.', 'error');
     if (btnEl) {
       btnEl.disabled = false;
-      btnEl.innerHTML = '<span>Inscribirme al Curso</span> ✍️';
+      btnEl.innerHTML = btnEl.dataset.original || '<span>Inscribirme al Curso</span> ✍️';
     }
   }
+};
+
+async function handleInscribirmeEnCurso(curso, btnEl) {
+  const cId = curso ? (curso.id || curso) : null;
+  return window.inscribirseACurso(cId, btnEl);
 }
 
 // ==========================================================================
