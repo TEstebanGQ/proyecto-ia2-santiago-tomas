@@ -937,12 +937,12 @@ export const ui = {
           <p class="course-editorial-desc">${cursoDesc}</p>
           ${prerreqs ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; background: var(--bg-card-subtle); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border-left: 2px solid var(--accent-lime);"><strong>Prerrequisitos:</strong> ${prerreqs}</div>` : ''}
         </div>
-        <div class="course-editorial-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <div class="course-editorial-footer">
           <span class="course-editorial-hours">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             ${cursoHoras}h
           </span>
-          <div style="display: inline-flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+          <div class="course-card-actions">
             ${botonInscripcion}
             <button type="button" class="btn-ask-course" title="Preguntar al Asesor RAG">
               Orientar →
