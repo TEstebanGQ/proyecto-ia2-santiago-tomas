@@ -24,10 +24,12 @@ public class EstudianteService {
 
     private final EstudianteRepository estudianteRepository;
     private final ConsultaRepository consultaRepository;
+    private final AuditoriaService auditoriaService;
 
-    public EstudianteService(EstudianteRepository estudianteRepository, ConsultaRepository consultaRepository) {
+    public EstudianteService(EstudianteRepository estudianteRepository, ConsultaRepository consultaRepository, AuditoriaService auditoriaService) {
         this.estudianteRepository = estudianteRepository;
         this.consultaRepository = consultaRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional
@@ -44,6 +46,15 @@ public class EstudianteService {
         );
 
         Estudiante guardado = estudianteRepository.save(estudiante);
+
+        auditoriaService.registrarEvento(
+                "REGISTRO",
+                guardado.getCorreoElectronico(),
+                guardado.getNombreCompleto(),
+                "ESTUDIANTE",
+                "Registro de nuevo estudiante (" + guardado.getAreaInteres() + " - " + guardado.getNivelExperiencia() + ")"
+        );
+
         return mapToResponse(guardado);
     }
 
