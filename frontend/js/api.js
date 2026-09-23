@@ -81,11 +81,18 @@ export const api = {
   },
 
   // Consultas RAG
-  async solicitarRecomendacion(estudianteId, pregunta) {
+  async solicitarRecomendacion(estudianteId, pregunta, cursosPrevios = [], contextoPrevio = '') {
+    const payload = { estudianteId, pregunta };
+    if (Array.isArray(cursosPrevios) && cursosPrevios.length > 0) {
+      payload.cursosPrevios = cursosPrevios;
+    }
+    if (contextoPrevio) {
+      payload.contextoPrevio = contextoPrevio;
+    }
     const res = await fetch(`${API_BASE_URL}/consultas/recomendar`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ estudianteId, pregunta }),
+      body: JSON.stringify(payload),
       credentials: 'include'
     });
     const data = await res.json();
@@ -224,6 +231,99 @@ export const api = {
       credentials: 'include'
     });
     if (!res.ok) throw new Error('Error al consultar las estadísticas');
+    return await res.json();
+  },
+
+  // ==========================================================
+  // Operaciones del Rol DOCENTE (Gestión de su Especialidad)
+  // ==========================================================
+  async getDocentePerfil(email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/perfil${q}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Error al consultar el perfil docente');
+    return await res.json();
+  },
+
+  async getDocenteCursos(email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/cursos${q}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Error al listar cursos de la especialidad docente');
+    return await res.json();
+  },
+
+  async crearDocenteCurso(curso, email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/cursos${q}`, {
+      method: 'POST',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify(curso),
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.mensaje || 'Error al crear el curso');
+    return data;
+  },
+
+  async actualizarDocenteCurso(id, curso, email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/cursos/${id}${q}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify(curso),
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.mensaje || 'Error al actualizar el curso');
+    return data;
+  },
+
+  async desactivarDocenteCurso(id, email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/cursos/${id}/desactivar${q}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.mensaje || 'Error al desactivar el curso');
+    return data;
+  },
+
+  async activarDocenteCurso(id, email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/cursos/${id}/activar${q}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.mensaje || 'Error al activar el curso');
+    return data;
+  },
+
+  async getDocenteFeedback(email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/feedback${q}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Error al consultar el feedback de estudiantes');
+    return await res.json();
+  },
+
+  async getDocenteEstadisticas(email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/estadisticas${q}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Error al consultar analíticas docentes');
     return await res.json();
   }
 };

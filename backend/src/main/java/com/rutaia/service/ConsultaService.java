@@ -53,12 +53,14 @@ public class ConsultaService {
         Consulta consulta = new Consulta(estudiante, dto.getPregunta().trim(), "Pendiente");
         consulta = consultaRepository.save(consulta);
 
-        // RF 08: Enviar a n8n el id_consulta, pregunta, nivel_experiencia y area_interes
+        // RF 08: Enviar a n8n el id_consulta, pregunta, nivel_experiencia, area_interes y contexto conversacional previo
         N8nRecomendacionRequest n8nRequest = new N8nRecomendacionRequest(
                 consulta.getId(),
                 consulta.getPregunta(),
                 estudiante.getNivelExperiencia(),
-                estudiante.getAreaInteres()
+                estudiante.getAreaInteres(),
+                dto.getCursosPrevios(),
+                dto.getContextoPrevio()
         );
 
         N8nRecomendacionResponse n8nResponse = n8nOrquestadorService.enviarConsultaAn8n(n8nRequest);

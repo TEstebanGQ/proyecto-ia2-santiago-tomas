@@ -12,17 +12,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     ui.renderUsuarioHeader(state.usuario);
   }
 
+  window.navegarACatalogo = () => cambiarVista('catalogo');
+
   initNavigation();
   initMobileNavigation();
   initPastelTiles();
   initTestChips();
   initQueryForm();
+  initChatControls();
   initCatalogFilters();
   initStudentModal();
   initQuickSearch();
   initAuthModal();
   initAdminPanel();
+  initDocentePanel();
   initRegisterView();
+
+  ui.renderChatSession(state.chatSession, onCalificarHandler);
 
   await cargarDatosIniciales();
 });
@@ -227,6 +233,9 @@ export function cambiarVista(viewId) {
     cargarCursosAdmin();
     cargarEstudiantesAdmin();
   }
+  if (viewId === 'docente') {
+    cargarPanelDocente();
+  }
   
   // Desplazar al tope del contenido
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -298,6 +307,28 @@ function initQueryForm() {
   }
 }
 
+// Manejador centralizado de calificaciones
+const onCalificarHandler = async (recId, puntuacion, comentario) => {
+  const resCal = await api.calificarRecomendacion(recId, puntuacion, comentario);
+  cargarEstadisticas();
+  return resCal;
+};
+
+// Controles de Sesión de Chat (Reiniciar conversación)
+function initChatControls() {
+  const resetBtn = document.getElementById('btn-reset-chat');
+  const resetBtnFromLimit = document.getElementById('btn-new-chat-from-limit');
+
+  const reiniciarHandler = () => {
+    state.reiniciarChat();
+    ui.renderChatSession(state.chatSession, onCalificarHandler);
+    ui.showToast('Sesión de conversación reiniciada. ¡Listo para una nueva consulta!', 'info');
+  };
+
+  if (resetBtn) resetBtn.addEventListener('click', reiniciarHandler);
+  if (resetBtnFromLimit) resetBtnFromLimit.addEventListener('click', reiniciarHandler);
+}
+
 async function ejecutarConsulta(pregunta) {
   if (!pregunta) {
     ui.showToast('Por favor escribe tu duda o consulta vocacional.', 'error');
@@ -310,19 +341,38 @@ async function ejecutarConsulta(pregunta) {
     return;
   }
 
+  // Validar si superó el límite de 5 consultas en esta sesión (Ventana deslizante)
+  if (!state.puedeEnviarMensaje()) {
+    ui.showToast('Has completado el límite de 5 consultas en esta sesión. Inicia una nueva conversación para continuar.', 'warning');
+    return;
+  }
+
   // Asegurar que estamos en la vista de Asesor
   cambiarVista('asesor');
+
+  // Obtener contexto de cursos previos para enriquecer al LLM sin gastar tokens en respuestas largas
+  const contexto = state.obtenerContextoCompacto();
+
+  // Agregar turno del estudiante inmediatamente a la interfaz (0 tokens gastados)
+  state.agregarMensajeUsuario(pregunta);
+  ui.renderChatSession(state.chatSession, onCalificarHandler);
+
+  const textarea = document.getElementById('query-input');
+  if (textarea) textarea.value = '';
+
   ui.setLoading(true);
 
   try {
-    const resultado = await api.solicitarRecomendacion(state.estudianteActivo.id, pregunta);
+    const resultado = await api.solicitarRecomendacion(
+      state.estudianteActivo.id,
+      pregunta,
+      contexto.cursosPrevios,
+      contexto.contextoPrevio
+    );
     state.setUltimaRecomendacion(resultado);
+    state.agregarRespuestaIA(resultado);
 
-    ui.renderResultadoRecomendacion(resultado, async (recId, puntuacion, comentario) => {
-      const resCal = await api.calificarRecomendacion(recId, puntuacion, comentario);
-      cargarEstadisticas();
-      return resCal;
-    });
+    ui.renderChatSession(state.chatSession, onCalificarHandler);
 
     if (resultado.estadoFinal === 'Sin resultados') {
       ui.showToast('No se identificaron cursos del catálogo para esta consulta.', 'info');
@@ -454,6 +504,7 @@ function initStudentModal() {
     const est = e.detail;
     state.setEstudianteActivo(est);
     ui.renderEstudianteActivo(est);
+    ui.renderChatSession(state.chatSession, onCalificarHandler);
     ui.showToast(`Perfil activo: ${est.nombreCompleto}`, 'info');
     if (modal) modal.style.display = 'none';
     actualizarHistorialesEstudiante();
@@ -825,17 +876,30 @@ function initAdminPanel() {
       const cursoData = { nombre, descripcion, categoria, nivel, duracionHoras, prerrequisitos };
 
       try {
+        const isDocente = state.usuario && state.usuario.rol === 'DOCENTE';
         if (id) {
-          await api.actualizarCurso(id, cursoData);
+          if (isDocente) {
+            await api.actualizarDocenteCurso(id, cursoData, state.usuario ? state.usuario.email : null);
+          } else {
+            await api.actualizarCurso(id, cursoData);
+          }
           ui.showToast(`Curso #${id} actualizado correctamente.`, 'success');
         } else {
-          await api.crearCurso(cursoData);
+          if (isDocente) {
+            await api.crearDocenteCurso(cursoData, state.usuario ? state.usuario.email : null);
+          } else {
+            await api.crearCurso(cursoData);
+          }
           ui.showToast(`Curso "${nombre}" creado y registrado en el catálogo.`, 'success');
         }
 
         if (modal) modal.style.display = 'none';
         form.reset();
-        await cargarCursosAdmin();
+        if (isDocente) {
+          await cargarPanelDocente();
+        } else {
+          await cargarCursosAdmin();
+        }
         await cargarCatalogo();
       } catch (err) {
         ui.showToast('Error al procesar el curso: ' + err.message, 'error');
@@ -1002,6 +1066,127 @@ export async function inspeccionarEstudianteAdmin(id) {
       searchBtn.disabled = false;
       searchBtn.innerHTML = '<span>Consultar por ID</span><span class="btn-arrow">➔</span>';
     }
+  }
+}
+
+// ==========================================================================
+// 13. PANEL DOCENTE: GESTIÓN DE ESPECIALIDAD, FEEDBACK Y ANALÍTICAS
+// ==========================================================================
+function initDocentePanel() {
+  const openNewBtn = document.getElementById('btn-open-docente-new-course');
+  const subtabCourses = document.getElementById('subtab-docente-courses');
+  const subtabFeedback = document.getElementById('subtab-docente-feedback');
+  const subtabStats = document.getElementById('subtab-docente-stats');
+
+  const paneCourses = document.getElementById('docente-pane-courses');
+  const paneFeedback = document.getElementById('docente-pane-feedback');
+  const paneStats = document.getElementById('docente-pane-stats');
+
+  const switchDocenteTab = (targetTab) => {
+    if (subtabCourses) subtabCourses.classList.toggle('active', targetTab === 'courses');
+    if (subtabFeedback) subtabFeedback.classList.toggle('active', targetTab === 'feedback');
+    if (subtabStats) subtabStats.classList.toggle('active', targetTab === 'stats');
+
+    if (paneCourses) paneCourses.style.display = (targetTab === 'courses') ? 'block' : 'none';
+    if (paneFeedback) paneFeedback.style.display = (targetTab === 'feedback') ? 'block' : 'none';
+    if (paneStats) paneStats.style.display = (targetTab === 'stats') ? 'block' : 'none';
+  };
+
+  if (subtabCourses) subtabCourses.addEventListener('click', () => switchDocenteTab('courses'));
+  if (subtabFeedback) subtabFeedback.addEventListener('click', () => switchDocenteTab('feedback'));
+  if (subtabStats) subtabStats.addEventListener('click', () => switchDocenteTab('stats'));
+
+  if (openNewBtn) {
+    openNewBtn.addEventListener('click', () => {
+      const area = state.docentePerfil ? state.docentePerfil.areaEspecialidad : (state.usuario ? state.usuario.area : 'Programación');
+      abrirModalCursoDocente(null, area);
+    });
+  }
+}
+
+function abrirModalCursoDocente(curso = null, areaEspecialidad = 'Programación') {
+  const modal = document.getElementById('course-modal');
+  const title = document.getElementById('course-modal-title');
+  const subtitle = document.getElementById('course-modal-subtitle');
+  const form = document.getElementById('course-admin-form');
+  const catInput = document.getElementById('course-form-categoria');
+
+  if (!modal || !form) return;
+  form.reset();
+
+  const area = areaEspecialidad || (state.docentePerfil ? state.docentePerfil.areaEspecialidad : 'Programación');
+
+  if (curso) {
+    if (title) title.textContent = `Editar Asignatura: ${curso.nombre}`;
+    if (subtitle) subtitle.textContent = `Actualiza las competencias y prerrequisitos dentro de tu cátedra (${area}):`;
+    document.getElementById('course-form-id').value = curso.id;
+    document.getElementById('course-form-nombre').value = curso.nombre || '';
+    document.getElementById('course-form-descripcion').value = curso.descripcion || '';
+    if (catInput) {
+      catInput.value = area;
+      catInput.readOnly = true;
+    }
+    document.getElementById('course-form-nivel').value = (curso.nivel === 'Básico' ? 'Principiante' : curso.nivel) || 'Intermedio';
+    document.getElementById('course-form-duracion').value = curso.duracionHoras || 40;
+    document.getElementById('course-form-prerrequisitos').value = curso.prerrequisitos || '';
+  } else {
+    if (title) title.textContent = `Registrar Nueva Asignatura en ${area}`;
+    if (subtitle) subtitle.textContent = `Define los contenidos curriculares y prerrequisitos de tu especialidad:`;
+    document.getElementById('course-form-id').value = '';
+    if (catInput) {
+      catInput.value = area;
+      catInput.readOnly = true;
+    }
+    document.getElementById('course-form-nivel').value = 'Principiante';
+    document.getElementById('course-form-duracion').value = 40;
+  }
+
+  modal.style.display = 'flex';
+}
+
+async function toggleActivoDocenteCurso(id, activar) {
+  try {
+    const email = state.usuario ? state.usuario.email : null;
+    if (activar) {
+      await api.activarDocenteCurso(id, email);
+      ui.showToast('Curso reactivado y vector reindexado en Qdrant.', 'success');
+    } else {
+      await api.desactivarDocenteCurso(id, email);
+      ui.showToast('Curso desactivado y vector removido de Qdrant.', 'info');
+    }
+    await cargarPanelDocente();
+    await cargarCatalogo();
+  } catch (err) {
+    ui.showToast('Error al cambiar estado del curso: ' + err.message, 'error');
+  }
+}
+
+async function cargarPanelDocente() {
+  try {
+    const email = state.usuario ? state.usuario.email : null;
+    const perfil = await api.getDocentePerfil(email);
+    state.setDocentePerfil(perfil);
+
+    const [cursos, feedback, stats] = await Promise.all([
+      api.getDocenteCursos(email),
+      api.getDocenteFeedback(email),
+      api.getDocenteEstadisticas(email)
+    ]);
+
+    state.setCursosDocente(cursos);
+    state.setDocenteFeedback(feedback);
+    state.setDocenteEstadisticas(stats);
+
+    ui.renderDocenteCursos(
+      cursos,
+      perfil,
+      (c) => abrirModalCursoDocente(c, perfil.areaEspecialidad),
+      (id, activar) => toggleActivoDocenteCurso(id, activar)
+    );
+    ui.renderDocenteFeedback(feedback);
+    ui.renderDocenteEstadisticas(stats);
+  } catch (err) {
+    ui.showToast('Error al cargar panel docente: ' + err.message, 'error');
   }
 }
 

@@ -78,14 +78,14 @@ export const ui = {
 
   renderUsuarioHeader(usuario) {
     this.renderEstudianteActivo(usuario);
-    // Ajustar visibilidad o estilo de botones de navegación si es Administrador
+    // Ajustar visibilidad o estilo de botones de navegación según rol
     const navAdmin = document.getElementById('nav-admin-item');
+    const navDocente = document.getElementById('nav-docente-item');
     if (navAdmin) {
-      if (usuario && usuario.rol === 'ADMINISTRADOR') {
-        navAdmin.style.display = 'flex';
-      } else {
-        navAdmin.style.display = 'none';
-      }
+      navAdmin.style.display = (usuario && usuario.rol === 'ADMINISTRADOR') ? 'flex' : 'none';
+    }
+    if (navDocente) {
+      navDocente.style.display = (usuario && usuario.rol === 'DOCENTE') ? 'flex' : 'none';
     }
   },
 
@@ -226,6 +226,271 @@ export const ui = {
     }
     if (submitBtn) {
       submitBtn.disabled = isLoading;
+    }
+  },
+
+  // Helper para escapar HTML seguro
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  },
+
+  // Actualizar la barra superior de sesión
+  updateChatSessionBar(turnCount, maxTurns) {
+    const turnCountEl = document.getElementById('session-turn-count');
+    const sessionBadge = document.getElementById('session-badge');
+    const limitBanner = document.getElementById('session-limit-banner');
+    const queryInput = document.getElementById('query-input');
+    const submitBtn = document.getElementById('submit-query-btn');
+    const sessionHint = document.getElementById('session-hint');
+
+    if (turnCountEl) {
+      turnCountEl.textContent = turnCount;
+    }
+
+    const isFull = turnCount >= maxTurns;
+
+    if (sessionBadge) {
+      sessionBadge.classList.toggle('badge-full', isFull);
+      if (isFull) {
+        sessionBadge.innerHTML = `Sesión: <strong>${turnCount}</strong> / ${maxTurns} completada`;
+      } else {
+        sessionBadge.innerHTML = `Sesión: <strong>${turnCount}</strong> / ${maxTurns} consultas`;
+      }
+    }
+
+    if (sessionHint) {
+      if (isFull) {
+        sessionHint.textContent = 'Has alcanzado el límite de 5 consultas en esta sesión.';
+      } else if (turnCount > 0) {
+        sessionHint.textContent = 'Puedes profundizar o hacer preguntas de seguimiento sobre los cursos anteriores.';
+      } else {
+        sessionHint.textContent = 'Conversación activa: puedes hacer hasta 5 consultas en esta sesión.';
+      }
+    }
+
+    if (limitBanner) {
+      limitBanner.style.display = isFull ? 'flex' : 'none';
+    }
+
+    if (queryInput) {
+      queryInput.disabled = isFull;
+      if (isFull) {
+        queryInput.placeholder = 'Límite de 5 consultas completado. Inicia una nueva conversación para consultar otro tema.';
+      } else {
+        queryInput.placeholder = 'Ejemplo: "Quiero aprender Java para trabajar con Spring Boot" o "¿Qué estudiar para trabajar con IA?"';
+      }
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = isFull;
+    }
+  },
+
+  // Renderizar la sesión conversacional completa (Hilo de hasta 5 turnos - 0 tokens en local)
+  renderChatSession(chatSession, onCalificar) {
+    this.updateChatSessionBar(chatSession.turnCount, chatSession.maxTurns);
+
+    const threadContainer = document.getElementById('chat-thread-container');
+    const resultCard = document.getElementById('result-card');
+
+    if (!threadContainer) return;
+
+    if (!chatSession.mensajes || chatSession.mensajes.length === 0) {
+      threadContainer.innerHTML = '';
+      if (resultCard) resultCard.style.display = 'none';
+      return;
+    }
+
+    if (resultCard) resultCard.style.display = 'none';
+    threadContainer.innerHTML = '';
+
+    const turnos = {};
+    chatSession.mensajes.forEach(msg => {
+      const t = msg.turno || 1;
+      if (!turnos[t]) turnos[t] = {};
+      if (msg.remitente === 'usuario') {
+        turnos[t].usuario = msg;
+      } else {
+        turnos[t].ia = msg;
+      }
+    });
+
+    Object.keys(turnos).sort((a, b) => Number(a) - Number(b)).forEach(turnoKey => {
+      const { usuario, ia } = turnos[turnoKey];
+      const turnBlock = document.createElement('div');
+      turnBlock.className = 'chat-turn-block';
+      turnBlock.id = `chat-turn-${turnoKey}`;
+
+      let turnHtml = '';
+
+      if (usuario) {
+        const timeStr = usuario.timestamp ? new Date(usuario.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        turnHtml += `
+          <div class="chat-turn-header">
+            <span class="chat-turn-tag">Consulta ${turnoKey} de ${chatSession.maxTurns}</span>
+            <span class="chat-turn-tag">${timeStr}</span>
+          </div>
+          <div class="chat-user-row">
+            <div class="chat-user-bubble">
+              <div class="chat-user-meta">
+                <strong>Tú</strong>
+              </div>
+              <div class="chat-user-text">${this.escapeHtml(usuario.texto)}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (ia) {
+        const estadoLimpio = ia.estadoFinal || 'Respondida';
+        const estadoClass = estadoLimpio.toLowerCase().includes('sin') ? 'sin-resultados' : 'respondida';
+        const esSinResultados = estadoLimpio.toLowerCase().includes('sin') || !ia.fuentes || ia.fuentes.length === 0;
+
+        turnHtml += `
+          <div class="chat-ia-wrapper">
+            <div class="result-bento-card" style="display: block; margin-top: 0.5rem;">
+              <div class="result-top-badge-row">
+                <div class="badge-spark-group">
+                  <span class="sparkle-icon">✦</span>
+                  <span class="badge-spark-text">Orientación RutaIA • Consulta ${turnoKey}</span>
+                </div>
+                <span class="status-pill ${estadoClass}">${estadoLimpio}</span>
+              </div>
+        `;
+
+        if (esSinResultados) {
+          turnHtml += `
+              <div class="fallback-bento-card" style="display: flex;">
+                <div class="fallback-icon-box">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                </div>
+                <div class="fallback-content">
+                  <h4 class="fallback-title">No encontramos cursos para tu consulta</h4>
+                  <p class="fallback-message">${this.escapeHtml(ia.texto)}</p>
+                </div>
+                <button class="btn-secondary-pill" onclick="window.navegarACatalogo && window.navegarACatalogo()">
+                  Ver catálogo de cursos
+                </button>
+              </div>
+          `;
+        } else {
+          const topCourse = ia.fuentes[0];
+          const simPct = (topCourse.similitud * 100).toFixed(1);
+          const matchLabel = simPct >= 70 ? 'Alta coincidencia' : simPct >= 45 ? 'Coincidencia media' : 'Coincidencia exploratoria';
+
+          turnHtml += `
+            <div class="featured-course-card">
+              <div class="featured-course-layout">
+                <div class="featured-course-thumb">
+                  <div class="thumb-window-bar">
+                    <span class="dot-red"></span>
+                    <span class="dot-yellow"></span>
+                    <span class="dot-green"></span>
+                  </div>
+                  <div class="thumb-code-lines">
+                    <div class="line w-80 code-accent"></div>
+                    <div class="line w-60"></div>
+                    <div class="line w-90"></div>
+                    <div class="line w-40 code-subaccent"></div>
+                  </div>
+                  <div class="thumb-badge-tag">${topCourse.categoria || 'Curso'}</div>
+                </div>
+
+                <div class="featured-course-info">
+                  <div class="featured-header-row">
+                    <span class="match-pill-green">${matchLabel}</span>
+                  </div>
+                  <h3 class="course-headline-title">${this.escapeHtml(topCourse.nombre)}</h3>
+                  <div class="course-meta-pills">
+                    <span>Nivel: <strong>${this.escapeHtml(topCourse.nivel)}</strong></span>
+                    <span>Duración: <strong>${topCourse.duracionHoras}h</strong></span>
+                    <span>Categoría: <strong>${this.escapeHtml(topCourse.categoria)}</strong></span>
+                  </div>
+                  <p class="course-short-desc">${this.escapeHtml(topCourse.descripcion)}</p>
+                </div>
+
+                <div class="featured-course-actions">
+                  <div class="similarity-circle-badge">
+                    <span class="similarity-circle-val">${simPct}%</span>
+                    <span class="similarity-circle-txt">Similitud</span>
+                  </div>
+                  <button class="btn-course-details" onclick="window.verDetalleCursoModal('${topCourse.nombre.replace(/'/g, "\\'")}')">
+                    Ver detalles →
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Explicación de la IA -->
+            <div class="ai-rationale-box">
+              <div class="rationale-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span class="rationale-title">Orientación Académica Institucional</span>
+              </div>
+              <div class="rationale-body">${this.escapeHtml(ia.texto)}</div>
+            </div>
+          `;
+
+          if (ia.fuentes.length > 1) {
+            turnHtml += `
+              <div class="sources-bento-section">
+                <div class="sources-section-title">
+                  <span>Otras opciones del catálogo</span>
+                  <span class="sources-counter">${ia.fuentes.length} cursos</span>
+                </div>
+                <div class="sources-list">
+            `;
+            ia.fuentes.forEach((f, idx) => {
+              const fSim = (f.similitud * 100).toFixed(1);
+              turnHtml += `
+                <div class="source-item-row">
+                  <div class="source-item-left">
+                    <div class="source-item-name">${idx + 1}. ${this.escapeHtml(f.nombre)}</div>
+                    <div class="source-item-meta">
+                      <span>${this.escapeHtml(f.categoria)}</span> • <span>${this.escapeHtml(f.nivel)}</span> • ${f.duracionHoras} hrs
+                    </div>
+                  </div>
+                  <div class="source-item-right">
+                    <span class="source-item-sim">${fSim}%</span>
+                    <button class="source-item-action" onclick="window.verDetalleCursoModal('${f.nombre.replace(/'/g, "\\'")}')" title="Ver plan de estudios">➔</button>
+                  </div>
+                </div>
+              `;
+            });
+            turnHtml += `
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        turnHtml += `
+            </div>
+          </div>
+        `;
+      }
+
+      turnBlock.innerHTML = turnHtml;
+      threadContainer.appendChild(turnBlock);
+    });
+
+    const lastTurn = threadContainer.lastElementChild;
+    if (lastTurn) {
+      lastTurn.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   },
 
@@ -817,7 +1082,10 @@ export const ui = {
       if (idInput) idInput.value = curso.id;
       if (nombreInput) nombreInput.value = curso.nombre || '';
       if (descInput) descInput.value = curso.descripcion || '';
-      if (catInput) catInput.value = curso.categoria || '';
+      if (catInput) {
+        catInput.value = curso.categoria || '';
+        catInput.readOnly = false;
+      }
       if (nivelInput) nivelInput.value = (curso.nivel === 'Básico' ? 'Principiante' : curso.nivel) || 'Principiante';
       if (durInput) durInput.value = curso.duracionHoras || 40;
       if (prereqInput) prereqInput.value = curso.prerrequisitos || '';
@@ -827,7 +1095,10 @@ export const ui = {
       if (idInput) idInput.value = '';
       if (nombreInput) nombreInput.value = '';
       if (descInput) descInput.value = '';
-      if (catInput) catInput.value = '';
+      if (catInput) {
+        catInput.value = '';
+        catInput.readOnly = false;
+      }
       if (nivelInput) nivelInput.value = 'Principiante';
       if (durInput) durInput.value = 40;
       if (prereqInput) prereqInput.value = '';
@@ -1066,5 +1337,165 @@ export const ui = {
     }
 
     container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  },
+
+  // ==========================================================
+  // Renderizado del Panel Docente
+  // ==========================================================
+  renderDocenteCursos(cursos, docente, onEditar, onToggleActivar) {
+    const badgeEl = document.getElementById('docente-badge-area');
+    const subtitleEl = document.getElementById('docente-view-subtitle');
+    const totalEl = document.getElementById('docente-count-total');
+    const activosEl = document.getElementById('docente-count-activos');
+    const inactivosEl = document.getElementById('docente-count-inactivos');
+    const tbody = document.getElementById('docente-courses-tbody');
+
+    const area = docente ? (docente.areaEspecialidad || docente.area || 'Programación') : 'Especialidad';
+    if (badgeEl) badgeEl.textContent = `Especialidad: ${area}`;
+    if (subtitleEl) subtitleEl.textContent = `Gestiona exclusivamente los contenidos curriculares y prerrequisitos de tu área de cátedra (${area}).`;
+
+    const total = cursos ? cursos.length : 0;
+    const activos = cursos ? cursos.filter(c => c.activo).length : 0;
+    const inactivos = total - activos;
+
+    if (totalEl) totalEl.textContent = total;
+    if (activosEl) activosEl.textContent = activos;
+    if (inactivosEl) inactivosEl.textContent = inactivos;
+
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!cursos || cursos.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 2.5rem; color: #64748B;">
+            No tienes cursos registrados en tu especialidad (${area}). Haz clic en "+ Nuevo Curso en mi Área" para publicar tu primera asignatura.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    cursos.forEach(curso => {
+      const tr = document.createElement('tr');
+      const isActivo = curso.activo !== false;
+      const statusBadge = isActivo
+        ? '<span class="status-pill status-active">Activo (Qdrant)</span>'
+        : '<span class="status-pill status-inactive">Inactivo (Oculto)</span>';
+
+      const prereqBadge = curso.prerrequisitos
+        ? `<span class="badge-prereq" title="${curso.prerrequisitos}">📚 ${curso.prerrequisitos}</span>`
+        : '<span class="text-muted" style="font-size:0.8rem;">Sin prerrequisitos</span>';
+
+      tr.innerHTML = `
+        <td>
+          <div style="font-weight: 600; color: #0F172A;">${curso.nombre}</div>
+          <div style="font-size: 0.8rem; color: #64748B; margin-top: 2px;">${curso.descripcion ? curso.descripcion.substring(0, 85) + '...' : ''}</div>
+        </td>
+        <td><span class="badge-level badge-level-${(curso.nivel || 'Intermedio').toLowerCase()}">${curso.nivel || 'Intermedio'}</span></td>
+        <td><span style="font-size: 0.88rem; font-weight: 500;">${curso.duracionHoras || 40}h</span></td>
+        <td>${prereqBadge}</td>
+        <td>${statusBadge}</td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button type="button" class="btn-action-edit btn-edit-docente-curso" data-id="${curso.id}" title="Editar curso">
+            ✏ Editar
+          </button>
+          <button type="button" class="btn-action-toggle ${isActivo ? 'btn-deactivate' : 'btn-activate'} btn-toggle-docente-curso" data-id="${curso.id}">
+            ${isActivo ? 'Desactivar' : 'Activar'}
+          </button>
+        </td>
+      `;
+
+      const editBtn = tr.querySelector('.btn-edit-docente-curso');
+      if (editBtn) editBtn.addEventListener('click', () => onEditar(curso));
+
+      const toggleBtn = tr.querySelector('.btn-toggle-docente-curso');
+      if (toggleBtn) toggleBtn.addEventListener('click', () => onToggleActivar(curso.id, !isActivo));
+
+      tbody.appendChild(tr);
+    });
+  },
+
+  renderDocenteFeedback(feedbackList) {
+    const container = document.getElementById('docente-feedback-container');
+    if (!container) return;
+
+    if (!feedbackList || feedbackList.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state-editorial" style="text-align: center; padding: 3rem 1.5rem; background: #FFFFFF; border-radius: 16px; border: 1px dashed #CBD5E1; margin-top: 1rem;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">💬</div>
+          <h4 style="font-size: 1.1rem; color: #1E293B; margin-bottom: 0.25rem;">Aún no hay feedback registrado sobre tus materias</h4>
+          <p style="color: #64748B; font-size: 0.9rem; max-width: 480px; margin: 0 auto;">
+            Cuando los estudiantes consulten al Asesor Vocacional con IA y se les recomiende un curso de tu especialidad, aquí verás sus preguntas, porcentaje de afinidad y las calificaciones con estrellas que otorguen.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = '';
+    feedbackList.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'docente-feedback-card';
+      card.style.cssText = 'background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);';
+
+      const fechaStr = item.fecha ? new Date(item.fecha).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : 'Reciente';
+      const simPercent = item.similitud ? (item.similitud * 100).toFixed(1) + '%' : 'N/A';
+
+      const stars = item.puntuacion
+        ? '★'.repeat(item.puntuacion) + '☆'.repeat(5 - item.puntuacion)
+        : '<span style="color: #94A3B8; font-size: 0.85rem;">Sin calificar aún</span>';
+
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 700; color: #0F172A; font-size: 0.95rem;">${item.estudianteNombre || 'Estudiante'}</span>
+              <span class="badge-level" style="font-size: 0.75rem; padding: 2px 8px;">${item.estudianteNivel || 'Estudiante'}</span>
+              <span style="font-size: 0.8rem; color: #64748B;">• ${fechaStr}</span>
+            </div>
+            <div style="margin-top: 6px; font-size: 0.92rem; color: #334155; font-style: italic; background: #F8FAFC; padding: 8px 12px; border-left: 3px solid #D7F338; border-radius: 4px;">
+              "${item.pregunta || 'Consulta académica'}"
+            </div>
+          </div>
+          <div style="text-align: right; min-width: 140px;">
+            <div style="color: #F59E0B; font-size: 1.1rem; letter-spacing: 2px;">${stars}</div>
+            <div style="font-size: 0.78rem; color: #64748B; margin-top: 2px;">Afinidad IA: <strong>${simPercent}</strong></div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #F1F5F9; border-radius: 8px; padding: 8px 14px; margin-top: 0.6rem;">
+          <div style="font-size: 0.85rem; color: #1E293B;">
+            📖 Curso sugerido: <strong>${item.cursoNombre || 'Asignatura'}</strong> <span style="color: #64748B;">(${item.cursoCategoria || 'Especialidad'})</span>
+          </div>
+          ${item.comentario ? `<div style="font-size: 0.85rem; color: #047857; font-weight: 500;">💬 "${item.comentario}"</div>` : ''}
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  },
+
+  renderDocenteEstadisticas(stats) {
+    if (!stats) return;
+    const cursosEl = document.getElementById('docente-stat-cursos');
+    const consultasEl = document.getElementById('docente-stat-consultas');
+    const satisfaccionEl = document.getElementById('docente-stat-satisfaccion');
+    const calificacionesEl = document.getElementById('docente-stat-calificaciones');
+    const topCursoEl = document.getElementById('docente-stat-top-curso');
+
+    if (cursosEl) cursosEl.textContent = stats.totalCursosEspecialidad || 0;
+    if (consultasEl) consultasEl.textContent = stats.totalConsultasRelacionadas || 0;
+    if (satisfaccionEl) {
+      satisfaccionEl.textContent = (stats.promedioCalificacionCursos !== null && stats.promedioCalificacionCursos !== undefined)
+        ? `★ ${Number(stats.promedioCalificacionCursos).toFixed(1)}`
+        : 'N/A';
+    }
+    if (calificacionesEl) calificacionesEl.textContent = stats.totalCalificacionesRecibidas || 0;
+    if (topCursoEl) {
+      topCursoEl.textContent = (!stats.cursoMasDemandado || stats.cursoMasDemandado === 'Ninguno aún')
+        ? 'Sin recomendaciones registradas aún en tu especialidad'
+        : stats.cursoMasDemandado;
+    }
   }
 };

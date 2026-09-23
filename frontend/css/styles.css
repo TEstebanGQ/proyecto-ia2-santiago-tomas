@@ -4277,3 +4277,171 @@ button, input, select, textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================
+   ESTILOS DE CHAT CONVERSACIONAL (MÁXIMO 5 TURNOS / 0 TOKENS EN LOCAL)
+   ========================================================== */
+
+.chat-session-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #FFFFFF;
+  border: 1.5px solid #18191E;
+  border-radius: 14px;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 2px 2px 0px #18191E;
+}
+
+.session-progress-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.session-badge {
+  background: #E8F88E;
+  color: #1F4205;
+  border: 1px solid #18191E;
+  border-radius: 9999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.session-badge.badge-full {
+  background: #FFD2CF;
+  color: #8C1D18;
+}
+
+.session-hint {
+  font-size: 0.8rem;
+  color: #55575E;
+}
+
+.btn-clean-session {
+  background: #F4F1EA;
+  border: 1.5px solid #18191E;
+  border-radius: 10px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #18191E;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-clean-session:hover {
+  background: #18191E;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.session-limit-banner {
+  background: #FFFBEB;
+  border: 2px solid #F59E0B;
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.session-limit-banner .limit-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.session-limit-banner .limit-content {
+  flex: 1;
+}
+
+.session-limit-banner h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #92400E;
+}
+
+.session-limit-banner p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #78350F;
+  line-height: 1.4;
+}
+
+.session-limit-banner .btn-sm {
+  padding: 0.5rem 0.9rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* Hilo de conversación */
+.chat-thread-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.chat-turn-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
+}
+
+.chat-turn-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.5rem;
+}
+
+.chat-turn-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #8A8D98;
+}
+
+.chat-user-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chat-user-bubble {
+  max-width: 82%;
+  background: #18191E;
+  color: #FFFFFF;
+  padding: 0.85rem 1.15rem;
+  border-radius: 16px 16px 4px 16px;
+  box-shadow: 2px 3px 0px rgba(0,0,0,0.15);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.chat-user-meta {
+  font-size: 0.72rem;
+  color: #A3A7B2;
+  margin-bottom: 0.3rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.chat-ia-wrapper {
+  width: 100%;
+}
+

@@ -15,6 +15,12 @@ public class N8nRecomendacionRequest {
     @JsonProperty("area_interes")
     private String areaInteres;
 
+    @JsonProperty("cursos_previos")
+    private java.util.List<String> cursosPrevios;
+
+    @JsonProperty("contexto_previo")
+    private String contextoPrevio;
+
     public N8nRecomendacionRequest() {
     }
 
@@ -23,6 +29,15 @@ public class N8nRecomendacionRequest {
         this.pregunta = pregunta;
         this.nivelExperiencia = nivelExperiencia;
         this.areaInteres = areaInteres;
+    }
+
+    public N8nRecomendacionRequest(Long idConsulta, String pregunta, String nivelExperiencia, String areaInteres, java.util.List<String> cursosPrevios, String contextoPrevio) {
+        this.idConsulta = idConsulta;
+        this.pregunta = pregunta;
+        this.nivelExperiencia = nivelExperiencia;
+        this.areaInteres = areaInteres;
+        this.cursosPrevios = cursosPrevios;
+        this.contextoPrevio = contextoPrevio;
     }
 
     public Long getIdConsulta() {
@@ -55,5 +70,21 @@ public class N8nRecomendacionRequest {
 
     public void setAreaInteres(String areaInteres) {
         this.areaInteres = areaInteres;
+    }
+
+    public java.util.List<String> getCursosPrevios() {
+        return cursosPrevios;
+    }
+
+    public void setCursosPrevios(java.util.List<String> cursosPrevios) {
+        this.cursosPrevios = cursosPrevios;
+    }
+
+    public String getContextoPrevio() {
+        return contextoPrevio;
+    }
+
+    public void setContextoPrevio(String contextoPrevio) {
+        this.contextoPrevio = contextoPrevio;
     }
 }
