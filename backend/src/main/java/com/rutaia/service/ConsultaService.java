@@ -25,17 +25,20 @@ public class ConsultaService {
     private final ConsultaRepository consultaRepository;
     private final RecomendacionRepository recomendacionRepository;
     private final N8nOrquestadorService n8nOrquestadorService;
+    private final ConfiguracionService configuracionService;
 
     public ConsultaService(EstudianteRepository estudianteRepository,
                            CursoRepository cursoRepository,
                            ConsultaRepository consultaRepository,
                            RecomendacionRepository recomendacionRepository,
-                           N8nOrquestadorService n8nOrquestadorService) {
+                           N8nOrquestadorService n8nOrquestadorService,
+                           ConfiguracionService configuracionService) {
         this.estudianteRepository = estudianteRepository;
         this.cursoRepository = cursoRepository;
         this.consultaRepository = consultaRepository;
         this.recomendacionRepository = recomendacionRepository;
         this.n8nOrquestadorService = n8nOrquestadorService;
+        this.configuracionService = configuracionService;
     }
 
     @Transactional
@@ -53,12 +56,16 @@ public class ConsultaService {
         Consulta consulta = new Consulta(estudiante, dto.getPregunta().trim(), "Pendiente");
         consulta = consultaRepository.save(consulta);
 
-        // RF 08: Enviar a n8n el id_consulta, pregunta, nivel_experiencia y area_interes
+        // Obtener el umbral decimal actual (ej. 40.0% -> 0.40)
+        Double umbralDecimal = configuracionService.obtenerUmbral().getValorDecimal().doubleValue();
+
+        // RF 08: Enviar a n8n el id_consulta, pregunta, nivel_experiencia, area_interes y umbral
         N8nRecomendacionRequest n8nRequest = new N8nRecomendacionRequest(
                 consulta.getId(),
                 consulta.getPregunta(),
                 estudiante.getNivelExperiencia(),
-                estudiante.getAreaInteres()
+                estudiante.getAreaInteres(),
+                umbralDecimal
         );
 
         N8nRecomendacionResponse n8nResponse = n8nOrquestadorService.enviarConsultaAn8n(n8nRequest);

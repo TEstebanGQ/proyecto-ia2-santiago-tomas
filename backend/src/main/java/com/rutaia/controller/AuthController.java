@@ -6,6 +6,7 @@ import com.rutaia.entity.Estudiante;
 import com.rutaia.repository.EstudianteRepository;
 import com.rutaia.security.JwtUtil;
 import com.rutaia.service.RedisTokenService;
+import com.rutaia.service.AuditoriaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,15 +23,18 @@ public class AuthController {
     private final EstudianteRepository estudianteRepository;
     private final JwtUtil jwtUtil;
     private final RedisTokenService redisTokenService;
+    private final AuditoriaService auditoriaService;
 
     public AuthController(
             EstudianteRepository estudianteRepository,
             JwtUtil jwtUtil,
-            RedisTokenService redisTokenService
+            RedisTokenService redisTokenService,
+            AuditoriaService auditoriaService
     ) {
         this.estudianteRepository = estudianteRepository;
         this.jwtUtil = jwtUtil;
         this.redisTokenService = redisTokenService;
+        this.auditoriaService = auditoriaService;
     }
 
     @PostMapping("/login")
@@ -85,6 +89,9 @@ public class AuthController {
 
         // 4. Registrar sesión en Redis para que el servidor gestione la validez del token
         redisTokenService.registrarToken(tokenJwt, email, rol);
+
+        // 5. Registrar evento de auditoría de ingreso
+        auditoriaService.registrarEvento("INGRESO", email, nombre, rol, "Inicio de sesión exitoso (" + (request.getProveedor() != null ? request.getProveedor() : "local") + ")");
 
         // 5. Establecer HttpOnly Cookie para que el navegador NO almacene el token en localStorage/caché
         org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("rutaia_token", tokenJwt)
@@ -150,6 +157,9 @@ public class AuthController {
         // Generar JWT y guardar en Redis
         String tokenJwt = jwtUtil.generarToken(email, rol, id, nombre);
         redisTokenService.registrarToken(tokenJwt, email, rol);
+
+        // Registrar auditoría de ingreso
+        auditoriaService.registrarEvento("INGRESO", email, nombre, rol, "Inicio de sesión con Google Sign-In");
 
         org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("rutaia_token", tokenJwt)
                 .httpOnly(true)

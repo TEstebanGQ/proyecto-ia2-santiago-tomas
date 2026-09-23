@@ -37,6 +37,12 @@ public class EstudianteController {
         return ResponseEntity.ok(estudianteService.listarTodos());
     }
 
+    @GetMapping("/buscar")
+    @Operation(summary = "Buscar estudiantes por nombre o correo (RF 02)")
+    public ResponseEntity<List<EstudianteResponseDTO>> buscarPorNombre(@RequestParam String query) {
+        return ResponseEntity.ok(estudianteService.buscarPorNombre(query));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Consultar un estudiante por identificador (RF 02)")
     public ResponseEntity<EstudianteResponseDTO> obtenerPorId(@PathVariable Long id) {

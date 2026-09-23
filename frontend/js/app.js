@@ -226,6 +226,7 @@ export function cambiarVista(viewId) {
   if (viewId === 'admin') {
     cargarCursosAdmin();
     cargarEstudiantesAdmin();
+    cargarUmbralAdmin();
   }
   
   // Desplazar al tope del contenido
@@ -565,14 +566,31 @@ function mostrarDetalleHistorial(item) {
   });
 }
 
+let cacheStatsAdmin = null;
+
+async function cargarEstadisticasAdmin() {
+  try {
+    const data = await api.getEstadisticasAdmin();
+    cacheStatsAdmin = data;
+    ui.renderEstadisticasAdmin(data);
+  } catch (err) {
+    console.error('Error al cargar estadísticas admin:', err);
+    ui.showToast('Error al cargar estadísticas globales y auditoría: ' + err.message, 'error');
+  }
+}
+
 async function cargarEstadisticas() {
   try {
+    const isAdmin = state.usuario && state.usuario.rol === 'ADMINISTRADOR';
     const estudianteId = (state.usuario && state.usuario.rol === 'ESTUDIANTE')
       ? (state.usuario.id || (state.estudianteActivo ? state.estudianteActivo.id : null))
       : null;
-    const stats = await api.getEstadisticas(estudianteId);
+    const stats = await api.getEstadisticas(isAdmin ? null : estudianteId);
     state.setEstadisticas(stats);
     ui.renderEstadisticas(stats, state.usuario);
+    if (isAdmin) {
+      cargarEstadisticasAdmin();
+    }
   } catch (err) {
     ui.showToast('Error al cargar estadísticas: ' + err.message, 'error');
   }
@@ -844,43 +862,131 @@ function initAdminPanel() {
   }
 
   // ==========================================================
-  // PESTAÑAS SUB-PANEL ADMIN (RF 03 CURSOS VS RF 02 ESTUDIANTES)
+  // PESTAÑAS SUB-PANEL ADMIN (CURSOS, ESTUDIANTES, CONFIGURACIÓN UMBRAL Y ESTADÍSTICAS/AUDITORÍA)
   // ==========================================================
   const subtabCourses = document.getElementById('subtab-admin-courses');
   const subtabStudents = document.getElementById('subtab-admin-students');
+  const subtabConfig = document.getElementById('subtab-admin-config');
+  const subtabStats = document.getElementById('subtab-admin-stats');
   const paneCourses = document.getElementById('admin-pane-courses');
   const paneStudents = document.getElementById('admin-pane-students');
+  const paneConfig = document.getElementById('admin-pane-config');
+  const paneStats = document.getElementById('admin-pane-stats');
 
-  if (subtabCourses && subtabStudents) {
+  const deactivateAllSubtabs = () => {
+    [subtabCourses, subtabStudents, subtabConfig, subtabStats].forEach(t => t && t.classList.remove('active'));
+    [paneCourses, paneStudents, paneConfig, paneStats].forEach(p => p && (p.style.display = 'none'));
+  };
+
+  if (subtabCourses) {
     subtabCourses.addEventListener('click', () => {
+      deactivateAllSubtabs();
       subtabCourses.classList.add('active');
-      subtabStudents.classList.remove('active');
       if (paneCourses) paneCourses.style.display = 'block';
-      if (paneStudents) paneStudents.style.display = 'none';
       cargarCursosAdmin();
     });
-
+  }
+  if (subtabStudents) {
     subtabStudents.addEventListener('click', () => {
+      deactivateAllSubtabs();
       subtabStudents.classList.add('active');
-      subtabCourses.classList.remove('active');
       if (paneStudents) paneStudents.style.display = 'block';
-      if (paneCourses) paneCourses.style.display = 'none';
       cargarEstudiantesAdmin();
     });
   }
+  if (subtabConfig) {
+    subtabConfig.addEventListener('click', () => {
+      deactivateAllSubtabs();
+      subtabConfig.classList.add('active');
+      if (paneConfig) paneConfig.style.display = 'block';
+      cargarUmbralAdmin();
+    });
+  }
+  if (subtabStats) {
+    subtabStats.addEventListener('click', () => {
+      deactivateAllSubtabs();
+      subtabStats.classList.add('active');
+      if (paneStats) paneStats.style.display = 'block';
+      cargarEstadisticasAdmin();
+    });
+  }
 
-  // Búsqueda por Identificador de Estudiante (RF 02)
+  // Eventos para filtros y refresco de estadísticas globales y auditoría
+  const btnRefreshStats = document.getElementById('btn-admin-refresh-stats');
+  if (btnRefreshStats) {
+    btnRefreshStats.addEventListener('click', () => {
+      cargarEstadisticasAdmin();
+      ui.showToast('Métricas globales y bitácora de auditoría actualizadas', 'info');
+    });
+  }
+
+  const userActionsFilter = document.getElementById('admin-user-actions-filter');
+  if (userActionsFilter) {
+    userActionsFilter.addEventListener('input', () => {
+      if (cacheStatsAdmin) ui.renderEstadisticasAdmin(cacheStatsAdmin);
+    });
+  }
+
+  const auditSearch = document.getElementById('admin-audit-search');
+  if (auditSearch) {
+    auditSearch.addEventListener('input', () => {
+      if (cacheStatsAdmin) ui.renderTablaAuditoria(cacheStatsAdmin.auditoria || []);
+    });
+  }
+
+  const auditTypeFilter = document.getElementById('admin-audit-type-filter');
+  if (auditTypeFilter) {
+    auditTypeFilter.addEventListener('change', () => {
+      if (cacheStatsAdmin) ui.renderTablaAuditoria(cacheStatsAdmin.auditoria || []);
+    });
+  }
+
+  // Sincronización del Slider e Input Numérico de Umbral
+  const thresholdSlider = document.getElementById('admin-threshold-slider');
+  const thresholdNumberInput = document.getElementById('admin-threshold-number-input');
+  const thresholdForm = document.getElementById('admin-threshold-form');
+
+  if (thresholdSlider && thresholdNumberInput) {
+    thresholdSlider.addEventListener('input', () => {
+      thresholdNumberInput.value = thresholdSlider.value;
+      actualizarEtiquetaVisualUmbral(parseFloat(thresholdSlider.value));
+    });
+    thresholdNumberInput.addEventListener('input', () => {
+      thresholdSlider.value = thresholdNumberInput.value;
+      actualizarEtiquetaVisualUmbral(parseFloat(thresholdNumberInput.value) || 0);
+    });
+  }
+
+  if (thresholdForm) {
+    thresholdForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const val = parseFloat(thresholdNumberInput ? thresholdNumberInput.value : '40');
+      if (isNaN(val) || val < 0 || val > 100) {
+        ui.showToast('Por favor ingresa un porcentaje válido entre 0% y 100%.', 'error');
+        return;
+      }
+      try {
+        const res = await api.actualizarUmbral(val);
+        actualizarUIUmbral(res);
+        ui.showToast(`Configuración guardada: Umbral RAG establecido en ${res.porcentaje}% (${res.valorDecimal}).`, 'success');
+      } catch (err) {
+        ui.showToast('Error al guardar configuración de umbral: ' + err.message, 'error');
+      }
+    });
+  }
+
+  // Búsqueda General por Nombre o Correo de Estudiante (RF 02)
   const studentSearchForm = document.getElementById('admin-student-search-form');
-  const studentIdInput = document.getElementById('admin-student-id-input');
+  const studentNameInput = document.getElementById('admin-student-name-input');
   if (studentSearchForm) {
     studentSearchForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const val = studentIdInput ? studentIdInput.value.trim() : '';
+      const val = studentNameInput ? studentNameInput.value.trim() : '';
       if (!val) {
-        ui.showToast('Por favor ingresa un número de ID para consultar.', 'error');
+        ui.showToast('Por favor ingresa un nombre o correo para consultar.', 'error');
         return;
       }
-      inspeccionarEstudianteAdmin(val);
+      inspeccionarEstudiantePorNombreAdmin(val);
     });
   }
 
@@ -907,7 +1013,7 @@ function initAdminPanel() {
           String(est.id) === q;
       });
       ui.renderEstudiantesAdmin(filtrados, (est) => {
-        if (studentIdInput) studentIdInput.value = est.id;
+        if (studentNameInput) studentNameInput.value = est.nombreCompleto;
         inspeccionarEstudianteAdmin(est.id);
       });
     });
@@ -954,7 +1060,7 @@ export async function cargarEstudiantesAdmin() {
     state.setEstudiantes(lista);
 
     const filterInput = document.getElementById('admin-student-table-filter');
-    const studentIdInput = document.getElementById('admin-student-id-input');
+    const studentNameInput = document.getElementById('admin-student-name-input');
     const q = filterInput ? filterInput.value.toLowerCase().trim() : '';
 
     const filtrados = q ? lista.filter(e =>
@@ -964,7 +1070,7 @@ export async function cargarEstudiantesAdmin() {
     ) : lista;
 
     ui.renderEstudiantesAdmin(filtrados, (est) => {
-      if (studentIdInput) studentIdInput.value = est.id;
+      if (studentNameInput) studentNameInput.value = est.nombreCompleto;
       inspeccionarEstudianteAdmin(est.id);
     });
   } catch (err) {
@@ -972,13 +1078,52 @@ export async function cargarEstudiantesAdmin() {
   }
 }
 
-export async function inspeccionarEstudianteAdmin(id) {
-  const searchBtn = document.getElementById('btn-search-student-id');
+export async function inspeccionarEstudiantePorNombreAdmin(query) {
+  const searchBtn = document.getElementById('btn-search-student-name');
   if (searchBtn) {
     searchBtn.disabled = true;
-    searchBtn.innerHTML = '<span>Consultando...</span>';
+    searchBtn.innerHTML = '<span>Buscando...</span>';
   }
 
+  try {
+    let resultados = [];
+    try {
+      resultados = await api.buscarEstudiantes(query);
+    } catch (e) {
+      console.warn('Fallback a filtrado en memoria:', e.message);
+      const qLower = query.toLowerCase();
+      resultados = (state.estudiantes || []).filter(e =>
+        (e.nombreCompleto && e.nombreCompleto.toLowerCase().includes(qLower)) ||
+        (e.correoElectronico && e.correoElectronico.toLowerCase().includes(qLower))
+      );
+    }
+
+    if (!resultados || resultados.length === 0) {
+      ui.renderErrorEstudianteAdmin(query, 'No existen registros con el nombre o correo ingresado.');
+      ui.showToast(`No se encontraron estudiantes para "${query}".`, 'error');
+      return;
+    }
+
+    if (resultados.length === 1) {
+      await inspeccionarEstudianteAdmin(resultados[0].id);
+    } else {
+      ui.renderResultadosBusquedaEstudiantesAdmin(query, resultados, async (est) => {
+        await inspeccionarEstudianteAdmin(est.id);
+      });
+      ui.showToast(`Se encontraron ${resultados.length} coincidencias para "${query}".`, 'info');
+    }
+  } catch (err) {
+    ui.renderErrorEstudianteAdmin(query, err.message);
+    ui.showToast(`Error al consultar estudiantes: ${err.message}`, 'error');
+  } finally {
+    if (searchBtn) {
+      searchBtn.disabled = false;
+      searchBtn.innerHTML = '<span>Consultar por Nombre</span><span class="btn-arrow">➔</span>';
+    }
+  }
+}
+
+export async function inspeccionarEstudianteAdmin(id) {
   try {
     const estudiante = await api.getEstudiante(id);
     let historial = [];
@@ -989,19 +1134,57 @@ export async function inspeccionarEstudianteAdmin(id) {
     }
 
     ui.renderFichaEstudianteAdmin(estudiante, historial, () => {
-      const inp = document.getElementById('admin-student-id-input');
+      const inp = document.getElementById('admin-student-name-input');
       if (inp) inp.value = '';
     });
-    ui.showToast(`Estudiante #${estudiante.id} (${estudiante.nombreCompleto}) cargado correctamente.`, 'success');
   } catch (err) {
-    // Responder adecuadamente cuando el estudiante no exista (RF 02)
-    ui.renderErrorEstudianteAdmin(id, err.message);
+    ui.renderErrorEstudianteAdmin(`ID #${id}`, err.message);
     ui.showToast(`Estudiante no encontrado con ID #${id}.`, 'error');
-  } finally {
-    if (searchBtn) {
-      searchBtn.disabled = false;
-      searchBtn.innerHTML = '<span>Consultar por ID</span><span class="btn-arrow">➔</span>';
-    }
+  }
+}
+
+export async function cargarUmbralAdmin() {
+  try {
+    const data = await api.getUmbral();
+    actualizarUIUmbral(data);
+  } catch (err) {
+    console.warn('Error al obtener umbral RAG:', err.message);
+  }
+}
+
+function actualizarUIUmbral(data) {
+  const displayVal = document.getElementById('admin-umbral-display-value');
+  const decimalVal = document.getElementById('admin-umbral-decimal-value');
+  const slider = document.getElementById('admin-threshold-slider');
+  const numInp = document.getElementById('admin-threshold-number-input');
+
+  if (displayVal) displayVal.textContent = `${data.porcentaje}%`;
+  if (decimalVal) decimalVal.textContent = `(${data.valorDecimal})`;
+  if (slider) slider.value = data.porcentaje;
+  if (numInp) numInp.value = data.porcentaje;
+
+  actualizarEtiquetaVisualUmbral(data.porcentaje);
+}
+
+function actualizarEtiquetaVisualUmbral(pct) {
+  const badgeStatus = document.getElementById('admin-umbral-badge-status');
+  if (!badgeStatus) return;
+
+  if (pct < 35.0) {
+    badgeStatus.textContent = 'Alta Cobertura / Flexible';
+    badgeStatus.className = 'status-pill sin-resultados';
+    badgeStatus.style.background = '#DBEAFE';
+    badgeStatus.style.color = '#1E40AF';
+  } else if (pct <= 65.0) {
+    badgeStatus.textContent = 'Equilibrado (Recomendado)';
+    badgeStatus.className = 'status-pill respondida';
+    badgeStatus.style.background = '#DCFCE7';
+    badgeStatus.style.color = '#166534';
+  } else {
+    badgeStatus.textContent = 'Exigente / Estricto';
+    badgeStatus.className = 'status-pill';
+    badgeStatus.style.background = '#FEF3C7';
+    badgeStatus.style.color = '#92400E';
   }
 }
 

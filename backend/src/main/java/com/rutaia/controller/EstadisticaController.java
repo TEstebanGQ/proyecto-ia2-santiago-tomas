@@ -1,5 +1,6 @@
 package com.rutaia.controller;
 
+import com.rutaia.dto.EstadisticasAdminDTO;
 import com.rutaia.dto.EstadisticasDTO;
 import com.rutaia.repository.EstudianteRepository;
 import com.rutaia.service.EstadisticaService;
@@ -45,5 +46,11 @@ public class EstadisticaController {
             }
         }
         return ResponseEntity.ok(estadisticaService.obtenerEstadisticas(estudianteId));
+    }
+
+    @GetMapping("/admin")
+    @Operation(summary = "Consultar estadísticas globales administrativas y bitácora de auditoría de todo el sistema")
+    public ResponseEntity<EstadisticasAdminDTO> obtenerEstadisticasAdmin() {
+        return ResponseEntity.ok(estadisticaService.obtenerEstadisticasAdminGlobales());
     }
 }

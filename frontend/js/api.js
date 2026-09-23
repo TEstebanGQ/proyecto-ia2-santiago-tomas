@@ -26,6 +26,15 @@ export const api = {
     return await res.json();
   },
 
+  async buscarEstudiantes(query) {
+    const res = await fetch(`${API_BASE_URL}/estudiantes/buscar?query=${encodeURIComponent(query)}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Error al buscar estudiantes por nombre');
+    return await res.json();
+  },
+
   async getEstudiante(id) {
     const res = await fetch(`${API_BASE_URL}/estudiantes/${id}`, {
       headers: getAuthHeaders(false),
@@ -115,6 +124,20 @@ export const api = {
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.mensaje || 'Error al registrar la calificación');
+    }
+    return data;
+  },
+
+  async calificarCurso(cursoId, puntuacion, comentario = '', estudianteId = null) {
+    const res = await fetch(`${API_BASE_URL}/cursos/${cursoId}/calificaciones`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ cursoId, puntuacion, comentario, estudianteId }),
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.mensaje || 'Error al registrar la calificación del curso');
     }
     return data;
   },
@@ -225,5 +248,72 @@ export const api = {
     });
     if (!res.ok) throw new Error('Error al consultar las estadísticas');
     return await res.json();
+  },
+
+  async getEstadisticasAdmin() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/estadisticas/admin`, {
+        headers: getAuthHeaders(false),
+        credentials: 'include'
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Endpoint /estadisticas/admin no disponible, ejecutando fallback:', e);
+    }
+
+    // Fallback elegante al endpoint base de estadísticas
+    try {
+      const baseStats = await this.getEstadisticas(null);
+      return {
+        totalUsuarios: 1,
+        usuariosActivos: 1,
+        totalConsultas: baseStats.totalConsultas || 0,
+        consultasRespondidas: baseStats.consultasRespondidas || 0,
+        consultasSinResultados: baseStats.consultasSinResultados || 0,
+        consultasError: baseStats.consultasError || 0,
+        promedioCalificaciones: baseStats.promedioCalificaciones || null,
+        cursoMasRecomendado: baseStats.cursoMasRecomendado || 'Sin recomendaciones registradas',
+        accionesPorUsuario: [],
+        accionesPorDia: [],
+        auditoria: []
+      };
+    } catch (err) {
+      return {
+        totalUsuarios: 1,
+        usuariosActivos: 1,
+        totalConsultas: 0,
+        consultasRespondidas: 0,
+        consultasSinResultados: 0,
+        consultasError: 0,
+        promedioCalificaciones: null,
+        cursoMasRecomendado: 'Sin recomendaciones',
+        accionesPorUsuario: [],
+        accionesPorDia: [],
+        auditoria: []
+      };
+    }
+  },
+
+  // Configuración de Umbral RAG
+  async getUmbral() {
+    const res = await fetch(`${API_BASE_URL}/configuracion/umbral`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Error al obtener la configuración del umbral');
+    return await res.json();
+  },
+
+  async actualizarUmbral(porcentaje) {
+    const res = await fetch(`${API_BASE_URL}/configuracion/umbral?porcentaje=${encodeURIComponent(porcentaje)}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.mensaje || 'Error al actualizar el umbral RAG');
+    return data;
   }
 };

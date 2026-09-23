@@ -1,5 +1,6 @@
 package com.rutaia.controller;
 
+import com.rutaia.dto.CalificacionCursoDTO;
 import com.rutaia.dto.CursoDTO;
 import com.rutaia.dto.CursoResponseDTO;
 import com.rutaia.service.CursoService;
@@ -41,6 +42,15 @@ public class CursoController {
     @Operation(summary = "Consultar un curso por identificador")
     public ResponseEntity<CursoResponseDTO> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(cursoService.obtenerPorId(id));
+    }
+
+    @PostMapping("/{id}/calificaciones")
+    @Operation(summary = "Calificar un curso por parte de un estudiante (1 a 5 estrellas)")
+    public ResponseEntity<CalificacionCursoDTO> calificarCurso(
+            @PathVariable Long id,
+            @Valid @RequestBody CalificacionCursoDTO dto) {
+        CalificacionCursoDTO registrada = cursoService.calificarCurso(id, dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(registrada);
     }
 
     @PostMapping

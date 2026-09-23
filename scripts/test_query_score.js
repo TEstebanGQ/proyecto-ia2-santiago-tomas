@@ -19,7 +19,8 @@ async function testQuery() {
   }
   const vector = embData.data[0].embedding;
   
-  const qRes = await fetch('http://localhost:6333/collections/cursos_academicos/points/search', {
+  const qPort = process.env.QDRANT_PORT || '6335';
+  const qRes = await fetch(`http://localhost:${qPort}/collections/cursos_academicos/points/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

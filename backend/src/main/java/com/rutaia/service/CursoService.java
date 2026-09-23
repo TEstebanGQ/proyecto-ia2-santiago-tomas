@@ -1,10 +1,13 @@
 package com.rutaia.service;
 
+import com.rutaia.dto.CalificacionCursoDTO;
 import com.rutaia.dto.CursoDTO;
 import com.rutaia.dto.CursoResponseDTO;
+import com.rutaia.entity.CalificacionCurso;
 import com.rutaia.entity.Curso;
 import com.rutaia.exception.BusinessRuleException;
 import com.rutaia.exception.ResourceNotFoundException;
+import com.rutaia.repository.CalificacionCursoRepository;
 import com.rutaia.repository.CursoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,10 +19,12 @@ import java.util.stream.Collectors;
 public class CursoService {
 
     private final CursoRepository cursoRepository;
+    private final CalificacionCursoRepository calificacionCursoRepository;
     private final QdrantSyncService qdrantSyncService;
 
-    public CursoService(CursoRepository cursoRepository, QdrantSyncService qdrantSyncService) {
+    public CursoService(CursoRepository cursoRepository, CalificacionCursoRepository calificacionCursoRepository, QdrantSyncService qdrantSyncService) {
         this.cursoRepository = cursoRepository;
+        this.calificacionCursoRepository = calificacionCursoRepository;
         this.qdrantSyncService = qdrantSyncService;
     }
 
@@ -130,6 +135,27 @@ public class CursoService {
         return mapToResponse(actualizado);
     }
 
+    @Transactional
+    public CalificacionCursoDTO calificarCurso(Long cursoId, CalificacionCursoDTO dto) {
+        if (dto.getPuntuacion() == null || dto.getPuntuacion() < 1 || dto.getPuntuacion() > 5) {
+            throw new BusinessRuleException("La calificación debe ser un valor entero entre 1 y 5 estrellas.");
+        }
+
+        Curso curso = cursoRepository.findById(cursoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Curso no encontrado con ID: " + cursoId));
+
+        CalificacionCurso calificacion = new CalificacionCurso(
+                curso,
+                dto.getPuntuacion(),
+                dto.getComentario() != null ? dto.getComentario().trim() : null,
+                dto.getEstudianteId()
+        );
+
+        calificacionCursoRepository.save(calificacion);
+        dto.setCursoId(cursoId);
+        return dto;
+    }
+
     private void validarReglasCurso(CursoDTO dto) {
         if (dto.getDuracionHoras() == null || dto.getDuracionHoras() <= 0) {
             throw new BusinessRuleException("La duración del curso debe ser mayor que cero horas.");
@@ -143,7 +169,7 @@ public class CursoService {
     }
 
     private CursoResponseDTO mapToResponse(Curso c) {
-        return new CursoResponseDTO(
+        CursoResponseDTO response = new CursoResponseDTO(
                 c.getId(),
                 c.getNombre(),
                 c.getDescripcion(),
@@ -154,5 +180,13 @@ public class CursoService {
                 c.getActivo(),
                 c.getFechaCreacion()
         );
+
+        Double promedio = calificacionCursoRepository.findPromedioPuntuacionByCursoId(c.getId());
+        Long total = calificacionCursoRepository.countByCursoId(c.getId());
+
+        response.setPromedioCalificaciones(promedio != null ? Math.round(promedio * 10.0) / 10.0 : null);
+        response.setTotalCalificaciones(total != null ? total : 0L);
+
+        return response;
     }
 }
