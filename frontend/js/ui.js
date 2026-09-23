@@ -217,17 +217,26 @@ export const ui = {
     });
   },
 
-  // Indicador de Carga
+  // Indicador de Carga dentro del Chat
   setLoading(isLoading, title = 'Consultando Asesor Vocacional con RAG...', desc = 'Generando embeddings semánticos, recuperando cursos de Qdrant y sintetizando orientación...') {
     const loadingBox = document.getElementById('loading-box');
     const resultBox = document.getElementById('result-card');
     const submitBtn = document.getElementById('submit-query-btn');
 
     if (loadingBox) {
-      loadingBox.style.display = isLoading ? 'flex' : 'none';
+      loadingBox.style.display = isLoading ? 'inline-flex' : 'none';
+      const titleEl = document.getElementById('loading-title');
+      const descEl = document.getElementById('loading-desc');
+      if (titleEl) titleEl.textContent = title;
+      if (descEl) descEl.textContent = desc;
+
       if (isLoading) {
-        document.getElementById('loading-title').textContent = title;
-        document.getElementById('loading-desc').textContent = desc;
+        const scrollArea = document.getElementById('chat-scroll-area');
+        if (scrollArea) {
+          setTimeout(() => {
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+          }, 30);
+        }
       }
     }
     if (resultBox && isLoading) {
@@ -292,7 +301,7 @@ export const ui = {
       if (isFull) {
         queryInput.placeholder = 'Límite de 5 consultas completado. Inicia una nueva conversación para consultar otro tema.';
       } else {
-        queryInput.placeholder = 'Ejemplo: "Quiero aprender Java para trabajar con Spring Boot" o "¿Qué estudiar para trabajar con IA?"';
+        queryInput.placeholder = 'Escribe tu pregunta o seguimiento aquí...';
       }
     }
 
@@ -301,22 +310,28 @@ export const ui = {
     }
   },
 
-  // Renderizar la sesión conversacional completa (Hilo de hasta 5 turnos - 0 tokens en local)
+  // Renderizar la sesión conversacional completa (Hilo de hasta 5 turnos - natural chat UX)
   renderChatSession(chatSession, onCalificar) {
     this.updateChatSessionBar(chatSession.turnCount, chatSession.maxTurns);
 
+    const welcomeState = document.getElementById('chat-welcome-state');
     const threadContainer = document.getElementById('chat-thread-container');
     const resultCard = document.getElementById('result-card');
+    const scrollArea = document.getElementById('chat-scroll-area');
 
     if (!threadContainer) return;
 
+    if (threadContainer) threadContainer.style.display = 'flex';
+    if (resultCard) resultCard.style.display = 'none';
+
     if (!chatSession.mensajes || chatSession.mensajes.length === 0) {
+      if (welcomeState) welcomeState.style.display = 'flex';
       threadContainer.innerHTML = '';
-      if (resultCard) resultCard.style.display = 'none';
       return;
     }
 
-    if (resultCard) resultCard.style.display = 'none';
+    if (welcomeState) welcomeState.style.display = 'none';
+    if (scrollArea) scrollArea.style.display = 'flex';
     threadContainer.innerHTML = '';
 
     const turnos = {};
@@ -329,6 +344,8 @@ export const ui = {
         turnos[t].ia = msg;
       }
     });
+
+    const activeTurnsWithIa = [];
 
     Object.keys(turnos).sort((a, b) => Number(a) - Number(b)).forEach(turnoKey => {
       const { usuario, ia } = turnos[turnoKey];
@@ -357,40 +374,42 @@ export const ui = {
       }
 
       if (ia) {
+        activeTurnsWithIa.push({ turnoKey, ia });
         const estadoLimpio = ia.estadoFinal || 'Respondida';
         const estadoClass = estadoLimpio.toLowerCase().includes('sin') ? 'sin-resultados' : 'respondida';
         const esSinResultados = estadoLimpio.toLowerCase().includes('sin') || !ia.fuentes || ia.fuentes.length === 0;
 
         turnHtml += `
           <div class="chat-ia-wrapper">
-            <div class="result-bento-card" style="display: block; margin-top: 0.5rem;">
-              <div class="result-top-badge-row">
-                <div class="badge-spark-group">
-                  <span class="sparkle-icon">✦</span>
-                  <span class="badge-spark-text">Orientación RutaIA • Consulta ${turnoKey}</span>
+            <div class="chat-ia-bubble-container">
+              <div class="chat-ia-bubble-header">
+                <div class="chat-ia-brand">
+                  <div class="chat-ia-brand-avatar">✦</div>
+                  <div class="chat-ia-brand-name">RutaIA Asesor</div>
                 </div>
                 <span class="status-pill ${estadoClass}">${estadoLimpio}</span>
               </div>
+              <div class="chat-ia-text">${this.escapeHtml(ia.texto)}</div>
         `;
 
         if (esSinResultados) {
           turnHtml += `
-              <div class="fallback-bento-card" style="display: flex;">
-                <div class="fallback-icon-box">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                  </svg>
-                </div>
-                <div class="fallback-content">
-                  <h4 class="fallback-title">No encontramos cursos para tu consulta</h4>
-                  <p class="fallback-message">${this.escapeHtml(ia.texto)}</p>
-                </div>
-                <button class="btn-secondary-pill" onclick="window.navegarACatalogo && window.navegarACatalogo()">
-                  Ver catálogo de cursos
-                </button>
+            <div class="fallback-bento-card" style="display: flex; margin-bottom: 0.5rem;">
+              <div class="fallback-icon-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
               </div>
+              <div class="fallback-content">
+                <h4 class="fallback-title">No encontramos cursos específicos</h4>
+                <p class="fallback-message">Prueba profundizando en tu interés o explora el catálogo académico general.</p>
+              </div>
+              <button class="btn-secondary-pill" onclick="window.navegarACatalogo && window.navegarACatalogo()">
+                Ver catálogo
+              </button>
+            </div>
           `;
         } else {
           const topCourse = ia.fuentes[0];
@@ -398,7 +417,7 @@ export const ui = {
           const matchLabel = simPct >= 70 ? 'Alta coincidencia' : simPct >= 45 ? 'Coincidencia media' : 'Coincidencia exploratoria';
 
           turnHtml += `
-            <div class="featured-course-card">
+            <div class="featured-course-card" style="margin-bottom: 0.75rem;">
               <div class="featured-course-layout">
                 <div class="featured-course-thumb">
                   <div class="thumb-window-bar">
@@ -412,7 +431,7 @@ export const ui = {
                     <div class="line w-90"></div>
                     <div class="line w-40 code-subaccent"></div>
                   </div>
-                  <div class="thumb-badge-tag">${topCourse.categoria || 'Curso'}</div>
+                  <div class="thumb-badge-tag">${this.escapeHtml(topCourse.categoria || 'Curso')}</div>
                 </div>
 
                 <div class="featured-course-info">
@@ -439,36 +458,23 @@ export const ui = {
                 </div>
               </div>
             </div>
-
-            <!-- Explicación de la IA -->
-            <div class="ai-rationale-box">
-              <div class="rationale-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="16" x2="12" y2="12"></line>
-                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-                <span class="rationale-title">Orientación Académica Institucional</span>
-              </div>
-              <div class="rationale-body">${this.escapeHtml(ia.texto)}</div>
-            </div>
           `;
 
           if (ia.fuentes.length > 1) {
             turnHtml += `
-              <div class="sources-bento-section">
+              <div class="sources-bento-section" style="margin-bottom: 0.75rem;">
                 <div class="sources-section-title">
                   <span>Otras opciones del catálogo</span>
                   <span class="sources-counter">${ia.fuentes.length} cursos</span>
                 </div>
                 <div class="sources-list">
             `;
-            ia.fuentes.forEach((f, idx) => {
+            ia.fuentes.slice(1).forEach((f, idx) => {
               const fSim = (f.similitud * 100).toFixed(1);
               turnHtml += `
                 <div class="source-item-row">
                   <div class="source-item-left">
-                    <div class="source-item-name">${idx + 1}. ${this.escapeHtml(f.nombre)}</div>
+                    <div class="source-item-name">${idx + 2}. ${this.escapeHtml(f.nombre)}</div>
                     <div class="source-item-meta">
                       <span>${this.escapeHtml(f.categoria)}</span> • <span>${this.escapeHtml(f.nivel)}</span> • ${f.duracionHoras} hrs
                     </div>
@@ -487,6 +493,37 @@ export const ui = {
           }
         }
 
+        // Calificación Inline debajo de la respuesta de la IA (RF 17)
+        if (ia.calificacionPuntuacion) {
+          turnHtml += `
+            <div class="chat-inline-rating">
+              <div class="chat-rating-confirmed">
+                <span>✓ Calificado con ${ia.calificacionPuntuacion} estrellas</span>
+                ${ia.calificacionComentario ? `<span style="color:#64748B; font-weight:normal;">• "${this.escapeHtml(ia.calificacionComentario)}"</span>` : ''}
+              </div>
+            </div>
+          `;
+        } else if (ia.recomendacionId) {
+          turnHtml += `
+            <div class="chat-inline-rating" id="chat-rating-turn-${turnoKey}">
+              <div class="chat-rating-prompt">
+                <span class="chat-rating-label">¿Qué tal te pareció esta recomendación?</span>
+                <div class="chat-star-row" id="star-row-turn-${turnoKey}">
+                  <button type="button" class="chat-star-btn" data-rating="1" data-turn="${turnoKey}" title="1 estrella">★</button>
+                  <button type="button" class="chat-star-btn" data-rating="2" data-turn="${turnoKey}" title="2 estrellas">★</button>
+                  <button type="button" class="chat-star-btn" data-rating="3" data-turn="${turnoKey}" title="3 estrellas">★</button>
+                  <button type="button" class="chat-star-btn" data-rating="4" data-turn="${turnoKey}" title="4 estrellas">★</button>
+                  <button type="button" class="chat-star-btn" data-rating="5" data-turn="${turnoKey}" title="5 estrellas">★</button>
+                </div>
+              </div>
+              <div class="chat-rating-comment-box" id="comment-box-turn-${turnoKey}" style="display: none;">
+                <input type="text" class="chat-rating-input" id="rating-input-turn-${turnoKey}" placeholder="Deja un comentario o feedback opcional..." />
+                <button type="button" class="chat-rating-submit" id="rating-submit-turn-${turnoKey}">Calificar</button>
+              </div>
+            </div>
+          `;
+        }
+
         turnHtml += `
             </div>
           </div>
@@ -497,17 +534,103 @@ export const ui = {
       threadContainer.appendChild(turnBlock);
     });
 
-    const lastTurn = threadContainer.lastElementChild;
-    if (lastTurn) {
-      lastTurn.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Configurar listeners de calificación inline para cada turno interactivo
+    activeTurnsWithIa.forEach(({ turnoKey, ia }) => {
+      if (!ia.calificacionPuntuacion && ia.recomendacionId) {
+        this.setupInlineRatingListeners(turnoKey, ia, onCalificar);
+      }
+    });
+
+    // Auto-scroll al fondo del área de chat
+    if (scrollArea) {
+      setTimeout(() => {
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+      }, 50);
+    }
+  },
+
+  // Helper para listeners de calificación inline en cada turno
+  setupInlineRatingListeners(turnoKey, ia, onCalificar) {
+    const starRow = document.getElementById(`star-row-turn-${turnoKey}`);
+    const commentBox = document.getElementById(`comment-box-turn-${turnoKey}`);
+    const inputField = document.getElementById(`rating-input-turn-${turnoKey}`);
+    const submitBtn = document.getElementById(`rating-submit-turn-${turnoKey}`);
+    const ratingContainer = document.getElementById(`chat-rating-turn-${turnoKey}`);
+
+    if (!starRow || !ratingContainer) return;
+
+    let selectedRating = 0;
+    const starBtns = starRow.querySelectorAll('.chat-star-btn');
+
+    starBtns.forEach(btn => {
+      const r = parseInt(btn.dataset.rating, 10);
+      btn.addEventListener('mouseenter', () => {
+        starBtns.forEach(s => {
+          s.classList.toggle('hovered', parseInt(s.dataset.rating, 10) <= r);
+        });
+      });
+      btn.addEventListener('mouseleave', () => {
+        starBtns.forEach(s => {
+          s.classList.remove('hovered');
+        });
+      });
+      btn.addEventListener('click', () => {
+        selectedRating = r;
+        starBtns.forEach(s => {
+          s.classList.toggle('selected', parseInt(s.dataset.rating, 10) <= selectedRating);
+        });
+        if (commentBox) {
+          commentBox.style.display = 'flex';
+          if (inputField) inputField.focus();
+        }
+      });
+    });
+
+    if (submitBtn) {
+      submitBtn.addEventListener('click', async () => {
+        if (!selectedRating || selectedRating < 1 || selectedRating > 5) {
+          this.showToast('Por favor selecciona entre 1 y 5 estrellas', 'error');
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando...';
+        const comment = inputField ? inputField.value.trim() : '';
+        try {
+          if (onCalificar && ia.recomendacionId) {
+            await onCalificar(ia.recomendacionId, selectedRating, comment);
+          }
+          ia.calificacionPuntuacion = selectedRating;
+          ia.calificacionComentario = comment;
+          ratingContainer.innerHTML = `
+            <div class="chat-rating-confirmed">
+              <span>✓ Calificado con ${selectedRating} estrellas</span>
+              ${comment ? `<span style="color:#64748B; font-weight:normal;">• "${this.escapeHtml(comment)}"</span>` : ''}
+            </div>
+          `;
+          this.showToast('¡Gracias por calificar la recomendación!', 'success');
+        } catch (err) {
+          this.showToast(err.message || 'Error al guardar la calificación', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Calificar';
+        }
+      });
     }
   },
 
   // Renderizado del Resultado RAG (Estilo Editorial Bento)
   renderResultadoRecomendacion(rec, onCalificar) {
     const resultCard = document.getElementById('result-card');
+    const scrollArea = document.getElementById('chat-scroll-area');
+    const welcomeState = document.getElementById('chat-welcome-state');
+    const threadContainer = document.getElementById('chat-thread-container');
+    const loadingBox = document.getElementById('loading-box');
+
     if (!resultCard) return;
 
+    if (scrollArea) scrollArea.style.display = 'flex';
+    if (welcomeState) welcomeState.style.display = 'none';
+    if (threadContainer) threadContainer.style.display = 'none';
+    if (loadingBox) loadingBox.style.display = 'none';
     resultCard.style.display = 'block';
 
     // Status Badge
@@ -648,8 +771,12 @@ export const ui = {
       if (ratingCard) ratingCard.style.display = 'none';
     }
 
-    // Desplazar suavemente a la tarjeta de resultados
-    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Desplazar suavemente al inicio del área scrollable
+    if (scrollArea) {
+      setTimeout(() => {
+        scrollArea.scrollTop = 0;
+      }, 30);
+    }
   },
 
   // Componente Interactivo de Estrellas para Calificación (Editorial)
@@ -744,7 +871,7 @@ export const ui = {
     if (!grid) return;
 
     grid.innerHTML = '';
-    if (cursos.length === 0) {
+    if (!cursos || cursos.length === 0) {
       grid.innerHTML = `
         <div style="grid-column: 1/-1; text-align: center; padding: 3.5rem; background: var(--bg-card); border-radius: var(--radius-xl); border: 1px dashed var(--border-medium); color: var(--text-muted);">
           No se encontraron cursos que coincidan con los filtros seleccionados.
@@ -754,7 +881,7 @@ export const ui = {
     }
 
     const getCatClass = (cat = '') => {
-      const c = cat.toLowerCase();
+      const c = (cat || '').toLowerCase();
       if (c.includes('web')) return 'cat-web';
       if (c.includes('java') || c.includes('spring')) return 'cat-java';
       if (c.includes('datos') || c.includes('data')) return 'cat-data';
@@ -777,41 +904,93 @@ export const ui = {
         if (estaInscrito) {
           botonInscripcion = `<span class="badge-enrolled-mini" title="Ya te encuentras matriculado en este curso">✓ Inscrito</span>`;
         } else {
-          botonInscripcion = `<button type="button" class="btn-enroll-mini" onclick="event.stopPropagation(); window.inscribirseACurso(${curso.id}, this)" title="Inscribirme oficialmente a este curso"><span>Inscribirme</span> ✍️</button>`;
+          botonInscripcion = `<button type="button" class="btn-enroll-mini" title="Inscribirme oficialmente a este curso"><span>Inscribirme</span> ✍️</button>`;
         }
       }
+
+      const cursoNombre = this.escapeHtml(curso.nombre || '');
+      const cursoDesc = this.escapeHtml(curso.descripcion || 'Formación académica especializada.');
+      const cursoCat = this.escapeHtml(curso.categoria || 'Tecnología');
+      const cursoNivel = this.escapeHtml(curso.nivel || 'Intermedio');
+      const cursoHoras = curso.duracionHoras || 40;
+      const prerreqs = curso.prerrequisitos ? this.escapeHtml(curso.prerrequisitos) : '';
 
       card.innerHTML = `
         <div class="course-editorial-header">
           <div class="course-editorial-badges">
-            <span class="badge-cat ${catClass}">${curso.categoria}</span>
-            <span class="badge-level">${curso.nivel}</span>
+            <span class="badge-cat ${catClass}">${cursoCat}</span>
+            <span class="badge-level">${cursoNivel}</span>
           </div>
-          <h3 class="course-editorial-title" style="cursor: pointer;" onclick="event.stopPropagation(); window.verDetalleCursoModal('${curso.nombre.replace(/'/g, "\\'")}')" title="Ver ficha técnica del curso">${curso.nombre}</h3>
-          <p class="course-editorial-desc">${curso.descripcion}</p>
-          ${curso.prerrequisitos ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; background: var(--bg-card-subtle); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border-left: 2px solid var(--accent-lime);"><strong>Prerrequisitos:</strong> ${curso.prerrequisitos}</div>` : ''}
+          <h3 class="course-editorial-title" style="cursor: pointer;" title="Ver ficha técnica del curso">${cursoNombre}</h3>
+          <p class="course-editorial-desc">${cursoDesc}</p>
+          ${prerreqs ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; background: var(--bg-card-subtle); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border-left: 2px solid var(--accent-lime);"><strong>Prerrequisitos:</strong> ${prerreqs}</div>` : ''}
         </div>
         <div class="course-editorial-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <span class="course-editorial-hours">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            ${curso.duracionHoras}h
+            ${cursoHoras}h
           </span>
           <div style="display: inline-flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
             ${botonInscripcion}
-            <button class="btn-ask-course" onclick="event.stopPropagation(); window.consultarCursoSemantico('${curso.nombre.replace(/'/g, "\\'")}')" title="Preguntar al Asesor RAG">
+            <button type="button" class="btn-ask-course" title="Preguntar al Asesor RAG">
               Orientar →
             </button>
-            <button type="button" class="btn-details-icon" onclick="event.stopPropagation(); window.verDetalleCursoModal('${curso.nombre.replace(/'/g, "\\'")}')" title="Ver ficha técnica del curso">
+            <button type="button" class="btn-details-icon" title="Ver ficha técnica del curso">
               ℹ️
             </button>
           </div>
         </div>
       `;
-      card.onclick = (e) => {
+
+      // Listeners seguros sin strings inline
+      const enrollBtn = card.querySelector('.btn-enroll-mini');
+      if (enrollBtn) {
+        enrollBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.inscribirseACurso) {
+            window.inscribirseACurso(curso.id, enrollBtn);
+          }
+        });
+      }
+
+      const askBtn = card.querySelector('.btn-ask-course');
+      if (askBtn) {
+        askBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.consultarCursoSemantico) {
+            window.consultarCursoSemantico(curso.nombre);
+          }
+        });
+      }
+
+      const detailsBtn = card.querySelector('.btn-details-icon');
+      if (detailsBtn) {
+        detailsBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.verDetalleCursoModal) {
+            window.verDetalleCursoModal(curso.nombre);
+          }
+        });
+      }
+
+      const titleEl = card.querySelector('.course-editorial-title');
+      if (titleEl) {
+        titleEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.verDetalleCursoModal) {
+            window.verDetalleCursoModal(curso.nombre);
+          }
+        });
+      }
+
+      card.addEventListener('click', (e) => {
         if (!e.target.closest('button')) {
-          window.verDetalleCursoModal(curso.nombre);
+          if (window.verDetalleCursoModal) {
+            window.verDetalleCursoModal(curso.nombre);
+          }
         }
-      };
+      });
+
       grid.appendChild(card);
     });
   },

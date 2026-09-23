@@ -343,6 +343,72 @@
                   <span class="chat-loading-text">RutaIA está pensando...</span>
                 </div>
 
+                <!-- Tarjeta de Resultados RAG (para detalle del historial, ahora dentro del scroll para poder bajar y revisarlo completo) -->
+                <div class="result-bento-card" id="result-card" style="display: none; margin-top: 0.5rem; width: 100%; box-sizing: border-box;">
+                  <div class="result-history-nav-bar" style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #E2E8F0; padding-bottom: 0.75rem;">
+                    <button type="button" class="btn-clean-session" id="btn-back-to-active-chat" onclick="window.volverAlChatActivo && window.volverAlChatActivo()">
+                      ← Volver a la conversación activa
+                    </button>
+                    <span style="font-size: 0.8rem; color: #64748B; font-weight: 700;">Consulta del historial</span>
+                  </div>
+
+                  <div class="result-top-badge-row">
+                    <div class="badge-spark-group">
+                      <span class="sparkle-icon">✦</span>
+                      <span class="badge-spark-text">Curso recomendado</span>
+                    </div>
+                    <span class="status-pill respondida" id="result-status-badge">Respondida</span>
+                  </div>
+                  <div class="query-recap-box">
+                    <span class="recap-label">Consulta realizada:</span>
+                    <span class="recap-query" id="result-pregunta">-</span>
+                  </div>
+                  <div id="course-success-view">
+                    <div class="featured-course-card" id="featured-course-container"></div>
+                    <div class="ai-rationale-box">
+                      <div class="rationale-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <span class="rationale-title">Orientación Académica Institucional</span>
+                      </div>
+                      <div class="rationale-body" id="result-ai-text">Cargando orientación...</div>
+                    </div>
+                    <div class="sources-bento-section" id="sources-section">
+                      <div class="sources-section-title">
+                        <span>Fuentes de la recomendación</span>
+                        <span class="sources-counter" id="sources-counter">1 curso</span>
+                      </div>
+                      <div class="sources-list" id="sources-container"></div>
+                    </div>
+                  </div>
+                  <div class="fallback-bento-card" id="fallback-box" style="display: none;">
+                    <div class="fallback-icon-box">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div class="fallback-content">
+                      <h4 class="fallback-title">No encontramos cursos para tu consulta</h4>
+                      <p class="fallback-message" id="fallback-message-text">No hay cursos relacionados con tu búsqueda en nuestro catálogo institucional.</p>
+                    </div>
+                    <button class="btn-secondary-pill" id="fallback-catalog-btn" data-view="catalogo">Ver catálogo de cursos</button>
+                  </div>
+                  <div class="rating-bento-section" id="rating-section">
+                    <div class="rating-header-row">
+                      <span class="rating-label">¿Qué tan útil fue esta orientación?</span>
+                      <span class="rating-status-hint" id="rating-status-message"></span>
+                    </div>
+                    <div class="star-rating" id="star-rating">
+                      <button class="star-btn" data-rating="1">★</button>
+                      <button class="star-btn" data-rating="2">★</button>
+                      <button class="star-btn" data-rating="3">★</button>
+                      <button class="star-btn" data-rating="4">★</button>
+                      <button class="star-btn" data-rating="5">★</button>
+                    </div>
+                    <div class="rating-input-row">
+                      <input type="text" id="rating-comment" class="rating-input-field" placeholder="Deja un comentario o feedback opcional..." />
+                      <button class="btn-dark-pill" id="rating-submit-btn">Enviar Calificación</button>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               <!-- Input de Chat (Fijo abajo) -->
@@ -369,65 +435,6 @@
                       <polyline points="5 12 12 5 19 12"></polyline>
                     </svg>
                   </button>
-                </div>
-              </div>
-
-              <!-- Tarjeta de Resultados RAG (solo para historial, oculta por defecto) -->
-              <div class="result-bento-card" id="result-card" style="display: none;">
-                <div class="result-top-badge-row">
-                  <div class="badge-spark-group">
-                    <span class="sparkle-icon">✦</span>
-                    <span class="badge-spark-text">Curso recomendado</span>
-                  </div>
-                  <span class="status-pill respondida" id="result-status-badge">Respondida</span>
-                </div>
-                <div class="query-recap-box">
-                  <span class="recap-label">Consulta realizada:</span>
-                  <span class="recap-query" id="result-pregunta">-</span>
-                </div>
-                <div id="course-success-view">
-                  <div class="featured-course-card" id="featured-course-container"></div>
-                  <div class="ai-rationale-box">
-                    <div class="rationale-header">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                      <span class="rationale-title">Orientación Académica Institucional</span>
-                    </div>
-                    <div class="rationale-body" id="result-ai-text">Cargando orientación...</div>
-                  </div>
-                  <div class="sources-bento-section" id="sources-section">
-                    <div class="sources-section-title">
-                      <span>Fuentes de la recomendación</span>
-                      <span class="sources-counter" id="sources-counter">1 curso</span>
-                    </div>
-                    <div class="sources-list" id="sources-container"></div>
-                  </div>
-                </div>
-                <div class="fallback-bento-card" id="fallback-box" style="display: none;">
-                  <div class="fallback-icon-box">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                  </div>
-                  <div class="fallback-content">
-                    <h4 class="fallback-title">No encontramos cursos para tu consulta</h4>
-                    <p class="fallback-message" id="fallback-message-text">No hay cursos relacionados con tu búsqueda en nuestro catálogo institucional.</p>
-                  </div>
-                  <button class="btn-secondary-pill" id="fallback-catalog-btn" data-view="catalogo">Ver catálogo de cursos</button>
-                </div>
-                <div class="rating-bento-section" id="rating-section">
-                  <div class="rating-header-row">
-                    <span class="rating-label">¿Qué tan útil fue esta orientación?</span>
-                    <span class="rating-status-hint" id="rating-status-message"></span>
-                  </div>
-                  <div class="star-rating" id="star-rating">
-                    <button class="star-btn" data-rating="1">★</button>
-                    <button class="star-btn" data-rating="2">★</button>
-                    <button class="star-btn" data-rating="3">★</button>
-                    <button class="star-btn" data-rating="4">★</button>
-                    <button class="star-btn" data-rating="5">★</button>
-                  </div>
-                  <div class="rating-input-row">
-                    <input type="text" id="rating-comment" class="rating-input-field" placeholder="Deja un comentario o feedback opcional..." />
-                    <button class="btn-dark-pill" id="rating-submit-btn">Enviar Calificación</button>
-                  </div>
                 </div>
               </div>
 

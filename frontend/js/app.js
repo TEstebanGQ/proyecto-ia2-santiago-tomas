@@ -310,6 +310,7 @@ function initQueryForm() {
 // Manejador centralizado de calificaciones
 const onCalificarHandler = async (recId, puntuacion, comentario) => {
   const resCal = await api.calificarRecomendacion(recId, puntuacion, comentario);
+  state.guardarCalificacionEnMensaje(recId, puntuacion, comentario);
   cargarEstadisticas();
   return resCal;
 };
@@ -417,23 +418,23 @@ function initCatalogFilters() {
   const levelSelect = document.getElementById('catalog-level');
 
   const aplicarFiltros = () => {
-    const searchVal = (searchInput.value || '').toLowerCase().trim();
-    const catVal = categorySelect ? categorySelect.value : '';
-    const levelVal = levelSelect ? levelSelect.value : '';
+    const searchVal = (searchInput && searchInput.value ? searchInput.value : '').toLowerCase().trim();
+    const catVal = (categorySelect ? categorySelect.value : '').toLowerCase().trim();
+    const levelVal = (levelSelect ? levelSelect.value : '').toLowerCase().trim();
 
     let filtrados = state.cursos || [];
 
     if (catVal) {
-      filtrados = filtrados.filter(c => c.categoria.toLowerCase() === catVal.toLowerCase());
+      filtrados = filtrados.filter(c => (c.categoria || '').toLowerCase() === catVal);
     }
     if (levelVal) {
-      filtrados = filtrados.filter(c => c.nivel.toLowerCase() === levelVal.toLowerCase());
+      filtrados = filtrados.filter(c => (c.nivel || '').toLowerCase() === levelVal);
     }
     if (searchVal) {
       filtrados = filtrados.filter(c =>
-        c.nombre.toLowerCase().includes(searchVal) ||
-        c.descripcion.toLowerCase().includes(searchVal) ||
-        c.categoria.toLowerCase().includes(searchVal)
+        (c.nombre || '').toLowerCase().includes(searchVal) ||
+        (c.descripcion || '').toLowerCase().includes(searchVal) ||
+        (c.categoria || '').toLowerCase().includes(searchVal)
       );
     }
 
@@ -521,34 +522,39 @@ function abrirModalEstudiantes() {
 
 // 9. Cargas de Datos y Conexión con Spring Boot
 async function cargarDatosIniciales() {
+  // 1. Cargar catálogo de cursos prioritariamente (ruta pública)
+  try {
+    const cursos = await api.getCursos();
+    state.setCursos(cursos || []);
+    poblarCategoriasSelect(cursos || []);
+  } catch (err) {
+    console.warn('No se pudo precargar cursos:', err.message);
+  }
+
+  // 2. Cargar lista de estudiantes y perfil activo
   try {
     const estudiantes = await api.getEstudiantes();
-    state.setEstudiantes(estudiantes);
+    state.setEstudiantes(estudiantes || []);
 
-    // Inicializar estado de usuario y header
     if (state.usuario) {
       ui.renderUsuarioHeader(state.usuario);
     } else if (state.estudianteActivo) {
       ui.renderEstudianteActivo(state.estudianteActivo);
     }
 
-    const cursos = await api.getCursos();
-    state.setCursos(cursos);
-    poblarCategoriasSelect(cursos);
-
     if (state.estudianteActivo) {
       actualizarHistorialesEstudiante();
     }
   } catch (err) {
-    console.warn('Backend aún conectándose:', err.message);
+    console.warn('Backend aún conectándose a estudiantes:', err.message);
   }
 }
 
 function poblarCategoriasSelect(cursos) {
   const select = document.getElementById('catalog-category');
-  if (!select) return;
+  if (!select || !Array.isArray(cursos)) return;
 
-  const categorias = [...new Set(cursos.map(c => c.categoria))].sort();
+  const categorias = [...new Set(cursos.map(c => c.categoria).filter(Boolean))].sort();
   select.innerHTML = '<option value="">Todas las categorías</option>';
   categorias.forEach(cat => {
     const opt = document.createElement('option');
@@ -560,9 +566,21 @@ function poblarCategoriasSelect(cursos) {
 
 async function cargarCatalogo() {
   try {
-    const cursos = await api.getCursos();
-    state.setCursos(cursos);
-    ui.renderCatalogo(cursos);
+    let cursos = state.cursos;
+    if (!cursos || cursos.length === 0) {
+      cursos = await api.getCursos();
+      state.setCursos(cursos || []);
+      poblarCategoriasSelect(cursos || []);
+    } else {
+      // Refrescar en background para tener siempre los datos más recientes
+      api.getCursos().then(nuevos => {
+        if (nuevos && nuevos.length > 0) {
+          state.setCursos(nuevos);
+          poblarCategoriasSelect(nuevos);
+        }
+      }).catch(e => console.warn('Sync background cursos:', e));
+    }
+    ui.renderCatalogo(cursos || []);
   } catch (err) {
     ui.showToast('Error al cargar el catálogo de cursos: ' + err.message, 'error');
   }
@@ -633,6 +651,12 @@ async function cargarEstadisticas() {
     ui.showToast('Error al cargar estadísticas: ' + err.message, 'error');
   }
 }
+
+// Utilidad global para volver desde el detalle de historial a la conversación activa
+window.volverAlChatActivo = () => {
+  cambiarVista('asesor');
+  ui.renderChatSession(state.chatSession, onCalificarHandler);
+};
 
 // Utilidad global invocada desde tarjetas de curso en el catálogo
 window.consultarCursoSemantico = (nombreCurso) => {

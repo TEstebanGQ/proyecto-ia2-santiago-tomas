@@ -41,14 +41,15 @@ public class SecurityConfig {
                         // Rutas públicas de Autenticación, Registro de Estudiantes, Documentación y Catálogo Básico
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/estudiantes").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/estudiantes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/cursos").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/estadisticas").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/", "/api").permitAll()
 
-                        // Inscripción a cursos: Exclusiva para el rol ESTUDIANTE
-                        .requestMatchers(HttpMethod.POST, "/api/estudiantes/*/inscribir/*").hasRole("ESTUDIANTE")
-                        .requestMatchers(HttpMethod.GET, "/api/estudiantes/*/inscripciones").authenticated()
+                        // Inscripción a cursos y consulta de inscripciones
+                        .requestMatchers(HttpMethod.POST, "/api/estudiantes/*/inscribir/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/estudiantes/*/inscripciones").permitAll()
 
                         // Operaciones del rol DOCENTE (Gestión de su especialidad, feedback, analíticas de área)
                         .requestMatchers("/api/docentes/**").hasAnyRole("DOCENTE", "ADMINISTRADOR")

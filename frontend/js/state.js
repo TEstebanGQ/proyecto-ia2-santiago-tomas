@@ -247,13 +247,23 @@ export const state = {
       idConsulta: resultado.idConsulta,
       recomendacionId: resultado.idRecomendacion || resultado.idConsulta,
       fuentes: resultado.fuentes || [],
-      similitudes: resultado.similitudes || [],
+      calificacionPuntuacion: resultado.calificacionPuntuacion || null,
+      calificacionComentario: resultado.calificacionComentario || null,
       turno: this.chatSession.turnCount,
       timestamp: new Date().toISOString()
     };
     this.chatSession.mensajes.push(msg);
     this.saveChatSession();
     return msg;
+  },
+
+  guardarCalificacionEnMensaje(recId, puntuacion, comentario) {
+    const msg = this.chatSession.mensajes.find(m => m.remitente === 'ia' && (m.recomendacionId == recId || m.idConsulta == recId));
+    if (msg) {
+      msg.calificacionPuntuacion = puntuacion;
+      msg.calificacionComentario = comentario;
+      this.saveChatSession();
+    }
   },
 
   reiniciarChat() {
