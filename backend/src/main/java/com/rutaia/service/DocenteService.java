@@ -17,6 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import com.rutaia.dto.InscripcionResponseDTO;
+import com.rutaia.entity.Estudiante;
+import com.rutaia.entity.Inscripcion;
+import com.rutaia.repository.EstudianteRepository;
+import com.rutaia.repository.InscripcionRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,20 +33,23 @@ public class DocenteService {
     private final CursoService cursoService;
     private final FuenteRepository fuenteRepository;
     private final CalificacionRepository calificacionRepository;
+    private final InscripcionRepository inscripcionRepository;
 
     public DocenteService(DocenteRepository docenteRepository,
                           CursoRepository cursoRepository,
                           CursoService cursoService,
                           FuenteRepository fuenteRepository,
-                          CalificacionRepository calificacionRepository) {
+                          CalificacionRepository calificacionRepository,
+                          InscripcionRepository inscripcionRepository) {
         this.docenteRepository = docenteRepository;
         this.cursoRepository = cursoRepository;
         this.cursoService = cursoService;
         this.fuenteRepository = fuenteRepository;
         this.calificacionRepository = calificacionRepository;
+        this.inscripcionRepository = inscripcionRepository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Docente obtenerDocentePorEmail(String email) {
         if (email == null || email.isBlank()) {
             throw new ResourceNotFoundException("Correo del docente no proporcionado");
@@ -71,62 +79,61 @@ public class DocenteService {
     public List<CursoResponseDTO> listarCursosEspecialidad(String emailDocente) {
         Docente docente = obtenerDocentePorEmail(emailDocente);
         List<Curso> cursos = cursoRepository.findByCategoriaIgnoreCaseOrderByNombreAsc(docente.getAreaEspecialidad());
-        return cursos.stream().map(cursoService::mapToResponse).collect(Collectors.toList());
+        return cursos.stream().map(c -> {
+            CursoResponseDTO dto = cursoService.mapToResponse(c);
+            dto.setTotalInscritos((int) inscripcionRepository.countByCursoId(c.getId()));
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<InscripcionResponseDTO> obtenerInscritosPorCurso(String emailDocente, Long cursoId) {
+        Docente docente = obtenerDocentePorEmail(emailDocente);
+        Curso curso = cursoRepository.findById(cursoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Curso no encontrado con ID: " + cursoId));
+
+        if (!docente.getAreaEspecialidad().equalsIgnoreCase(curso.getCategoria())) {
+            throw new BusinessRuleException("Frontera curricular: Solo puedes consultar estudiantes inscritos en cursos de tu especialidad (" + docente.getAreaEspecialidad() + ")");
+        }
+
+        List<Inscripcion> inscripciones = inscripcionRepository.findByCursoIdOrderByFechaInscripcionDesc(cursoId);
+        return inscripciones.stream().map(ins -> new InscripcionResponseDTO(
+                ins.getId(),
+                ins.getEstudiante().getId(),
+                ins.getEstudiante().getNombreCompleto(),
+                ins.getEstudiante().getCorreoElectronico(),
+                ins.getEstudiante().getNivelExperiencia(),
+                ins.getEstudiante().getAreaInteres(),
+                curso.getId(),
+                curso.getNombre(),
+                ins.getFechaInscripcion(),
+                ins.getEstado()
+        )).collect(Collectors.toList());
     }
 
     @Transactional
     public CursoResponseDTO crearCursoEspecialidad(String emailDocente, CursoDTO dto) {
-        Docente docente = obtenerDocentePorEmail(emailDocente);
-        if (!docente.getAreaEspecialidad().equalsIgnoreCase(dto.getCategoria())) {
-            throw new BusinessRuleException("Frontera curricular: Como docente solo puedes crear cursos dentro de tu especialidad: " + docente.getAreaEspecialidad());
-        }
-        return cursoService.crear(dto);
+        throw new BusinessRuleException("Permiso restringido: Los docentes tienen permisos de visualización curricular y supervisión de estudiantes inscritos. La creación de asignaturas corresponde a la Administración.");
     }
 
     @Transactional
     public CursoResponseDTO actualizarCursoEspecialidad(String emailDocente, Long id, CursoDTO dto) {
-        Docente docente = obtenerDocentePorEmail(emailDocente);
-        Curso actual = cursoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Curso no encontrado con ID: " + id));
-
-        if (!docente.getAreaEspecialidad().equalsIgnoreCase(actual.getCategoria())) {
-            throw new BusinessRuleException("Frontera curricular: No tienes permisos para modificar cursos fuera de tu especialidad (" + docente.getAreaEspecialidad() + ")");
-        }
-        if (!docente.getAreaEspecialidad().equalsIgnoreCase(dto.getCategoria())) {
-            throw new BusinessRuleException("No puedes cambiar la categoría de un curso a una diferente a tu especialidad (" + docente.getAreaEspecialidad() + ")");
-        }
-
-        return cursoService.actualizar(id, dto);
+        throw new BusinessRuleException("Permiso restringido: Los docentes no pueden modificar el contenido oficial del catálogo de cursos. Debe ser gestionado por la Administración.");
     }
 
     @Transactional
     public CursoResponseDTO desactivarCursoEspecialidad(String emailDocente, Long id) {
-        Docente docente = obtenerDocentePorEmail(emailDocente);
-        Curso actual = cursoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Curso no encontrado con ID: " + id));
-
-        if (!docente.getAreaEspecialidad().equalsIgnoreCase(actual.getCategoria())) {
-            throw new BusinessRuleException("Frontera curricular: No tienes permisos para desactivar cursos fuera de tu especialidad (" + docente.getAreaEspecialidad() + ")");
-        }
-
-        return cursoService.desactivar(id);
+        throw new BusinessRuleException("Permiso restringido: Los docentes no pueden desactivar ni eliminar cursos del catálogo institucional.");
     }
 
     @Transactional
     public CursoResponseDTO activarCursoEspecialidad(String emailDocente, Long id) {
-        Docente docente = obtenerDocentePorEmail(emailDocente);
-        Curso actual = cursoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Curso no encontrado con ID: " + id));
-
-        if (!docente.getAreaEspecialidad().equalsIgnoreCase(actual.getCategoria())) {
-            throw new BusinessRuleException("Frontera curricular: No tienes permisos para activar cursos fuera de tu especialidad (" + docente.getAreaEspecialidad() + ")");
-        }
-
-        return cursoService.activar(id);
+        throw new BusinessRuleException("Permiso restringido: Los docentes no pueden alterar el estado de publicación de los cursos.");
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<DocenteFeedbackDTO> obtenerFeedbackConsultas(String emailDocente) {
+
         Docente docente = obtenerDocentePorEmail(emailDocente);
         List<Fuente> fuentes = fuenteRepository.findByCursoCategoriaOrderByFechaDesc(docente.getAreaEspecialidad());
 
@@ -161,7 +168,7 @@ public class DocenteService {
         return feedbackList;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public DocenteEstadisticasDTO obtenerEstadisticas(String emailDocente) {
         Docente docente = obtenerDocentePorEmail(emailDocente);
         String especialidad = docente.getAreaEspecialidad();
