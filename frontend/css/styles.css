@@ -4969,20 +4969,38 @@ button, input, select, textarea {
 }
 
 .btn-details-icon {
-  background: #F1F5F9;
-  color: #334155;
+  background: #F8FAFC;
+  color: #64748B;
   border: 1px solid #CBD5E1;
-  padding: 0.38rem 0.65rem;
+  padding: 0.44rem 0.55rem;
   border-radius: 9999px;
   cursor: pointer;
-  font-size: 0.85rem;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .btn-details-icon:hover {
   background: #E2E8F0;
   color: #0F172A;
+  border-color: #94A3B8;
+  transform: translateY(-1px);
 }
+
+.btn-details-icon svg {
+  display: block;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  animation: spin 0.8s linear infinite;
+  transform-origin: center;
+}
+
 

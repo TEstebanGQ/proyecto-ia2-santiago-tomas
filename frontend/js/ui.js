@@ -904,9 +904,19 @@ export const ui = {
       let botonInscripcion = '';
       if (esEstudiante) {
         if (estaInscrito) {
-          botonInscripcion = `<span class="badge-enrolled-mini" title="Ya te encuentras matriculado en este curso">✓ Inscrito</span>`;
+          botonInscripcion = `
+            <span class="badge-enrolled-mini" title="Ya te encuentras matriculado en este curso">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Inscrito</span>
+            </span>
+          `;
         } else {
-          botonInscripcion = `<button type="button" class="btn-enroll-mini" title="Inscribirme oficialmente a este curso"><span>Inscribirme</span> ✍️</button>`;
+          botonInscripcion = `
+            <button type="button" class="btn-enroll-mini" data-curso-id="${curso.id}" title="Inscribirme oficialmente a este curso">
+              <span>Inscribirme</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+            </button>
+          `;
         }
       }
 
@@ -937,8 +947,8 @@ export const ui = {
             <button type="button" class="btn-ask-course" title="Preguntar al Asesor RAG">
               Orientar →
             </button>
-            <button type="button" class="btn-details-icon" title="Ver ficha técnica del curso">
-              ℹ️
+            <button type="button" class="btn-details-icon" title="Ver ficha técnica del curso" aria-label="Ver detalles">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             </button>
           </div>
         </div>
@@ -1153,20 +1163,23 @@ export const ui = {
       if (estaInscrito) {
         enrollmentBtnHtml = `
           <button type="button" class="btn-enrolled-badge" disabled title="Ya te encuentras matriculado en este curso">
-            <span>✓ Ya estás inscrito</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Ya estás inscrito</span>
           </button>
         `;
       } else {
         enrollmentBtnHtml = `
           <button type="button" class="btn-enroll-course" id="modal-enroll-course-btn" onclick="window.inscribirseACurso(${curso.id}, this)" title="Inscribirme oficialmente a este curso">
-            <span>Inscribirme al Curso</span> ✍️
+            <span>Inscribirme al Curso</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><path d="M12 5v14M5 12h14"></path></svg>
           </button>
         `;
       }
     } else {
       enrollmentBtnHtml = `
         <span class="enroll-role-notice" title="Solo los estudiantes pueden inscribirse a los cursos">
-          🔒 Solo estudiantes pueden inscribirse
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px; vertical-align: -2px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <span>Solo estudiantes pueden inscribirse</span>
         </span>
       `;
     }

@@ -703,36 +703,38 @@ window.inscribirseACurso = async (cursoId, btnEl) => {
     if (btnEl) {
       btnEl.disabled = true;
       btnEl.dataset.original = btnEl.innerHTML;
-      btnEl.innerHTML = '<span>Inscribiendo...</span> ⏳';
+      btnEl.innerHTML = `<span>Inscribiendo...</span> <svg class="spin-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>`;
     }
     await api.inscribirCurso(estudianteId, cId);
     state.agregarInscripcion(cId);
-    ui.showToast(`🎉 ¡Inscripción exitosa! Te has matriculado en "${cNombre}".`, 'success');
+    ui.showToast(`Inscripción exitosa: te has matriculado en "${cNombre}".`, 'success');
+
+    const renderEnrolledState = (targetBtn) => {
+      if (targetBtn.classList.contains('btn-enroll-mini')) {
+        targetBtn.className = 'badge-enrolled-mini';
+        targetBtn.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Inscrito</span>
+        `;
+        targetBtn.disabled = true;
+      } else {
+        targetBtn.className = 'btn-enrolled-badge';
+        targetBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Ya estás inscrito</span>
+        `;
+        targetBtn.disabled = true;
+      }
+    };
 
     if (btnEl) {
-      if (btnEl.classList.contains('btn-enroll-mini')) {
-        btnEl.className = 'badge-enrolled-mini';
-        btnEl.innerHTML = '<span>✓ Inscrito</span>';
-        btnEl.disabled = true;
-      } else {
-        btnEl.className = 'btn-enrolled-badge';
-        btnEl.innerHTML = '<span>✓ Ya estás inscrito</span>';
-        btnEl.disabled = true;
-      }
+      renderEnrolledState(btnEl);
     }
 
     // Actualizar botones de este curso en todo el DOM
-    document.querySelectorAll(`button[onclick*="inscribirseACurso(${cId}"]`).forEach(b => {
+    document.querySelectorAll(`button[data-curso-id="${cId}"], button[onclick*="inscribirseACurso(${cId}"]`).forEach(b => {
       if (b !== btnEl) {
-        if (b.classList.contains('btn-enroll-mini')) {
-          b.className = 'badge-enrolled-mini';
-          b.innerHTML = '<span>✓ Inscrito</span>';
-          b.disabled = true;
-        } else {
-          b.className = 'btn-enrolled-badge';
-          b.innerHTML = '<span>✓ Ya estás inscrito</span>';
-          b.disabled = true;
-        }
+        renderEnrolledState(b);
       }
     });
 
@@ -740,7 +742,7 @@ window.inscribirseACurso = async (cursoId, btnEl) => {
     ui.showToast(err.message || 'Error al procesar la inscripción.', 'error');
     if (btnEl) {
       btnEl.disabled = false;
-      btnEl.innerHTML = btnEl.dataset.original || '<span>Inscribirme al Curso</span> ✍️';
+      btnEl.innerHTML = btnEl.dataset.original || `<span>Inscribirme</span> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>`;
     }
   }
 };
