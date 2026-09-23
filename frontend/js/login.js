@@ -54,42 +54,48 @@ function initModeToggle() {
   }
 }
 
-// 2. Selector Segmentado de Roles (Estudiante / Administrador)
+// 2. Selector Segmentado de Roles (Estudiante / Docente / Administrador)
 function initRoleSegments() {
   const segStudent = document.getElementById('seg-role-student');
+  const segDocente = document.getElementById('seg-role-docente');
   const segAdmin = document.getElementById('seg-role-admin');
   const emailInput = document.getElementById('login-email');
   const pwdInput = document.getElementById('login-password');
 
-  if (segStudent && segAdmin) {
-    segStudent.addEventListener('click', () => {
-      rolSeleccionado = 'ESTUDIANTE';
-      segStudent.classList.add('active');
-      segAdmin.classList.remove('active');
-      if (emailInput && (!emailInput.value || emailInput.value.includes('admin'))) {
-        emailInput.value = 'santiago.gomez@universidad.edu.co';
-      }
-      if (pwdInput && !pwdInput.value) {
-        pwdInput.value = '123456';
-      }
+  const setRole = (rol, activeBtn, defaultEmail) => {
+    rolSeleccionado = rol;
+    [segStudent, segDocente, segAdmin].forEach(b => {
+      if (b) b.classList.toggle('active', b === activeBtn);
     });
-
-    segAdmin.addEventListener('click', () => {
-      rolSeleccionado = 'ADMINISTRADOR';
-      segAdmin.classList.add('active');
-      segStudent.classList.remove('active');
-      if (emailInput && (!emailInput.value || emailInput.value.includes('santiago'))) {
-        emailInput.value = 'admin@universidad.edu.co';
-      }
-      if (pwdInput && !pwdInput.value) {
-        pwdInput.value = '123456';
-      }
-    });
-
-    // Default password for convenience on initial load
-    if (pwdInput && !pwdInput.value) {
-      pwdInput.value = '123456';
+    if (emailInput && (!emailInput.value || emailInput.value.includes('universidad.edu.co'))) {
+      emailInput.value = defaultEmail;
     }
+    if (pwdInput && !pwdInput.value) {
+      pwdInput.value = 'password123';
+    }
+  };
+
+  if (segStudent) {
+    segStudent.addEventListener('click', () => {
+      setRole('ESTUDIANTE', segStudent, 'santiago.gomez@universidad.edu.co');
+    });
+  }
+
+  if (segDocente) {
+    segDocente.addEventListener('click', () => {
+      setRole('DOCENTE', segDocente, 'profesor.programacion@universidad.edu.co');
+    });
+  }
+
+  if (segAdmin) {
+    segAdmin.addEventListener('click', () => {
+      setRole('ADMINISTRADOR', segAdmin, 'admin@universidad.edu.co');
+    });
+  }
+
+  // Default password for convenience on initial load
+  if (pwdInput && !pwdInput.value) {
+    pwdInput.value = 'password123';
   }
 }
 

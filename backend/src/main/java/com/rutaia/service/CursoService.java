@@ -142,7 +142,7 @@ public class CursoService {
         }
     }
 
-    private CursoResponseDTO mapToResponse(Curso c) {
+    public CursoResponseDTO mapToResponse(Curso c) {
         return new CursoResponseDTO(
                 c.getId(),
                 c.getNombre(),

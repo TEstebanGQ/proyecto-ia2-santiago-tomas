@@ -46,11 +46,14 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/", "/api").permitAll()
 
-                        // Operaciones Administrativas de Cursos exclusivas para rol ADMINISTRADOR (RF 03, RF 05)
-                        .requestMatchers(HttpMethod.GET, "/api/cursos/admin").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/api/cursos").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.PUT, "/api/cursos/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.PATCH, "/api/cursos/**").hasRole("ADMINISTRADOR")
+                        // Operaciones del rol DOCENTE (Gestión de su especialidad, feedback, analíticas de área)
+                        .requestMatchers("/api/docentes/**").hasAnyRole("DOCENTE", "ADMINISTRADOR")
+
+                        // Operaciones Administrativas de Cursos
+                        .requestMatchers(HttpMethod.GET, "/api/cursos/admin").hasAnyRole("ADMINISTRADOR", "DOCENTE")
+                        .requestMatchers(HttpMethod.POST, "/api/cursos").hasAnyRole("ADMINISTRADOR", "DOCENTE")
+                        .requestMatchers(HttpMethod.PUT, "/api/cursos/**").hasAnyRole("ADMINISTRADOR", "DOCENTE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/cursos/**").hasAnyRole("ADMINISTRADOR", "DOCENTE")
 
                         // Resto de operaciones (consultas RAG, calificaciones, gestión estudiantes) requieren autenticación
                         .anyRequest().authenticated()
