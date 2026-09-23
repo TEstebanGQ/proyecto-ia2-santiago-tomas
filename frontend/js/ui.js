@@ -3,6 +3,8 @@
  * Concepto: Editorial Learning Lab
  */
 
+import { state } from './state.js';
+
 export const ui = {
   // Notificaciones Toast de alta legibilidad
   showToast(mensaje, tipo = 'info') {

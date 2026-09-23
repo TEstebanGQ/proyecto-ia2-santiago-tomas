@@ -312,4 +312,7 @@ export const state = {
 // Inicializar usuario al cargar módulo
 state.initUsuario();
 state.initChatSession();
+if (typeof window !== 'undefined') {
+  window.state = state;
+}
 
