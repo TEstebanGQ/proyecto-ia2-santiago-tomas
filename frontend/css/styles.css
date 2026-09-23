@@ -1593,21 +1593,24 @@ button, input, select, textarea {
 /* Cuadrícula de Cursos */
 .courses-editorial-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-  gap: 1.65rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr));
+  gap: 1.5rem;
 }
 
 .course-editorial-card {
   background: #FFFFFF;
   border: 1px solid rgba(226, 220, 208, 0.9);
   border-radius: 20px;
-  padding: 1.75rem;
+  padding: 1.35rem 1.15rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   box-shadow: 0 4px 18px rgba(18, 19, 22, 0.02);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
+  min-width: 0;
+  box-sizing: border-box;
+  container-type: inline-size;
 }
 
 .course-editorial-card:hover {
@@ -1676,24 +1679,27 @@ button, input, select, textarea {
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid rgba(226, 220, 208, 0.7);
-  padding-top: 1rem;
+  padding-top: 0.9rem;
   gap: 0.35rem;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .course-card-actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .course-editorial-hours {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-muted, #76777E);
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1703,13 +1709,14 @@ button, input, select, textarea {
   border: 1px solid rgba(226, 220, 208, 0.9);
   color: #121316;
   border-radius: 9999px;
-  padding: 0.42rem 0.8rem;
-  font-size: 0.78rem;
+  padding: 0.36rem 0.6rem;
+  font-size: 0.74rem;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.18s ease;
   line-height: 1.2;
+  flex-shrink: 0;
 }
 
 .btn-ask-course:hover {
@@ -1717,6 +1724,20 @@ button, input, select, textarea {
   border-color: var(--accent-lime, #D7F338);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(215, 243, 56, 0.4);
+}
+
+@container (max-width: 255px) {
+  .course-editorial-footer {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .course-editorial-hours {
+    width: 100%;
+  }
+  .course-card-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 /* Historial Completo */
@@ -4949,17 +4970,18 @@ button, input, select, textarea {
   background: #4F46E5;
   color: #FFFFFF;
   font-weight: 700;
-  font-size: 0.78rem;
-  padding: 0.42rem 0.72rem;
+  font-size: 0.74rem;
+  padding: 0.36rem 0.6rem;
   border-radius: 9999px;
   border: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
   white-space: nowrap;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   line-height: 1.2;
+  flex-shrink: 0;
 }
 
 .btn-enroll-mini:hover {
@@ -4973,22 +4995,24 @@ button, input, select, textarea {
   color: #047857;
   border: 1px solid #A7F3D0;
   font-weight: 700;
-  font-size: 0.76rem;
-  padding: 0.4rem 0.68rem;
+  font-size: 0.73rem;
+  padding: 0.34rem 0.55rem;
   border-radius: 9999px;
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
   white-space: nowrap;
   line-height: 1.2;
+  flex-shrink: 0;
 }
 
 .btn-details-icon {
   background: #F8FAFC;
   color: #64748B;
   border: 1px solid #CBD5E1;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
   padding: 0;
   border-radius: 9999px;
   cursor: pointer;
