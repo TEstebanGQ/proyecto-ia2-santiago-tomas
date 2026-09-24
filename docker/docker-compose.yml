@@ -52,6 +52,9 @@ services:
     image: docker.n8n.io/n8nio/n8n:latest
     container_name: rutaia_n8n
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -85,6 +88,9 @@ services:
     image: rutaia-backend:17
     container_name: rutaia_backend
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - "8080:8080"
     environment:
@@ -95,6 +101,8 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - QDRANT_URL=http://qdrant:6333
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/recomendar-cursos
     depends_on:
       postgres:

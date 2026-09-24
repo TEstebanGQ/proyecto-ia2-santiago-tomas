@@ -1,7 +1,7 @@
 const sqlite3 = require('/usr/local/lib/node_modules/n8n/node_modules/sqlite3');
 const db = new sqlite3.Database('/home/node/.n8n/database.sqlite');
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AQ.Ab8RN6KZsL8-XMY422XdGnZ8r8cYeZ9ZhpS3rhD_6lMMh8G5fA';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 function updateWorkflowNodes(nodes) {
   let modified = false;
