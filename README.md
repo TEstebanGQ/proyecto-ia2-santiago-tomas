@@ -1,6 +1,6 @@
 # RutaIA: Sistema Inteligente de Orientación Académica y Recomendación Curricular (RAG + JWT + Redis + Umbral Dinámico)
 
-[![Java](https://img.shields.io/badge/Java-21_LTS-orange.svg)](https://www.oracle.com/java/)
+[![Java](https://img.shields.io/badge/Java-17_LTS-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4.3-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Spring Security](https://img.shields.io/badge/Spring_Security-6.4-green.svg)](https://spring.io/projects/spring-security)
 [![Redis](https://img.shields.io/badge/Redis-7_Alpine-red.svg)](https://redis.io/)
