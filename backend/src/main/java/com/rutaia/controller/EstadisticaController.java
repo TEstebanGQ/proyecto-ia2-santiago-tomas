@@ -34,7 +34,7 @@ public class EstadisticaController {
     ) {
         if (estudianteId == null && authentication != null && authentication.isAuthenticated()) {
             boolean isAdmin = authentication.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"));
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR") || a.getAuthority().equals("ROLE_SUPERADMIN"));
             if (!isAdmin) {
                 String email = authentication.getName();
                 if (email != null && !email.isBlank()) {

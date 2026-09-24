@@ -165,7 +165,16 @@ public class EstadisticaService {
     private List<AccionUsuarioDTO> calcularAccionesPorUsuario() {
         Map<String, AccionUsuarioDTO> mapAcciones = new LinkedHashMap<>();
 
-        // Agregar primero al Administrador
+        // Agregar primero al Superadmin y Administrador
+        mapAcciones.put("superadmin@universidad.edu.co", new AccionUsuarioDTO(
+                0L,
+                "Super Administrador del Sistema",
+                "superadmin@universidad.edu.co",
+                "SUPERADMIN",
+                0L,
+                null
+        ));
+
         mapAcciones.put("admin@universidad.edu.co", new AccionUsuarioDTO(
                 0L,
                 "Administrador Académico",
@@ -199,11 +208,14 @@ public class EstadisticaService {
                     AccionUsuarioDTO dto = mapAcciones.get(email);
                     dto.setTotalAcciones(dto.getTotalAcciones() + count);
                 } else {
+                    String deducedRole = email.contains("superadmin") ? "SUPERADMIN" :
+                            (email.contains("admin") ? "ADMINISTRADOR" :
+                            (email.contains("docente") || email.contains("profesor") ? "DOCENTE" : "ESTUDIANTE"));
                     mapAcciones.put(email, new AccionUsuarioDTO(
                             null,
                             email,
                             email,
-                            email.contains("admin") ? "ADMINISTRADOR" : "ESTUDIANTE",
+                            deducedRole,
                             count,
                             null
                     ));

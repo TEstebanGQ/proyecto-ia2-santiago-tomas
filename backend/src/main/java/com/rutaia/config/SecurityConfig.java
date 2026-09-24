@@ -54,27 +54,31 @@ public class SecurityConfig {
 
                 // Operaciones del rol DOCENTE
                 .requestMatchers("/api/docentes/**")
-                .hasAnyRole("DOCENTE", "ADMINISTRADOR")
+                .hasAnyRole("DOCENTE", "ADMINISTRADOR", "SUPERADMIN")
 
                 // Administración de cursos
                 .requestMatchers(HttpMethod.GET, "/api/cursos/admin")
-                .hasAnyRole("ADMINISTRADOR", "DOCENTE")
+                .hasAnyRole("ADMINISTRADOR", "SUPERADMIN", "DOCENTE")
 
                 .requestMatchers(HttpMethod.POST, "/api/cursos")
-                .hasAnyRole("ADMINISTRADOR", "DOCENTE")
+                .hasAnyRole("ADMINISTRADOR", "SUPERADMIN", "DOCENTE")
 
                 .requestMatchers(HttpMethod.PUT, "/api/cursos/**")
-                .hasAnyRole("ADMINISTRADOR", "DOCENTE")
+                .hasAnyRole("ADMINISTRADOR", "SUPERADMIN", "DOCENTE")
 
                 .requestMatchers(HttpMethod.PATCH, "/api/cursos/**")
-                .hasAnyRole("ADMINISTRADOR", "DOCENTE")
+                .hasAnyRole("ADMINISTRADOR", "SUPERADMIN", "DOCENTE")
 
                 // Configuración del umbral RAG
                 .requestMatchers(HttpMethod.PUT, "/api/configuracion/**")
-                .hasRole("ADMINISTRADOR")
+                .hasAnyRole("ADMINISTRADOR", "SUPERADMIN")
 
                 .requestMatchers(HttpMethod.GET, "/api/configuracion/**")
                 .permitAll()
+
+                // Gestión de usuarios y contraseñas
+                .requestMatchers("/api/usuarios/**")
+                .hasAnyRole("ADMINISTRADOR", "SUPERADMIN")
 
                 // Resto de operaciones requieren autenticación
                 .anyRequest().authenticated()
@@ -82,6 +86,11 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
     }
 
     @Bean

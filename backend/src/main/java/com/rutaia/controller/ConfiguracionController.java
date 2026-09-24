@@ -26,8 +26,8 @@ public class ConfiguracionController {
     }
 
     @PutMapping("/umbral")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
-    @Operation(summary = "Actualizar el porcentaje del umbral RAG (Exclusivo Administrador)")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERADMIN')")
+    @Operation(summary = "Actualizar el porcentaje del umbral RAG (Exclusivo Administrador y Superadmin)")
     public ResponseEntity<UmbralConfigDTO> guardarUmbral(@RequestParam Double porcentaje) {
         return ResponseEntity.ok(configuracionService.guardarUmbral(porcentaje));
     }
