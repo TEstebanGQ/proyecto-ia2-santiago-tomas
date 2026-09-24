@@ -27,6 +27,12 @@ public class AuthRequestDTO {
         this.email = email;
     }
 
+    public void setCorreoElectronico(String correoElectronico) {
+        if (this.email == null || this.email.isBlank()) {
+            this.email = correoElectronico;
+        }
+    }
+
     public String getPassword() {
         return password;
     }
