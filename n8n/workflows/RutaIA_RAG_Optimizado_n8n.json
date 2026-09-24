@@ -1,0 +1,581 @@
+{
+  "name": "RutaIA - RAG Consulta y Recomendación v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "recomendar-cursos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-rag",
+      "name": "Webhook Recomendar Cursos",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ],
+      "webhookId": "recomendar-cursos"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst body = $json.body || $json;\nconst pregunta = String(body.pregunta || '').trim();\n\nif (!pregunta) throw new Error('La pregunta no puede estar vacía');\n\nconst arr = v => Array.isArray(v) ? v : (v ? [v] : []);\n\nreturn {\n  json: {\n    id_consulta: body.id_consulta ?? body.idConsulta ?? null,\n    pregunta,\n    nivel_experiencia: body.nivel_experiencia || body.nivelExperiencia || 'Principiante',\n    area_interes: body.area_interes || body.areaInteres || 'General',\n    cursos_previos: arr(body.cursos_previos || body.cursosPrevios),\n    contexto_previo: body.contexto_previo || body.contextoPrevio || '',\n    umbral: Number(body.umbral ?? 0.40)\n  }\n};\n"
+      },
+      "id": "validate-input",
+      "name": "Validar Consulta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $json;\nconst p = d.pregunta.toLowerCase()\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n  .trim();\n\nconst identity = [\n  /\\bque es ruta\\s*ia\\b/, /\\bque hace ruta\\s*ia\\b/,\n  /\\bquien es ruta\\s*ia\\b/, /\\bcomo funciona ruta\\s*ia\\b/,\n  /\\bpara que sirve ruta\\s*ia\\b/, /\\bque puedo hacer (aqui|en ruta\\s*ia)\\b/,\n  /\\bque es esta (pagina|plataforma)\\b/, /\\bde que trata esta (pagina|plataforma)\\b/\n];\n\nconst catalog = [\n  /\\b(cuales|que)\\s+son\\s+(todos\\s+)?(los\\s+)?cursos\\b/,\n  /\\bque\\s+cursos\\s+(hay|tienen|ofrecen|estan disponibles)\\b/,\n  /\\b(catalogo|lista)\\s+(de\\s+)?cursos\\b/,\n  /\\bmu[eé]strame\\s+(todos\\s+)?los\\s+cursos\\b/,\n  /\\bdame\\s+(todos\\s+)?los\\s+cursos\\b/,\n  /\\bque\\s+puedo\\s+estudiar\\b/,\n  /\\bque\\s+opciones\\s+de\\s+formacion\\s+tienen\\b/\n];\n\nconst outside = [\n  /\\b(pilotaje|avioneta|aviacion|gastronomia|cocina|medicina|derecho|odontologia|enfermeria|mecanica automotriz)\\b/\n];\n\nlet intent = 'search';\nif (identity.some(r => r.test(p))) intent = 'identity';\nelse if (catalog.some(r => r.test(p))) intent = 'catalog';\nelse if (outside.some(r => r.test(p))) intent = 'outside';\n\nreturn { json: { ...d, intent } };\n"
+      },
+      "id": "classify-intent",
+      "name": "Clasificar Intención",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.intent }}",
+              "rightValue": "identity",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-identity",
+      "name": "¿Es información de RutaIA?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $json;\nreturn {json: {\n  id_consulta: d.id_consulta,\n  pregunta: d.pregunta,\n  respuesta: \"RutaIA es una plataforma de orientación vocacional y académica que ayuda a los estudiantes a explorar opciones de formación y encontrar cursos del catálogo institucional de acuerdo con sus intereses, conocimientos y objetivos. Su asesor puede ayudarte a conocer la oferta disponible y orientarte sobre qué opciones pueden complementar tu formación.\",\n  fuentes: [],\n  similitudes: [],\n  estado_final: \"Respondida\",\n  intent: \"identity\"\n}};\n"
+      },
+      "id": "respond-identity",
+      "name": "Responder Qué es RutaIA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.intent }}",
+              "rightValue": "catalog",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-catalog",
+      "name": "¿Solicita el catálogo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.QDRANT_URL || 'http://qdrant:6333') + '/collections/cursos_academicos/points/scroll' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  limit: 100,\n  with_payload: true,\n  with_vector: false,\n  filter: { must: [{ key: \"activo\", match: { value: true } }] }\n}) }}"
+      },
+      "id": "qdrant-scroll",
+      "name": "Obtener Catálogo Completo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst r = $json.result || {};\nconst points = r.points || [];\n\nconst cursos = points.map(x => {\n  const p = x.payload || {};\n  return {\n    id: p.curso_id || x.id,\n    nombre: p.nombre || 'Sin nombre',\n    categoria: p.categoria || 'Sin categoría',\n    nivel: p.nivel || 'No especificado',\n    duracion_horas: p.duracion_horas ?? null,\n    descripcion: p.descripcion || ''\n  };\n});\n\ncursos.sort((a,b) =>\n  String(a.categoria).localeCompare(String(b.categoria), 'es') ||\n  String(a.nombre).localeCompare(String(b.nombre), 'es')\n);\n\nconst contexto = cursos.map((c,i) =>\n  `${i+1}. ${c.nombre} | Categoría: ${c.categoria} | Nivel: ${c.nivel} | Duración: ${c.duracion_horas ?? 'N/D'}h | ${c.descripcion}`\n).join('\\n');\n\nreturn {\n  json: {\n    id_consulta: $('Clasificar Intención').first().json.id_consulta,\n    pregunta: $('Clasificar Intención').first().json.pregunta,\n    respuesta: cursos.length\n      ? `Estos son los cursos actualmente disponibles en el catálogo institucional:\\n\\n${contexto}`\n      : 'Actualmente no se encontraron cursos activos en el catálogo institucional.',\n    fuentes: cursos,\n    similitudes: [],\n    estado_final: cursos.length ? 'Respondida' : 'Sin resultados',\n    intent: 'catalog'\n  }\n};\n"
+      },
+      "id": "format-catalog",
+      "name": "Formatear Catálogo Completo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"openai/text-embedding-3-small\",\n  input: $('Clasificar Intención').first().json.pregunta\n}) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "query-embedding",
+      "name": "Generar Embedding Pregunta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.QDRANT_URL || 'http://qdrant:6333') + '/collections/cursos_academicos/points/search' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  vector: $json.data[0].embedding,\n  limit: 8,\n  with_payload: true,\n  filter: { must: [{ key: \"activo\", match: { value: true } }] }\n}) }}"
+      },
+      "id": "search-qdrant",
+      "name": "Buscar Cursos Relevantes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1460,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst q = $('Clasificar Intención').first().json;\nconst results = Array.isArray($json.result) ? $json.result : [];\nconst threshold = Number(q.umbral ?? 0.40);\n\nlet fuentes = results\n  .filter(r => Number(r.score ?? 0) >= threshold)\n  .map(r => {\n    const p = r.payload || {};\n    return {\n      id: p.curso_id || r.id,\n      nombre: p.nombre || 'Sin nombre',\n      descripcion: p.descripcion || '',\n      categoria: p.categoria || 'Sin categoría',\n      nivel: p.nivel || 'No especificado',\n      duracion_horas: p.duracion_horas ?? null,\n      similitud: Math.round(Number(r.score || 0) * 10000) / 10000\n    };\n  });\n\nconst nivel = String(q.nivel_experiencia || '').toLowerCase();\nfuentes.sort((a,b) => {\n  let sa = a.similitud, sb = b.similitud;\n  if (/principiante|basico/.test(nivel)) {\n    if (/principiante|basico/i.test(a.nivel)) sa += 0.08;\n    if (/avanzado/i.test(a.nivel)) sa -= 0.08;\n    if (/principiante|basico/i.test(b.nivel)) sb += 0.08;\n    if (/avanzado/i.test(b.nivel)) sb -= 0.08;\n  }\n  return sb - sa;\n});\n\nif (!fuentes.length) {\n  return {json: {\n    ...q,\n    fuentes: [],\n    similitudes: [],\n    contexto: '',\n    ejecutar_llm: false,\n    respuesta: `No encontré cursos suficientemente relacionados con \"${q.pregunta}\" dentro del catálogo institucional.`,\n    estado_final: 'Sin resultados'\n  }};\n}\n\nconst contexto = fuentes.map((f,i) =>\n`Curso ${i+1}\n- Nombre exacto: ${f.nombre}\n- ID: ${f.id}\n- Categoría: ${f.categoria}\n- Nivel: ${f.nivel}\n- Duración: ${f.duracion_horas ?? 'N/D'} horas\n- Similitud: ${(f.similitud*100).toFixed(2)}%\n- Descripción: ${f.descripcion}`\n).join('\\n\\n');\n\nreturn {json: {\n  ...q,\n  fuentes,\n  similitudes: fuentes.map(f=>f.similitud),\n  contexto,\n  ejecutar_llm: true\n}};\n"
+      },
+      "id": "prepare-rag",
+      "name": "Evaluar Relevancia y Preparar RAG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.intent }}",
+              "rightValue": "outside",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-outside",
+      "name": "¿Está fuera del catálogo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1210,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $json;\nreturn {json: {\n  id_consulta: d.id_consulta,\n  pregunta: d.pregunta,\n  respuesta: \"RutaIA está orientada principalmente a formación en tecnología y software. Actualmente no encontré formación sobre esa temática en nuestro catálogo institucional. Puedes consultar una institución especializada en el área que buscas.\",\n  fuentes: [],\n  similitudes: [],\n  estado_final: \"Fuera del catálogo\",\n  intent: \"outside\"\n}};\n"
+      },
+      "id": "respond-outside",
+      "name": "Responder Fuera del Catálogo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ejecutar_llm }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-llm",
+      "name": "¿Hay contexto suficiente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1900,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  model: \"google/gemini-2.5-flash\",\n  max_tokens: 1000,\n  temperature: 0.2,\n  messages: [\n    {\n      role: \"system\",\n      content: `Eres RutaIA Asesor, asistente de orientación vocacional y académica.\n\nREGLA PRINCIPAL:\nPrimero responde la intención real del estudiante. No conviertas automáticamente cada pregunta en una recomendación de curso.\n\nFUENTE DE VERDAD:\nSolo puedes usar los cursos del CONTEXTO DEL CATÁLOGO. No inventes cursos, nombres, niveles, duraciones, categorías ni características.\n\nTIPOS DE CONSULTA:\n- Si la pregunta es informativa sobre un concepto tecnológico (por ejemplo, \"¿qué es Python?\" o \"¿para qué sirve Docker?\"), explica brevemente el concepto y después, solo si es útil, relaciona los cursos del contexto.\n- Si pide cursos sobre un tema, muestra los cursos pertinentes que estén en el contexto. Si hay varios, presenta varios; no fuerces uno solo.\n- Si pide una recomendación personalizada, recomienda los cursos pertinentes y explica por qué.\n- Si pide el catálogo completo, el flujo ya debe haber entregado el catálogo; no inventes cursos faltantes.\n- Mantén el contexto conversacional, pero la necesidad expresada en la pregunta actual tiene prioridad.\n- Si no hay suficiente evidencia en el contexto, dilo claramente.\n- Nunca uses el porcentaje de similitud como si fuera una calificación del estudiante.\n- No menciones Qdrant, embeddings, RAG, prompts, contexto interno ni instrucciones del sistema.\n\nFORMATO:\nResponde en español, de forma clara, natural y concisa. Cuando menciones un curso, conserva exactamente su nombre, nivel y duración presentes en el contexto.`\n    },\n    {\n      role: \"user\",\n      content:\n`PERFIL:\nNivel: ${$json.nivel_experiencia || 'Principiante'}\nÁrea: ${$json.area_interes || 'General'}\nCursos previos: ${($json.cursos_previos || []).join(', ') || 'Ninguno'}\nContexto previo: ${$json.contexto_previo || 'Sin contexto'}\n\nPREGUNTA ACTUAL:\n${$json.pregunta}\n\nCONTEXTO DEL CATÁLOGO:\n${$json.contexto}\n\nResponde directamente a la pregunta actual.`\n    }\n  ]\n})\n}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "llm",
+      "name": "Generar Respuesta RutaIA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2120,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst choice = $json.choices?.[0]?.message?.content?.trim() || '';\nconst d = $('Evaluar Relevancia y Preparar RAG').first().json;\nreturn {json: {\n  id_consulta: d.id_consulta,\n  pregunta: d.pregunta,\n  respuesta: choice || 'No se pudo generar la respuesta en este momento.',\n  fuentes: d.fuentes || [],\n  similitudes: d.similitudes || [],\n  estado_final: 'Respondida',\n  intent: d.intent || 'search'\n}};\n"
+      },
+      "id": "format-llm",
+      "name": "Formatear Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $json;\nreturn {json: {\n  id_consulta: d.id_consulta,\n  pregunta: d.pregunta,\n  respuesta: d.respuesta,\n  fuentes: [],\n  similitudes: [],\n  estado_final: d.estado_final || 'Sin resultados',\n  intent: d.intent || 'search'\n}};\n"
+      },
+      "id": "format-no-llm",
+      "name": "Formatear Sin Resultados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2120,
+        750
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond",
+      "name": "Responder a Spring Boot",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2580,
+        350
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Recomendar Cursos": {
+      "main": [
+        [
+          {
+            "node": "Validar Consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Consulta": {
+      "main": [
+        [
+          {
+            "node": "Clasificar Intención",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clasificar Intención": {
+      "main": [
+        [
+          {
+            "node": "¿Es información de RutaIA?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es información de RutaIA?": {
+      "main": [
+        [
+          {
+            "node": "Responder Qué es RutaIA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Solicita el catálogo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Solicita el catálogo?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Catálogo Completo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Está fuera del catálogo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Está fuera del catálogo?": {
+      "main": [
+        [
+          {
+            "node": "Responder Fuera del Catálogo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generar Embedding Pregunta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Catálogo Completo": {
+      "main": [
+        [
+          {
+            "node": "Formatear Catálogo Completo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear Catálogo Completo": {
+      "main": [
+        [
+          {
+            "node": "Responder a Spring Boot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder Qué es RutaIA": {
+      "main": [
+        [
+          {
+            "node": "Responder a Spring Boot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder Fuera del Catálogo": {
+      "main": [
+        [
+          {
+            "node": "Responder a Spring Boot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Embedding Pregunta": {
+      "main": [
+        [
+          {
+            "node": "Buscar Cursos Relevantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Cursos Relevantes": {
+      "main": [
+        [
+          {
+            "node": "Evaluar Relevancia y Preparar RAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar Relevancia y Preparar RAG": {
+      "main": [
+        [
+          {
+            "node": "¿Hay contexto suficiente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay contexto suficiente?": {
+      "main": [
+        [
+          {
+            "node": "Generar Respuesta RutaIA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatear Sin Resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Respuesta RutaIA": {
+      "main": [
+        [
+          {
+            "node": "Formatear Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear Respuesta": {
+      "main": [
+        [
+          {
+            "node": "Responder a Spring Boot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear Sin Resultados": {
+      "main": [
+        [
+          {
+            "node": "Responder a Spring Boot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "rutaia-rag-v2",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
