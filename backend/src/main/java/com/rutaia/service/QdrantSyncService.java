@@ -19,6 +19,7 @@ public class QdrantSyncService {
 
     private final String qdrantUrl;
     private final String collectionName;
+    private final String qdrantApiKey;
     private final String openRouterApiKey;
     private final String embeddingModel;
     private final RestTemplate restTemplate;
@@ -27,11 +28,13 @@ public class QdrantSyncService {
     public QdrantSyncService(
             @Value("${qdrant.url:http://localhost:6333}") String qdrantUrl,
             @Value("${qdrant.collection:cursos_academicos}") String collectionName,
+            @Value("${qdrant.api-key:}") String qdrantApiKey,
             @Value("${openrouter.api.key:}") String openRouterApiKey,
             @Value("${openrouter.embedding.model:openai/text-embedding-3-small}") String embeddingModel
     ) {
         this.qdrantUrl = qdrantUrl;
         this.collectionName = collectionName;
+        this.qdrantApiKey = qdrantApiKey;
         this.openRouterApiKey = openRouterApiKey;
         this.embeddingModel = embeddingModel;
         this.restTemplate = new RestTemplate();
@@ -89,6 +92,9 @@ public class QdrantSyncService {
             String url = String.format("%s/collections/%s/points", qdrantUrl, collectionName);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            if (qdrantApiKey != null && !qdrantApiKey.isBlank()) {
+                headers.set("api-key", qdrantApiKey);
+            }
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, request, String.class);
@@ -122,6 +128,9 @@ public class QdrantSyncService {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            if (qdrantApiKey != null && !qdrantApiKey.isBlank()) {
+                headers.set("api-key", qdrantApiKey);
+            }
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);

@@ -66,6 +66,7 @@ services:
       - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
       - n8n_data:/home/node/.n8n
       - ../n8n/workflows:/data/workflows:ro
@@ -94,12 +95,15 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - N8N_WEBHOOK_URL=http://n8n:5678/webhook/recomendar-cursos
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
       qdrant:
+        condition: service_started
+      n8n:
         condition: service_started
     networks:
       - rutaia_net

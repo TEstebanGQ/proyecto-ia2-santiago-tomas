@@ -18,6 +18,7 @@ export const state = {
   docenteFeedback: [],
   docenteEstadisticas: null,
   estudiantesDocente: [],
+  docentes: [],
   inscripcionesCursoIds: new Set(),
 
   initUsuario() {
@@ -134,6 +135,10 @@ export const state = {
 
   setCursosAdmin(lista) {
     this.cursosAdmin = lista;
+  },
+
+  setDocentes(lista) {
+    this.docentes = lista || [];
   },
 
   setUltimaRecomendacion(rec) {

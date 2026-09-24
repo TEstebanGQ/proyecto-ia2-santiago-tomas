@@ -107,11 +107,6 @@ function initNavigation() {
       logoutModal.style.display = 'none';
     });
   }
-  if (logoutModal) {
-    logoutModal.addEventListener('click', (e) => {
-      if (e.target === logoutModal) logoutModal.style.display = 'none';
-    });
-  }
 }
 
 // Navegación Móvil (Drawer y Backdrop)
@@ -340,11 +335,40 @@ function initQueryForm() {
   const submitWelcomeBtn = document.getElementById('submit-query-welcome-btn');
   const textareaWelcome = document.getElementById('query-input-welcome');
 
+  const autoResize = (el, minH = 24, maxH = 200) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    const scrollH = el.scrollHeight;
+    if (scrollH > maxH) {
+      el.style.height = `${maxH}px`;
+      el.style.overflowY = 'auto';
+    } else {
+      el.style.height = `${Math.max(scrollH, minH)}px`;
+      el.style.overflowY = 'hidden';
+    }
+  };
+
+  if (textarea) {
+    textarea.addEventListener('input', () => autoResize(textarea, 24, 200));
+    textarea.addEventListener('paste', () => setTimeout(() => autoResize(textarea, 24, 200), 0));
+    textarea.addEventListener('cut', () => setTimeout(() => autoResize(textarea, 24, 200), 0));
+  }
+
+  if (textareaWelcome) {
+    textareaWelcome.addEventListener('input', () => autoResize(textareaWelcome, 52, 220));
+    textareaWelcome.addEventListener('paste', () => setTimeout(() => autoResize(textareaWelcome, 52, 220), 0));
+    textareaWelcome.addEventListener('cut', () => setTimeout(() => autoResize(textareaWelcome, 52, 220), 0));
+  }
+
   const enviarDesde = (inputEl, btnEl) => {
     if (btnEl && btnEl.disabled) return;
     if (state.chatSession && !state.puedeEnviarMensaje()) return;
     const pregunta = inputEl ? inputEl.value.trim() : '';
-    if (inputEl) inputEl.value = '';
+    if (inputEl) {
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      inputEl.style.overflowY = 'hidden';
+    }
     ejecutarConsulta(pregunta);
   };
 
@@ -389,6 +413,18 @@ function initChatControls() {
   const reiniciarHandler = () => {
     state.reiniciarChat();
     ui.renderChatSession(state.chatSession, onCalificarHandler);
+    const textarea = document.getElementById('query-input');
+    const textareaWelcome = document.getElementById('query-input-welcome');
+    if (textarea) {
+      textarea.value = '';
+      textarea.style.height = 'auto';
+      textarea.style.overflowY = 'hidden';
+    }
+    if (textareaWelcome) {
+      textareaWelcome.value = '';
+      textareaWelcome.style.height = 'auto';
+      textareaWelcome.style.overflowY = 'hidden';
+    }
     ui.showToast('Sesión de conversación reiniciada. ¡Listo para una nueva consulta!', 'info');
   };
 
@@ -582,11 +618,6 @@ function initStudentModal() {
   if (closeBtn && modal) {
     closeBtn.addEventListener('click', () => {
       modal.style.display = 'none';
-    });
-  }
-  if (modal) {
-    window.addEventListener('click', (e) => {
-      if (e.target === modal) modal.style.display = 'none';
     });
   }
 
@@ -911,12 +942,6 @@ function initAuthModal() {
     });
   }
 
-  if (modal) {
-    window.addEventListener('click', (e) => {
-      if (e.target === modal) modal.style.display = 'none';
-    });
-  }
-
   // Pestañas
   if (tabLogin) tabLogin.addEventListener('click', () => ui.mostrarModalAuth('login'));
   if (tabRegister) tabRegister.addEventListener('click', () => ui.mostrarModalAuth('register'));
@@ -1050,7 +1075,7 @@ function initAdminPanel() {
   const statusFilter = document.getElementById('admin-status-filter');
 
   if (openNewBtn) {
-    openNewBtn.addEventListener('click', () => ui.mostrarModalCursoAdmin());
+    openNewBtn.addEventListener('click', () => ui.mostrarModalCursoAdmin(null, state.docentes));
   }
 
   if (closeBtn && modal) {
@@ -1059,12 +1084,6 @@ function initAdminPanel() {
 
   if (cancelBtn && modal) {
     cancelBtn.addEventListener('click', () => modal.style.display = 'none');
-  }
-
-  if (modal) {
-    window.addEventListener('click', (e) => {
-      if (e.target === modal) modal.style.display = 'none';
-    });
   }
 
   // Filtrado de cursos en tabla admin
@@ -1088,8 +1107,9 @@ function initAdminPanel() {
 
     ui.renderCursosAdmin(
       filtrados,
-      (curso) => ui.mostrarModalCursoAdmin(curso),
-      (curso) => toggleActivoCurso(curso)
+      (curso) => ui.mostrarModalCursoAdmin(curso, state.docentes),
+      (curso) => toggleActivoCurso(curso),
+      state.docentes
     );
   }
 
@@ -1103,7 +1123,11 @@ function initAdminPanel() {
       const id = document.getElementById('course-form-id').value;
       const nombre = document.getElementById('course-form-nombre').value.trim();
       const descripcion = document.getElementById('course-form-descripcion').value.trim();
-      const categoria = document.getElementById('course-form-categoria').value.trim();
+      let categoria = document.getElementById('course-form-categoria').value.trim();
+      const docenteSelect = document.getElementById('course-form-docente');
+      if (!categoria && docenteSelect && docenteSelect.value) {
+        categoria = docenteSelect.value.trim();
+      }
       const nivel = document.getElementById('course-form-nivel').value;
       const duracionHoras = parseInt(document.getElementById('course-form-duracion').value, 10);
       const prerrequisitos = document.getElementById('course-form-prerrequisitos').value.trim();
@@ -1217,20 +1241,9 @@ function initAdminPanel() {
     });
   }
 
-  // Cierre de modales de usuario con backdrop click
+  // Modales de usuario: se cierran únicamente con botones ✕ o Cancelar
   const userCreateModal = document.getElementById('user-create-modal');
-  if (userCreateModal) {
-    userCreateModal.addEventListener('click', (e) => {
-      if (e.target === userCreateModal) ui.closeModalCrearUsuario();
-    });
-  }
-
   const userPwdModal = document.getElementById('user-password-modal');
-  if (userPwdModal) {
-    userPwdModal.addEventListener('click', (e) => {
-      if (e.target === userPwdModal) ui.closeModalPassword();
-    });
-  }
 
   // Tecla Escape para cerrar modales de usuario
   window.addEventListener('keydown', (e) => {
@@ -1547,12 +1560,20 @@ function initAdminPanel() {
 
 async function cargarCursosAdmin() {
   try {
-    const cursos = await api.getCursosAdmin();
+    const [cursos, docentes] = await Promise.all([
+      api.getCursosAdmin(),
+      api.getDocentes().catch(err => {
+        console.warn('No se pudieron obtener docentes para cátedras:', err);
+        return [];
+      })
+    ]);
     state.setCursosAdmin(cursos);
+    state.setDocentes(docentes);
     ui.renderCursosAdmin(
       cursos,
-      (curso) => ui.mostrarModalCursoAdmin(curso),
-      (curso) => toggleActivoCurso(curso)
+      (curso) => ui.mostrarModalCursoAdmin(curso, state.docentes),
+      (curso) => toggleActivoCurso(curso),
+      state.docentes
     );
   } catch (err) {
     ui.showToast('Error al cargar cursos para administración: ' + err.message, 'error');
@@ -1583,8 +1604,14 @@ let cacheUsuariosAdmin = [];
 
 export async function cargarUsuariosAdmin() {
   try {
-    const usuarios = await api.getUsuarios();
+    const [usuarios, cursos] = await Promise.all([
+      api.getUsuarios(),
+      api.getCursosAdmin().catch(() => state.cursosAdmin || [])
+    ]);
     cacheUsuariosAdmin = usuarios || [];
+    if (cursos && cursos.length > 0) {
+      state.setCursosAdmin(cursos);
+    }
     aplicarFiltrosUsuariosAdmin();
   } catch (err) {
     console.error('Error al cargar usuarios:', err);
@@ -1625,13 +1652,21 @@ export function aplicarFiltrosUsuariosAdmin() {
 
   const currentRole = state.usuario ? (state.usuario.rol || '').toUpperCase() : 'ADMINISTRADOR';
 
-  ui.renderUsuariosAdmin(filtrados, (usuario) => {
-    if ((usuario.rol === 'SUPERADMIN' || usuario.rol === 'ADMINISTRADOR') && !state.esSuperAdmin()) {
-      ui.showToast('Un Administrador solo puede configurar contraseñas de Docentes y Estudiantes.', 'error');
-      return;
+  ui.renderUsuariosAdmin(
+    filtrados,
+    (usuario) => {
+      if ((usuario.rol === 'SUPERADMIN' || usuario.rol === 'ADMINISTRADOR') && !state.esSuperAdmin()) {
+        ui.showToast('Un Administrador solo puede configurar contraseñas de Docentes y Estudiantes.', 'error');
+        return;
+      }
+      ui.openModalPassword(usuario);
+    },
+    currentRole,
+    state.cursosAdmin,
+    (docente, cursosAsignados) => {
+      ui.mostrarModalCursosDocenteAdmin(docente, cursosAsignados);
     }
-    ui.openModalPassword(usuario);
-  }, currentRole);
+  );
 }
 
 // ==========================================================================
@@ -1865,9 +1900,11 @@ function abrirModalCursoDocente(curso = null, areaEspecialidad = 'Programación'
   const subtitle = document.getElementById('course-modal-subtitle');
   const form = document.getElementById('course-admin-form');
   const catInput = document.getElementById('course-form-categoria');
+  const docenteGroup = document.getElementById('course-form-docente-group');
 
   if (!modal || !form) return;
   form.reset();
+  if (docenteGroup) docenteGroup.style.display = 'none';
 
   const area = areaEspecialidad || (state.docentePerfil ? state.docentePerfil.areaEspecialidad : 'Programación');
 

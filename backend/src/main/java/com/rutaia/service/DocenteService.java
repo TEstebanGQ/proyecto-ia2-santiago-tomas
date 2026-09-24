@@ -4,6 +4,7 @@ import com.rutaia.dto.CursoDTO;
 import com.rutaia.dto.CursoResponseDTO;
 import com.rutaia.dto.DocenteEstadisticasDTO;
 import com.rutaia.dto.DocenteFeedbackDTO;
+import com.rutaia.dto.DocenteResponseDTO;
 import com.rutaia.entity.Curso;
 import com.rutaia.entity.Docente;
 import com.rutaia.entity.Fuente;
@@ -81,6 +82,19 @@ public class DocenteService {
                     Docente nuevo = new Docente(nombre, email.trim(), especialidad, "Facultad de Ingeniería");
                     return docenteRepository.save(nuevo);
                 });
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocenteResponseDTO> listarTodosDocentes() {
+        List<Docente> docentes = docenteRepository.findAll();
+        return docentes.stream().map(d -> new DocenteResponseDTO(
+                d.getId(),
+                d.getNombreCompleto(),
+                d.getCorreoElectronico(),
+                d.getAreaEspecialidad(),
+                d.getDepartamentoFacultad(),
+                d.getFechaCreacion()
+        )).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

@@ -1,7 +1,7 @@
 const sqlite3 = require('/usr/local/lib/node_modules/n8n/node_modules/sqlite3');
 const db = new sqlite3.Database('/home/node/.n8n/database.sqlite');
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AQ.Ab8RN6KGoZhNET7DhIu1Gukifs_KgZDOxZgk_C-F0XCQ5vUbkA';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AQ.Ab8RN6KZsL8-XMY422XdGnZ8r8cYeZ9ZhpS3rhD_6lMMh8G5fA';
 
 function updateWorkflowNodes(nodes) {
   let modified = false;
@@ -131,7 +131,7 @@ if (cursosFuentes.length > 0) {
     if (n.name === 'Generar Recomendacion LLM') {
       n.parameters = {
         method: 'POST',
-        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
         sendHeaders: true,
         headerParameters: {
           parameters: [

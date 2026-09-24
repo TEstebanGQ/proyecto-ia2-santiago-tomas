@@ -990,6 +990,17 @@ export const api = {
     return await res.json();
   },
 
+  async getDocentes() {
+    const res = await fetch(`${API_BASE_URL}/docentes`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      throw new Error('Error al listar los docentes del sistema');
+    }
+    return await res.json();
+  },
+
   // -------------------------------------------------------------------------
   // GESTIÓN DE USUARIOS Y CONTROL DE ACCESO (SUPERADMIN & ADMINISTRADOR)
   // -------------------------------------------------------------------------

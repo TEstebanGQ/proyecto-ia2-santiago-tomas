@@ -248,7 +248,7 @@ export const ui = {
     const submitBtn = document.getElementById('submit-query-btn');
 
     if (loadingBox) {
-      loadingBox.style.display = isLoading ? 'inline-flex' : 'none';
+      loadingBox.style.display = isLoading ? 'flex' : 'none';
       const titleEl = document.getElementById('loading-title');
       const descEl = document.getElementById('loading-desc');
       if (titleEl) titleEl.textContent = title;
@@ -476,7 +476,7 @@ export const ui = {
         activeTurnsWithIa.push({ turnoKey, ia });
         const estadoLimpio = ia.estadoFinal || 'Respondida';
         const estadoClass = estadoLimpio.toLowerCase().includes('sin') ? 'sin-resultados' : 'respondida';
-        const esSinResultados = estadoLimpio.toLowerCase().includes('sin') || !ia.fuentes || ia.fuentes.length === 0;
+        const esSinResultados = estadoLimpio.toLowerCase().includes('sin') || estadoLimpio.toLowerCase().includes('fuera');
 
         turnHtml += `
           <div class="chat-ia-wrapper">
@@ -1259,7 +1259,6 @@ export const ui = {
     const cerrar = () => { modal.style.display = 'none'; };
     if (closeBtn) closeBtn.onclick = cerrar;
     if (cancelBtn) cancelBtn.onclick = cerrar;
-    modal.onclick = (e) => { if (e.target === modal) cerrar(); };
 
     if (submitBtn) {
       submitBtn.onclick = async () => {
@@ -1355,9 +1354,6 @@ export const ui = {
 
     if (closeBtn) closeBtn.onclick = cerrar;
     if (cancelBtn) cancelBtn.onclick = cerrar;
-    modal.onclick = (e) => {
-      if (e.target === modal) cerrar();
-    };
 
     if (acceptBtn) {
       acceptBtn.onclick = () => {
@@ -1625,7 +1621,7 @@ export const ui = {
   // ==========================================================
   // ROL ADMINISTRADOR (5.2) - TABLA CRUD Y MODAL DE CURSOS
   // ==========================================================
-  renderCursosAdmin(cursos, onEditar, onToggleActivo) {
+  renderCursosAdmin(cursos, onEditar, onToggleActivo, docentes = []) {
     const tbody = document.getElementById('admin-courses-tbody');
     const totalEl = document.getElementById('admin-count-total');
     const activosEl = document.getElementById('admin-count-activos');
@@ -1645,7 +1641,7 @@ export const ui = {
     if (cursos.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+          <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
             No se encontraron cursos que coincidan con el criterio de búsqueda.
           </td>
         </tr>
@@ -1657,6 +1653,23 @@ export const ui = {
       const tr = document.createElement('tr');
       const esActivo = c.activo !== false;
 
+      const docentesAsignados = (docentes || []).filter(d =>
+        d.areaEspecialidad && c.categoria &&
+        d.areaEspecialidad.trim().toLowerCase() === c.categoria.trim().toLowerCase()
+      );
+
+      let docenteHtml = '';
+      if (docentesAsignados.length > 0) {
+        docenteHtml = docentesAsignados.map(d => `
+          <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
+            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4F46E5; flex-shrink: 0;"></span>
+            <span style="font-weight: 600; font-size: 0.82rem; color: #1E293B;">${d.nombre}</span>
+          </div>
+        `).join('');
+      } else {
+        docenteHtml = `<span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">Sin docente asignado</span>`;
+      }
+
       tr.innerHTML = `
         <td style="font-weight: 700; color: var(--text-muted); font-size: 0.8rem;">#${c.id}</td>
         <td>
@@ -1665,6 +1678,7 @@ export const ui = {
           <div class="course-table-prereq" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; font-style: italic;">${c.prerrequisitos ? '📌 Prerrequisitos: ' + c.prerrequisitos : 'Sin prerrequisitos'}</div>
         </td>
         <td><span class="catalog-badge-cat" style="font-size:0.75rem;">${c.categoria}</span></td>
+        <td>${docenteHtml}</td>
         <td><span style="font-weight: 600;">${c.nivel}</span></td>
         <td style="font-weight: 700;">${c.duracionHoras}h</td>
         <td>
@@ -1705,7 +1719,7 @@ export const ui = {
   },
 
   // Modal para Crear o Editar Curso (Admin)
-  mostrarModalCursoAdmin(curso = null) {
+  mostrarModalCursoAdmin(curso = null, docentes = []) {
     const modal = document.getElementById('course-modal');
     if (!modal) return;
 
@@ -1718,6 +1732,32 @@ export const ui = {
     const nivelInput = document.getElementById('course-form-nivel');
     const durInput = document.getElementById('course-form-duracion');
     const prereqInput = document.getElementById('course-form-prerrequisitos');
+    const docenteGroup = document.getElementById('course-form-docente-group');
+    const docenteSelect = document.getElementById('course-form-docente');
+
+    if (docenteGroup) docenteGroup.style.display = 'block';
+
+    if (docenteSelect) {
+      docenteSelect.innerHTML = '<option value="">-- Seleccionar Docente / Cátedra --</option>';
+      (docentes || []).forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.areaEspecialidad || '';
+        opt.dataset.docenteNombre = d.nombre;
+        opt.dataset.docenteId = d.id;
+        opt.textContent = `${d.nombre} — Cátedra: ${d.areaEspecialidad || 'General'}`;
+        if (curso && curso.categoria && d.areaEspecialidad &&
+            curso.categoria.trim().toLowerCase() === d.areaEspecialidad.trim().toLowerCase()) {
+          opt.selected = true;
+        }
+        docenteSelect.appendChild(opt);
+      });
+
+      docenteSelect.onchange = (e) => {
+        if (e.target.value && catInput) {
+          catInput.value = e.target.value;
+        }
+      };
+    }
 
     if (curso) {
       if (titleEl) titleEl.textContent = 'Actualizar Curso Curricular';
@@ -2644,9 +2684,6 @@ export const ui = {
     const closeBtnFooter = document.getElementById('btn-close-inscritos-footer');
     if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
     if (closeBtnFooter) closeBtnFooter.onclick = () => modal.style.display = 'none';
-    modal.onclick = (e) => {
-      if (e.target === modal) modal.style.display = 'none';
-    };
   },
 
   renderDocenteFeedback(feedbackList) {
@@ -2962,7 +2999,7 @@ export const ui = {
   // ==========================================================
   // GESTIÓN DE USUARIOS Y ROLES (SUPERADMIN & ADMINISTRADOR)
   // ==========================================================
-  renderUsuariosAdmin(usuarios, onCambiarPassword, currentRole = 'ADMINISTRADOR') {
+  renderUsuariosAdmin(usuarios, onCambiarPassword, currentRole = 'ADMINISTRADOR', cursos = [], onVerCursosDocente = null) {
     const tbody = document.getElementById('admin-users-tbody');
     const totalEl = document.getElementById('users-count-total');
     const superEl = document.getElementById('users-count-superadmin');
@@ -3052,6 +3089,11 @@ export const ui = {
 
       const areaText = u.areaInteres || u.departamentoFacultad || u.nivelExperiencia || 'General';
 
+      // Calcular cursos asignados para docentes
+      const cursosDocente = r === 'DOCENTE'
+        ? (cursos || []).filter(c => c.categoria && areaText && c.categoria.trim().toLowerCase() === areaText.trim().toLowerCase())
+        : [];
+
       tr.innerHTML = `
         <td style="font-weight: 700; color: var(--text-muted); font-size: 0.82rem;">#${u.id}</td>
         <td>
@@ -3068,9 +3110,27 @@ export const ui = {
           <span style="font-family: monospace; font-size: 0.84rem; color: #475569;">${u.correoElectronico}</span>
         </td>
         <td>${roleBadgeHtml}</td>
-        <td><span style="font-size: 0.84rem; font-weight: 600; color: #334155;">${areaText}</span></td>
+        <td>
+          <span style="font-size: 0.84rem; font-weight: 600; color: #334155;">${areaText}</span>
+          ${r === 'DOCENTE' ? `
+            <div style="margin-top: 0.25rem;">
+              <span class="catalog-badge-cat" style="font-size: 0.72rem; background: rgba(79, 70, 229, 0.1); color: #4F46E5; border: 1px solid rgba(79, 70, 229, 0.2); font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 6px;">
+                ${cursosDocente.length} ${cursosDocente.length === 1 ? 'curso asignado' : 'cursos asignados'}
+              </span>
+            </div>
+          ` : ''}
+        </td>
         <td style="font-size: 0.8rem; color: var(--text-muted);">${fecha}</td>
-        <td style="text-align: right;">
+        <td style="text-align: right; white-space: nowrap;">
+          ${r === 'DOCENTE' ? `
+            <button type="button" class="btn-table-action btn-action-view-docente-courses" data-id="${u.id}" style="background: rgba(79, 70, 229, 0.1); color: #4F46E5; border: 1px solid rgba(79, 70, 229, 0.25); padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 0.4rem; transition: all 0.2s;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              <span>Ver Cursos</span>
+            </button>
+          ` : ''}
           <button type="button" class="btn-table-action btn-action-change-pwd" data-id="${u.id}" style="background: #0F172A; color: #FFFFFF; padding: 0.4rem 0.85rem; border-radius: 8px; font-weight: 700; font-size: 0.78rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.2s;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 2l-2 2m-1.5 1.5L14 9l-3 3-4-1-4 4 4 4 1 4 4-4-1-4 3.5-3.5L20 4l2-2z"></path>
@@ -3085,8 +3145,80 @@ export const ui = {
         btnPwd.addEventListener('click', () => onCambiarPassword(u));
       }
 
+      const btnViewCourses = tr.querySelector('.btn-action-view-docente-courses');
+      if (btnViewCourses && onVerCursosDocente) {
+        btnViewCourses.addEventListener('click', () => onVerCursosDocente(u, cursosDocente));
+      }
+
       tbody.appendChild(tr);
     });
+  },
+
+  // Modal para ver cursos asignados al docente
+  mostrarModalCursosDocenteAdmin(docente, cursosAsignados = []) {
+    const modal = document.getElementById('modal-docente-assigned-courses');
+    if (!modal) return;
+
+    const nameEl = document.getElementById('docente-modal-name');
+    const emailEl = document.getElementById('docente-modal-email');
+    const avatarEl = document.getElementById('docente-modal-avatar');
+    const specialtyEl = document.getElementById('docente-modal-specialty');
+    const listEl = document.getElementById('docente-assigned-courses-list');
+    const closeBtn = document.getElementById('btn-close-docente-courses-modal');
+    const closeBtnBottom = document.getElementById('btn-close-docente-courses-modal-bottom');
+
+    const initials = (docente.nombreCompleto || docente.nombre || 'D').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    const area = docente.areaInteres || docente.departamentoFacultad || docente.areaEspecialidad || 'General';
+
+    if (nameEl) nameEl.textContent = docente.nombreCompleto || docente.nombre || 'Docente';
+    if (emailEl) emailEl.textContent = docente.correoElectronico || docente.email || 'docente@universidad.edu.co';
+    if (avatarEl) avatarEl.textContent = initials;
+    if (specialtyEl) specialtyEl.textContent = `Cátedra: ${area}`;
+
+    if (listEl) {
+      if (cursosAsignados.length === 0) {
+        listEl.innerHTML = `
+          <div style="text-align: center; padding: 2.5rem 1rem; background: var(--bg-surface, #F8FAFC); border: 1px dashed #CBD5E1; border-radius: 12px; color: var(--text-muted, #64748B);">
+            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.3rem; color: #1E293B;">No hay cursos asociados a esta cátedra</div>
+            <p style="font-size: 0.85rem; margin: 0;">Puedes registrar o editar cursos asignándolos a la categoría "${area}" para vincularlos a este docente.</p>
+          </div>
+        `;
+      } else {
+        listEl.innerHTML = cursosAsignados.map(c => {
+          const esActivo = c.activo !== false;
+          return `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid #E2E8F0; background: #FFFFFF; transition: box-shadow 0.2s;">
+              <div style="flex: 1; padding-right: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
+                  <span style="font-weight: 800; font-size: 0.92rem; color: #0F172A;">${c.nombre}</span>
+                  <span class="status-badge ${esActivo ? 'status-badge-active' : 'status-badge-inactive'}" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">
+                    <span class="status-dot"></span>
+                    ${esActivo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                <div style="font-size: 0.8rem; color: #475569; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                  ${c.descripcion || 'Sin descripción'}
+                </div>
+                <div style="display: flex; gap: 0.75rem; margin-top: 0.35rem; font-size: 0.76rem; color: var(--text-muted, #64748B);">
+                  <span>⏱ ${c.duracionHoras}h</span>
+                  <span>📊 ${c.nivel}</span>
+                  ${c.prerrequisitos ? `<span>📌 ${c.prerrequisitos}</span>` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    const cerrarModal = () => {
+      modal.style.display = 'none';
+    };
+
+    if (closeBtn) closeBtn.onclick = cerrarModal;
+    if (closeBtnBottom) closeBtnBottom.onclick = cerrarModal;
+
+    modal.style.display = 'flex';
   },
 
   openModalCrearUsuario(rolesPermitidos = ['DOCENTE', 'ESTUDIANTE']) {

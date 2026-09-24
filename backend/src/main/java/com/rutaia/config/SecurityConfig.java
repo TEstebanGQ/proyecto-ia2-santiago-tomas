@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/estudiantes/*/inscripciones").permitAll()
 
                 // Operaciones del rol DOCENTE
-                .requestMatchers("/api/docentes/**")
+                .requestMatchers("/api/docentes", "/api/docentes/**")
                 .hasAnyRole("DOCENTE", "ADMINISTRADOR", "SUPERADMIN")
 
                 // Administración de cursos

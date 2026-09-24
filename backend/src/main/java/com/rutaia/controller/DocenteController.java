@@ -38,6 +38,12 @@ public class DocenteController {
         return "profesor.programacion@universidad.edu.co";
     }
 
+    @GetMapping
+    @Operation(summary = "Listar todos los docentes registrados en la institución")
+    public ResponseEntity<List<DocenteResponseDTO>> listarTodos() {
+        return ResponseEntity.ok(docenteService.listarTodosDocentes());
+    }
+
     @GetMapping("/perfil")
     @Operation(summary = "Obtener perfil del docente actual")
     public ResponseEntity<DocenteResponseDTO> obtenerPerfil(
