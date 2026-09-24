@@ -54,17 +54,18 @@ function initModeToggle() {
   }
 }
 
-// 2. Selector Segmentado de Roles (Estudiante / Docente / Administrador)
+// 2. Selector Segmentado de Roles (Estudiante / Docente / Administrador / Superadmin)
 function initRoleSegments() {
   const segStudent = document.getElementById('seg-role-student');
   const segDocente = document.getElementById('seg-role-docente');
   const segAdmin = document.getElementById('seg-role-admin');
+  const segSuperAdmin = document.getElementById('seg-role-superadmin');
   const emailInput = document.getElementById('login-email');
   const pwdInput = document.getElementById('login-password');
 
   const setRole = (rol, activeBtn, defaultEmail) => {
     rolSeleccionado = rol;
-    [segStudent, segDocente, segAdmin].forEach(b => {
+    [segStudent, segDocente, segAdmin, segSuperAdmin].forEach(b => {
       if (b) b.classList.toggle('active', b === activeBtn);
     });
     if (emailInput && (!emailInput.value || emailInput.value.includes('universidad.edu.co'))) {
@@ -90,6 +91,12 @@ function initRoleSegments() {
   if (segAdmin) {
     segAdmin.addEventListener('click', () => {
       setRole('ADMINISTRADOR', segAdmin, 'admin@universidad.edu.co');
+    });
+  }
+
+  if (segSuperAdmin) {
+    segSuperAdmin.addEventListener('click', () => {
+      setRole('SUPERADMIN', segSuperAdmin, 'superadmin@universidad.edu.co');
     });
   }
 
@@ -446,19 +453,15 @@ function initRegisterForm() {
   });
 }
 
-// 10. Guardar Sesión y Redirigir al Dashboard Principal
+// 10. Confirmar Sesión en Redis y Redirigir al Dashboard Principal
 function guardarSesionYRedirigir(authData, mensajeBienvenida) {
   try {
-    // Seguridad con Redis: El token JWT viaja en HttpOnly Cookie y se valida en Redis.
-    // NUNCA se persiste el token en localStorage ni en la caché del cliente.
-    const userDisplay = { ...authData };
-    delete userDisplay.token;
-    localStorage.setItem('rutaia_user', JSON.stringify(userDisplay));
-    if (authData.id) {
-      localStorage.setItem('rutaia_active_student_id', authData.id);
-    }
+    // Seguridad Estricta con Redis: Toda la información de sesión se almacena exclusivamente en Redis
+    // y viaja vinculada a la HttpOnly Cookie. NUNCA se guarda en localStorage.
+    localStorage.removeItem('rutaia_user');
+    localStorage.removeItem('rutaia_active_student_id');
   } catch (e) {
-    console.error('Error guardando en localStorage', e);
+    console.error('Error limpiando almacenamiento local', e);
   }
 
   mostrarToast(mensajeBienvenida, 'success');

@@ -2,6 +2,8 @@
  * RutaIA - Manejador de Estado Global
  */
 
+import { api } from './api.js';
+
 export const state = {
   usuario: null, // { id, nombre, email, rol, nivel, area, token, proveedor }
   estudiantes: [],
@@ -19,63 +21,45 @@ export const state = {
   inscripcionesCursoIds: new Set(),
 
   initUsuario() {
+    // La sesión reside ÚNICAMENTE en el servidor Redis y viaja con HttpOnly Cookie.
+    // NUNCA se almacena en localStorage.
     try {
       if (typeof localStorage !== 'undefined') {
-        const saved = localStorage.getItem('rutaia_user');
-        if (saved) {
-          this.usuario = JSON.parse(saved);
-          if (this.usuario && this.usuario.token) {
-            delete this.usuario.token;
-            localStorage.setItem('rutaia_user', JSON.stringify(this.usuario));
-          }
-          return;
-        }
+        localStorage.removeItem('rutaia_user');
+        localStorage.removeItem('rutaia_active_student_id');
       }
-      // Por defecto rol Estudiante inicial
-      this.usuario = {
-        id: 1,
-        nombre: 'Santiago Gómez Morales',
-        email: 'santiago.gomez@universidad.edu.co',
-        rol: 'ESTUDIANTE',
-        nivel: 'Intermedio',
-        area: 'Desarrollo Web y Cloud'
-      };
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('rutaia_user', JSON.stringify(this.usuario));
-      }
-    } catch (e) {
-      console.warn('Error al cargar usuario de localStorage', e);
-    }
+    } catch (e) {}
   },
 
   setUsuario(user) {
     this.usuario = user;
-    if (typeof localStorage !== 'undefined') {
-      if (user) {
-        const cleanUser = { ...user };
-        delete cleanUser.token; // El token se gestiona exclusivamente en Redis y HttpOnly Cookie
-        localStorage.setItem('rutaia_user', JSON.stringify(cleanUser));
-      } else {
+    // Asegurar que localStorage esté completamente libre de datos del usuario
+    try {
+      if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('rutaia_user');
+        localStorage.removeItem('rutaia_active_student_id');
       }
-    }
+    } catch (e) {}
+
     if (user && user.rol === 'ESTUDIANTE' && user.id) {
       this.estudianteActivo = {
         id: user.id,
         nombreCompleto: user.nombre,
         correoElectronico: user.email,
-        nivelExperiencia: user.nivel || 'Intermedio',
-        areaInteres: user.area || 'Tecnología'
+        nivelExperiencia: user.nivel || user.nivelExperiencia || 'Intermedio',
+        areaInteres: user.area || user.areaInteres || 'Tecnología'
       };
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('rutaia_active_student_id', user.id);
-      }
     }
+  },
+
+  esSuperAdmin() {
+    const r = (this.getRol() || '').toUpperCase();
+    return r === 'SUPERADMIN' || r === 'ROLE_SUPERADMIN';
   },
 
   esAdmin() {
     const r = (this.getRol() || '').toUpperCase();
-    return r === 'ADMINISTRADOR' || r === 'ADMIN' || r === 'ROLE_ADMINISTRADOR';
+    return r === 'ADMINISTRADOR' || r === 'ADMIN' || r === 'ROLE_ADMINISTRADOR' || this.esSuperAdmin();
   },
 
   esDocente() {
@@ -88,7 +72,7 @@ export const state = {
   },
 
   esEstudiante() {
-    if (this.esAdmin() || this.esDocente()) return false;
+    if (this.esAdmin() || this.esDocente() || this.esSuperAdmin()) return false;
     return true;
   },
 
@@ -119,7 +103,7 @@ export const state = {
       }
     }
     if (!this.estudianteActivo && lista.length > 0) {
-      const savedId = localStorage.getItem('rutaia_active_student_id');
+      const savedId = this.usuario?.activeStudentId;
       const found = lista.find(e => e.id == savedId);
       this.estudianteActivo = found || lista[0];
     }
@@ -128,17 +112,19 @@ export const state = {
   setEstudianteActivo(estudiante) {
     this.estudianteActivo = estudiante;
     if (estudiante) {
-      localStorage.setItem('rutaia_active_student_id', estudiante.id);
-      if (this.usuario && this.usuario.rol === 'ESTUDIANTE') {
-        this.usuario.id = estudiante.id;
-        this.usuario.nombre = estudiante.nombreCompleto;
-        this.usuario.email = estudiante.correoElectronico;
-        this.usuario.nivel = estudiante.nivelExperiencia;
-        this.usuario.area = estudiante.areaInteres;
-        delete this.usuario.token;
-        localStorage.setItem('rutaia_user', JSON.stringify(this.usuario));
+      if (this.usuario) {
+        this.usuario.activeStudentId = estudiante.id;
+        if (this.usuario.rol === 'ESTUDIANTE') {
+          this.usuario.id = estudiante.id;
+          this.usuario.nombre = estudiante.nombreCompleto;
+          this.usuario.email = estudiante.correoElectronico;
+          this.usuario.nivel = estudiante.nivelExperiencia;
+          this.usuario.area = estudiante.areaInteres;
+        }
       }
       this.initChatSession();
+      // Persistir estudiante activo en la sesión de Redis en el servidor
+      api.updateActiveStudent(estudiante.id);
     }
   },
 

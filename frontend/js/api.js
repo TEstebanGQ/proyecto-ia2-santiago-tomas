@@ -401,6 +401,40 @@ export const api = {
   },
 
   // ==========================================================
+  // Sesión de Usuario en Redis (NUNCA en localStorage)
+  // ==========================================================
+
+  async getSesion() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: getAuthHeaders(false),
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        return null;
+      }
+
+      return await res.json();
+    } catch (e) {
+      console.warn('Error al consultar sesión activa en Redis:', e.message);
+      return null;
+    }
+  },
+
+  async updateActiveStudent(studentId) {
+    try {
+      await fetch(`${API_BASE_URL}/auth/me/active-student/${studentId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(false),
+        credentials: 'include'
+      });
+    } catch (e) {
+      console.warn('Error actualizando estudiante activo en sesión Redis:', e.message);
+    }
+  },
+
+  // ==========================================================
   // Cerrar sesión
   // ==========================================================
 
@@ -420,8 +454,10 @@ export const api = {
         e.message
       );
     } finally {
-      localStorage.removeItem('rutaia_user');
-      localStorage.removeItem('rutaia_active_student_id');
+      try {
+        localStorage.removeItem('rutaia_user');
+        localStorage.removeItem('rutaia_active_student_id');
+      } catch (e) {}
     }
   },
 
@@ -950,6 +986,71 @@ export const api = {
     });
     if (!res.ok) {
       throw new Error(`Historial no disponible para el estudiante #${id}`);
+    }
+    return await res.json();
+  },
+
+  // -------------------------------------------------------------------------
+  // GESTIÓN DE USUARIOS Y CONTROL DE ACCESO (SUPERADMIN & ADMINISTRADOR)
+  // -------------------------------------------------------------------------
+  async getUsuarios() {
+    const res = await fetch(`${API_BASE_URL}/usuarios`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error al obtener la lista de usuarios');
+    }
+    return await res.json();
+  },
+
+  async getUsuario(id) {
+    const res = await fetch(`${API_BASE_URL}/usuarios/${id}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      throw new Error(`Usuario #${id} no encontrado`);
+    }
+    return await res.json();
+  },
+
+  async crearUsuario(datos) {
+    const res = await fetch(`${API_BASE_URL}/usuarios`, {
+      method: 'POST',
+      headers: getAuthHeaders(true),
+      credentials: 'include',
+      body: JSON.stringify(datos)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error al registrar el nuevo usuario');
+    }
+    return await res.json();
+  },
+
+  async cambiarPasswordUsuario(id, nuevaPassword) {
+    const res = await fetch(`${API_BASE_URL}/usuarios/${id}/password`, {
+      method: 'PUT',
+      headers: getAuthHeaders(true),
+      credentials: 'include',
+      body: JSON.stringify({ nuevaPassword })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error al configurar la nueva contraseña');
+    }
+    return await res.json();
+  },
+
+  async getRolesPermitidos() {
+    const res = await fetch(`${API_BASE_URL}/usuarios/roles-permitidos`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      return ['DOCENTE', 'ESTUDIANTE'];
     }
     return await res.json();
   }

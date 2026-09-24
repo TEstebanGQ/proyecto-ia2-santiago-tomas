@@ -51,24 +51,25 @@
   <link rel="stylesheet" href="css/variables.css?v=6.5">
   <link rel="stylesheet" href="css/styles.css?v=6.5">
 
-  <!-- Router Guard: si ya existe sesión activa, ir al dashboard salvo que venga por ?cambiar=true o ?logout=true -->
+  <!-- Router Guard: La sesión reside exclusivamente en el servidor Redis mediante HttpOnly Cookie -->
   <script>
     try {
-      const u = localStorage.getItem('rutaia_user');
-      if (u) {
-        const parsed = JSON.parse(u);
-        if (parsed && parsed.token) {
-          delete parsed.token;
-          localStorage.setItem('rutaia_user', JSON.stringify(parsed));
-        }
-        if (parsed && parsed.email) {
-          const params = new URLSearchParams(window.location.search);
-          if (!params.has('logout') && !params.has('cambiar')) {
+      localStorage.removeItem('rutaia_user');
+      localStorage.removeItem('rutaia_active_student_id');
+    } catch(e) {}
+
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('logout') || params.has('cambiar')) return;
+
+      fetch('http://localhost:8080/api/auth/me', { credentials: 'include' })
+        .then(res => {
+          if (res.ok) {
             window.location.replace('index.html');
           }
-        }
-      }
-    } catch(e) {}
+        })
+        .catch(() => {});
+    })();
   </script>
 </head>
 <body class="pro-login-body">
@@ -304,6 +305,12 @@
                 <line x1="23" y1="11" x2="17" y2="11"></line>
               </svg>
               <span>Administrador</span>
+            </button>
+            <button type="button" class="role-segment" id="seg-role-superadmin" data-role="SUPERADMIN">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+              </svg>
+              <span>Superadmin</span>
             </button>
           </div>
 
