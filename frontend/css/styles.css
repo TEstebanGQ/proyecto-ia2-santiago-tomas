@@ -2376,6 +2376,23 @@ button, input, select, textarea {
   border: 1px solid #C7D2FE;
 }
 
+.role-badge-superadmin {
+  background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.text-purple {
+  color: #7C3AED !important;
+}
+
+.text-blue {
+  color: #2563EB !important;
+}
+
 .btn-ver-inscritos {
   background: #F8FAFC;
   color: #1E293B;
@@ -5886,9 +5903,9 @@ button, input, select, textarea {
    MODAL NÓMINA DE ESTUDIANTES - PANEL DOCENTE
    ========================================================== */
 .modal-docente-roster-card {
-  max-width: 860px !important;
-  width: 95% !important;
-  padding: 2.2rem !important;
+  max-width: 1060px !important;
+  width: 96% !important;
+  padding: 2.2rem 2.5rem !important;
   border-radius: 24px !important;
 }
 
@@ -5901,13 +5918,14 @@ button, input, select, textarea {
 }
 
 .docente-roster-scroll {
-  max-height: 380px;
+  max-height: 420px;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .docente-roster-scroll::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 .docente-roster-scroll::-webkit-scrollbar-track {
   background: #F8FAFC;
@@ -5924,13 +5942,13 @@ button, input, select, textarea {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .docente-roster-table th {
   background: #F8FAFC;
-  padding: 0.85rem 1.15rem;
-  font-size: 0.72rem;
+  padding: 0.95rem 1.3rem;
+  font-size: 0.74rem;
   font-weight: 800;
   color: #64748B;
   text-transform: uppercase;
@@ -5940,10 +5958,11 @@ button, input, select, textarea {
 }
 
 .docente-roster-table td {
-  padding: 0.95rem 1.15rem;
+  padding: 1rem 1.3rem;
   border-bottom: 1px solid #F1F5F9;
   vertical-align: middle;
   font-size: 0.88rem;
+  white-space: nowrap;
 }
 
 .docente-roster-table tbody tr {
@@ -5962,25 +5981,20 @@ button, input, select, textarea {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  overflow: hidden;
 }
 
 .docente-student-name {
   font-weight: 700;
   color: #0F172A;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   line-height: 1.3;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .docente-student-interest {
-  font-size: 0.77rem;
+  font-size: 0.78rem;
   color: #64748B;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .docente-student-interest strong {
@@ -5990,14 +6004,12 @@ button, input, select, textarea {
 
 .docente-student-email {
   color: #475569;
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .docente-student-email svg {
@@ -6007,7 +6019,7 @@ button, input, select, textarea {
 
 .docente-date-badge {
   color: #64748B;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -6043,5 +6055,261 @@ button, input, select, textarea {
     min-width: 600px;
   }
 }
+
+/* ==========================================================================
+   17. Modales de Gestión de Usuarios y Cambio de Contraseñas (Superadmin / Admin)
+   ========================================================================== */
+.modal-user-admin-card {
+  max-width: 620px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #FFFFFF;
+  border-radius: 24px;
+  padding: 2.2rem 2.4rem;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(226, 220, 208, 0.7);
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-pwd-admin-card {
+  max-width: 520px;
+  width: 95%;
+  background: #FFFFFF;
+  border-radius: 24px;
+  padding: 2.2rem 2.4rem;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(226, 220, 208, 0.7);
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-header-with-icon {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.modal-header-icon-box {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.modal-icon-badge-user {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #F5F3FF;
+  color: #7C3AED;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-icon-badge-pwd {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #FEF3C7;
+  color: #D97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.15rem;
+}
+
+@media (max-width: 620px) {
+  .modal-form-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+  .modal-user-admin-card, .modal-pwd-admin-card {
+    padding: 1.5rem !important;
+  }
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1.1rem;
+}
+
+.modal-field label {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #1E293B;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-field label .label-optional {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: #94A3B8;
+}
+
+.modal-field input,
+.modal-field select,
+.modal-field textarea {
+  background: #FAF8F2;
+  border: 1.5px solid rgba(226, 220, 208, 0.9);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  outline: none;
+  font-size: 0.92rem;
+  color: #121316;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-field input:focus,
+.modal-field select:focus,
+.modal-field textarea:focus {
+  border-color: #121316;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(215, 243, 56, 0.45);
+}
+
+.modal-field select {
+  cursor: pointer;
+}
+
+.modal-input-pwd-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.modal-input-pwd-box input {
+  padding-right: 2.75rem !important;
+}
+
+.modal-input-pwd-box .btn-toggle-pwd {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.modal-input-pwd-box .btn-toggle-pwd:hover {
+  color: #121316;
+  background: #E2E8F0;
+}
+
+.modal-input-pwd-box .btn-toggle-pwd.active {
+  color: #7C3AED;
+}
+
+/* Tarjeta informativa de usuario para modal de contraseñas */
+.pwd-target-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 0.95rem 1.15rem;
+  margin-bottom: 1.35rem;
+}
+
+.pwd-target-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.pwd-target-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #0F172A;
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.pwd-target-meta {
+  min-width: 0;
+}
+
+.pwd-target-name {
+  font-weight: 800;
+  font-size: 0.96rem;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pwd-target-email {
+  font-size: 0.82rem;
+  color: #64748B;
+  font-family: var(--font-mono, monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Indicador de coincidencia de contraseña */
+.pwd-feedback-hint {
+  font-size: 0.82rem;
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+}
+
+.pwd-feedback-hint.neutral {
+  color: #64748B;
+}
+
+.pwd-feedback-hint.valid {
+  color: #16A34A;
+  font-weight: 600;
+}
+
+.pwd-feedback-hint.invalid {
+  color: #DC2626;
+  font-weight: 600;
+}
+
+.pwd-feedback-hint svg {
+  flex-shrink: 0;
+}
+
 
 
