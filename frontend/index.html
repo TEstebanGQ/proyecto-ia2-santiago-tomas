@@ -65,21 +65,13 @@
   
   <!-- Estilos del Sistema -->
   <link rel="stylesheet" href="css/variables.css?v=5.0">
-  <link rel="stylesheet" href="css/styles.css?v=7.0">
+  <link rel="stylesheet" href="css/styles.css?v=7.1">
 
-  <!-- Enrutador y Control de Autenticación: si no hay sesión, ir a login.html -->
+  <!-- Enrutador y Control de Autenticación: La sesión reside ÚNICAMENTE en Redis -->
   <script>
     try {
-      const u = localStorage.getItem('rutaia_user');
-      if (!u) {
-        window.location.replace('login.html');
-      } else {
-        const parsed = JSON.parse(u);
-        if (parsed && parsed.token) {
-          delete parsed.token;
-          localStorage.setItem('rutaia_user', JSON.stringify(parsed));
-        }
-      }
+      localStorage.removeItem('rutaia_user');
+      localStorage.removeItem('rutaia_active_student_id');
     } catch (e) {}
   </script>
 </head>
@@ -704,6 +696,15 @@
               </svg>
               <span>Configuración del Umbral RAG</span>
             </button>
+            <button type="button" class="admin-subtab" id="subtab-admin-users" data-admintab="users">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span>Gestión de Usuarios y Roles</span>
+            </button>
           </div>
 
           <!-- ==========================================================
@@ -968,6 +969,107 @@
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+
+          <!-- ==========================================================
+               SUB-PANEL 4: GESTIÓN DE USUARIOS Y ROLES (SUPERADMIN & ADMIN)
+               ========================================================== -->
+          <div class="admin-pane" id="admin-pane-users" style="display: none;">
+            <div class="editorial-view-header admin-header-flex">
+              <div>
+                <div class="admin-badge-tag" id="admin-users-badge-tag">Control de Acceso</div>
+                <h2 class="view-title">Gestión de Usuarios, Roles y Credenciales</h2>
+                <p class="view-subtitle" id="admin-users-subtitle">
+                  Superadmin: permisos completos para crear Administradores, Docentes y Estudiantes, y configurar contraseñas. Administrador: puede crear Docentes y Estudiantes, y configurar contraseñas de usuarios.
+                </p>
+              </div>
+              <div class="admin-header-cta">
+                <button type="button" class="btn-primary-lime" id="btn-open-new-user">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Nuevo Usuario</span>
+                </button>
+                <button type="button" class="btn-refresh-pill" id="btn-admin-refresh-users" title="Refrescar lista de usuarios">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  <span>Actualizar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Métricas de Usuarios por Rol -->
+            <div class="admin-summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Total Cuentas</span>
+                <span class="admin-card-number" id="users-count-total">0</span>
+                <span class="admin-card-note">Usuarios registrados</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Superadmins</span>
+                <span class="admin-card-number text-purple" id="users-count-superadmin">0</span>
+                <span class="admin-card-note">Control maestro</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Administradores</span>
+                <span class="admin-card-number text-blue" id="users-count-admin">0</span>
+                <span class="admin-card-note">Gestión curricular</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Docentes</span>
+                <span class="admin-card-number text-warning" id="users-count-docente">0</span>
+                <span class="admin-card-note">Cátedra y feedback</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Estudiantes</span>
+                <span class="admin-card-number text-success" id="users-count-estudiante">0</span>
+                <span class="admin-card-note">Alumnos activos</span>
+              </div>
+            </div>
+
+            <!-- Barra de Filtro de Usuarios -->
+            <div class="admin-toolbar">
+              <div class="admin-search-box">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="admin-user-filter" placeholder="Buscar por nombre, correo o rol..." />
+              </div>
+              <div class="admin-filter-status">
+                <select id="admin-user-role-filter">
+                  <option value="todos">Todos los roles</option>
+                  <option value="SUPERADMIN">Superadmin</option>
+                  <option value="ADMINISTRADOR">Administrador</option>
+                  <option value="DOCENTE">Docente</option>
+                  <option value="ESTUDIANTE">Estudiante</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Tabla de Usuarios del Sistema -->
+            <div class="admin-table-container">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">ID</th>
+                    <th>Nombre Completo</th>
+                    <th>Correo Electrónico</th>
+                    <th>Rol en el Sistema</th>
+                    <th>Área / Especialidad</th>
+                    <th>Fecha de Alta</th>
+                    <th style="text-align: right; width: 180px;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-tbody">
+                  <!-- Render dinámico -->
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -1630,6 +1732,182 @@
     </div>
   </div>
 
+  <!-- ==========================================================
+       MODAL: CREAR NUEVO USUARIO (CONTROL DE ACCESO JERÁRQUICO)
+       ========================================================== -->
+  <div id="user-create-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
+    <div class="modal-editorial-card modal-user-admin-card">
+      <div class="modal-header-with-icon">
+        <div class="modal-header-icon-box">
+          <div class="modal-icon-badge-user">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <line x1="20" y1="8" x2="20" y2="14"></line>
+              <line x1="23" y1="11" x2="17" y2="11"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="user-modal-title" style="margin: 0; font-size: 1.25rem;">Registrar Nuevo Usuario</h3>
+            <p class="modal-subtitle" id="user-modal-subtitle" style="margin: 0.2rem 0 0; font-size: 0.85rem;">
+              Completa los datos y asigna el rol institucional correspondiente:
+            </p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="btn-close-user-modal" aria-label="Cerrar modal">✕</button>
+      </div>
+
+      <form id="user-create-form" novalidate>
+        <div class="modal-field">
+          <label for="user-create-name">Nombre completo *</label>
+          <input type="text" id="user-create-name" required placeholder="Ej: Dr. Roberto Gómez Bolaños" autocomplete="name" />
+        </div>
+
+        <div class="modal-form-grid-2">
+          <div class="modal-field">
+            <label for="user-create-email">Correo institucional *</label>
+            <input type="email" id="user-create-email" required placeholder="usuario@universidad.edu.co" autocomplete="email" />
+          </div>
+
+          <div class="modal-field">
+            <label for="user-create-rol">Rol en la plataforma *</label>
+            <select id="user-create-rol" required>
+              <!-- Opciones pobladas dinámicamente según permisos -->
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-field">
+          <label for="user-create-password">
+            <span>Contraseña inicial *</span>
+            <span class="label-optional">Mínimo 6 caracteres</span>
+          </label>
+          <div class="modal-input-pwd-box">
+            <input type="password" id="user-create-password" required minlength="6" placeholder="Ingresa una clave segura (ej: password123)" autocomplete="new-password" />
+            <button type="button" class="btn-toggle-pwd" data-target="user-create-password" title="Ver u ocultar contraseña">
+              <svg class="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-form-grid-2">
+          <div class="modal-field">
+            <label for="user-create-area" id="label-user-create-area">Área de interés / Especialidad</label>
+            <input type="text" id="user-create-area" placeholder="Ej: Inteligencia Artificial, Web, Redes" />
+          </div>
+
+          <div class="modal-field">
+            <label for="user-create-nivel" id="label-user-create-nivel">Nivel / Cargo institucional</label>
+            <select id="user-create-nivel">
+              <option value="Principiante">Principiante (Estudiante)</option>
+              <option value="Intermedio">Intermedio (Estudiante)</option>
+              <option value="Avanzado">Avanzado (Estudiante)</option>
+              <option value="Docente Titular">Docente Titular</option>
+              <option value="Coordinador">Coordinador (Administrador)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-field">
+          <label for="user-create-facultad" id="label-user-create-facultad">Facultad, Programa o Dependencia</label>
+          <input type="text" id="user-create-facultad" placeholder="Ej: Facultad de Ingeniería" value="Facultad de Ingeniería" />
+        </div>
+
+        <div class="modal-actions-row">
+          <button type="button" class="btn-cancel-modal" id="btn-cancel-user-modal">Cancelar</button>
+          <button type="submit" class="btn-primary-lime" id="btn-save-user">
+            <span>Crear Usuario</span>
+            <span class="btn-arrow">➔</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       MODAL: CONFIGURAR / CAMBIAR CONTRASEÑA DE USUARIO
+       ========================================================== -->
+  <div id="user-password-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="pwd-modal-title">
+    <div class="modal-editorial-card modal-pwd-admin-card">
+      <div class="modal-header-with-icon">
+        <div class="modal-header-icon-box">
+          <div class="modal-icon-badge-pwd">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="pwd-modal-title" style="margin: 0; font-size: 1.25rem;">Configurar Contraseña</h3>
+            <p class="modal-subtitle" style="margin: 0.2rem 0 0; font-size: 0.85rem;">Restablece las credenciales del usuario seleccionado:</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="btn-close-pwd-modal" aria-label="Cerrar modal">✕</button>
+      </div>
+
+      <!-- Tarjeta de usuario destino -->
+      <div class="pwd-target-card">
+        <div class="pwd-target-left">
+          <div class="pwd-target-avatar" id="pwd-modal-avatar">U</div>
+          <div class="pwd-target-meta">
+            <div class="pwd-target-name" id="pwd-modal-user-name">Nombre de Usuario</div>
+            <div class="pwd-target-email" id="pwd-modal-user-email">usuario@universidad.edu.co</div>
+          </div>
+        </div>
+        <div id="pwd-modal-user-role-wrap">
+          <span class="user-role-badge role-badge-admin" id="pwd-modal-user-role">Administrador</span>
+        </div>
+      </div>
+
+      <form id="user-password-form" novalidate>
+        <input type="hidden" id="pwd-modal-user-id" value="" />
+
+        <div class="modal-field">
+          <label for="pwd-input-new">
+            <span>Nueva contraseña *</span>
+            <span class="label-optional">Mínimo 6 caracteres</span>
+          </label>
+          <div class="modal-input-pwd-box">
+            <input type="password" id="pwd-input-new" required minlength="6" placeholder="Ingresa la nueva contraseña" autocomplete="new-password" />
+            <button type="button" class="btn-toggle-pwd" data-target="pwd-input-new" title="Ver u ocultar contraseña">
+              <svg class="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-field">
+          <label for="pwd-input-confirm">Confirmar nueva contraseña *</label>
+          <div class="modal-input-pwd-box">
+            <input type="password" id="pwd-input-confirm" required minlength="6" placeholder="Repite la nueva contraseña" autocomplete="new-password" />
+            <button type="button" class="btn-toggle-pwd" data-target="pwd-input-confirm" title="Ver u ocultar contraseña">
+              <svg class="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+          <div class="pwd-feedback-hint neutral" id="pwd-match-hint">
+            <span>Ingresa al menos 6 caracteres</span>
+          </div>
+        </div>
+
+        <div class="modal-actions-row">
+          <button type="button" class="btn-cancel-modal" id="btn-cancel-pwd-modal">Cancelar</button>
+          <button type="submit" class="btn-primary-lime" id="btn-save-pwd">
+            <span>Guardar Contraseña</span>
+            <span class="btn-arrow">➔</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal Confirmación de Cierre de Sesión -->
   <div id="logout-confirm-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="logout-modal-title">
     <div class="logout-modal-dialog">
@@ -1660,6 +1938,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts Modulares -->
-  <script type="module" src="js/app.js?v=7.0"></script>
+  <script type="module" src="js/app.js?v=7.1"></script>
 </body>
 </html>

@@ -8,6 +8,24 @@ import { state } from './state.js';
 import { ui } from './ui.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // 1. Obtener y validar sesión activa directamente desde Redis (vía HttpOnly Cookie)
+  try {
+    const sesion = await api.getSesion();
+    if (sesion && (sesion.email || sesion.id !== undefined)) {
+      state.setUsuario(sesion);
+      if (sesion.activeStudentId) {
+        state.usuario.activeStudentId = sesion.activeStudentId;
+      }
+    } else {
+      window.location.replace('login.html');
+      return;
+    }
+  } catch (err) {
+    console.warn('Error validando sesión activa en Redis:', err);
+    window.location.replace('login.html');
+    return;
+  }
+
   if (state.usuario) {
     ui.renderUsuarioHeader(state.usuario);
   }
@@ -231,9 +249,9 @@ export function cargarVistaRegistro() {
 }
 
 export function cambiarVista(viewId) {
-  // Proteger vista admin, metricas y auditoría exclusiva para Administrador
-  if ((viewId === 'admin' || viewId === 'metricas' || viewId === 'auditoria') && (!state.usuario || state.usuario.rol !== 'ADMINISTRADOR')) {
-    ui.showToast('Acceso restringido: Esta vista es exclusiva para el rol de Administrador.', 'error');
+  // Proteger vista admin, metricas y auditoría exclusiva para Administrador y Superadmin
+  if ((viewId === 'admin' || viewId === 'metricas' || viewId === 'auditoria') && (!state.usuario || (state.usuario.rol !== 'ADMINISTRADOR' && state.usuario.rol !== 'SUPERADMIN'))) {
+    ui.showToast('Acceso restringido: Esta vista es exclusiva para Administradores y Superadministradores.', 'error');
     viewId = 'asesor';
   }
 
@@ -255,6 +273,7 @@ export function cambiarVista(viewId) {
     cargarCursosAdmin();
     cargarEstudiantesAdmin();
     cargarUmbralAdmin();
+    cargarUsuariosAdmin();
   }
   if (viewId === 'metricas') {
     cargarEstadisticasAdmin();
@@ -724,7 +743,7 @@ async function cargarEstadisticasAdmin() {
 
 async function cargarEstadisticas() {
   try {
-    const isAdmin = state.usuario && state.usuario.rol === 'ADMINISTRADOR';
+    const isAdmin = state.esAdmin();
     const estudianteId = (state.usuario && state.usuario.rol === 'ESTUDIANTE')
       ? (state.usuario.id || (state.estudianteActivo ? state.estudianteActivo.id : null))
       : null;
@@ -971,7 +990,7 @@ function initAuthModal() {
         if (modal) modal.style.display = 'none';
         ui.showToast(`Bienvenido(a). Rol activo: ${authData.rol}`, 'success');
 
-        if (authData.rol === 'ADMINISTRADOR') {
+        if (authData.rol === 'ADMINISTRADOR' || authData.rol === 'SUPERADMIN') {
           cambiarVista('admin');
         } else {
           actualizarHistorialesEstudiante();
@@ -1124,18 +1143,20 @@ function initAdminPanel() {
   }
 
   // ==========================================================
-  // PESTAÑAS SUB-PANEL ADMIN (CURSOS, ESTUDIANTES, CONFIGURACIÓN UMBRAL)
+  // PESTAÑAS SUB-PANEL ADMIN (CURSOS, ESTUDIANTES, CONFIGURACIÓN UMBRAL, USUARIOS)
   // ==========================================================
   const subtabCourses = document.getElementById('subtab-admin-courses');
   const subtabStudents = document.getElementById('subtab-admin-students');
   const subtabConfig = document.getElementById('subtab-admin-config');
+  const subtabUsers = document.getElementById('subtab-admin-users');
   const paneCourses = document.getElementById('admin-pane-courses');
   const paneStudents = document.getElementById('admin-pane-students');
   const paneConfig = document.getElementById('admin-pane-config');
+  const paneUsers = document.getElementById('admin-pane-users');
 
   const deactivateAllSubtabs = () => {
-    [subtabCourses, subtabStudents, subtabConfig].forEach(t => t && t.classList.remove('active'));
-    [paneCourses, paneStudents, paneConfig].forEach(p => p && (p.style.display = 'none'));
+    [subtabCourses, subtabStudents, subtabConfig, subtabUsers].forEach(t => t && t.classList.remove('active'));
+    [paneCourses, paneStudents, paneConfig, paneUsers].forEach(p => p && (p.style.display = 'none'));
   };
 
   if (subtabCourses) {
@@ -1162,6 +1183,250 @@ function initAdminPanel() {
       cargarUmbralAdmin();
     });
   }
+  if (subtabUsers) {
+    subtabUsers.addEventListener('click', () => {
+      deactivateAllSubtabs();
+      subtabUsers.classList.add('active');
+      if (paneUsers) paneUsers.style.display = 'block';
+      cargarUsuariosAdmin();
+    });
+  }
+
+  // Eventos de Gestión de Usuarios y Roles (Superadmin & Administrador)
+  const btnOpenNewUser = document.getElementById('btn-open-new-user');
+  if (btnOpenNewUser) {
+    btnOpenNewUser.addEventListener('click', async () => {
+      try {
+        const roles = await api.getRolesPermitidos();
+        ui.openModalCrearUsuario(roles);
+      } catch (e) {
+        ui.openModalCrearUsuario(state.esSuperAdmin() ? ['ADMINISTRADOR', 'DOCENTE', 'ESTUDIANTE'] : ['DOCENTE', 'ESTUDIANTE']);
+      }
+    });
+  }
+
+  const btnCloseUserModal = document.getElementById('btn-close-user-modal');
+  const btnCancelUserModal = document.getElementById('btn-cancel-user-modal');
+  if (btnCloseUserModal) btnCloseUserModal.addEventListener('click', () => ui.closeModalCrearUsuario());
+  if (btnCancelUserModal) btnCancelUserModal.addEventListener('click', () => ui.closeModalCrearUsuario());
+  // Selector de Rol dinámico en Crear Usuario
+  const selectCreateRol = document.getElementById('user-create-rol');
+  if (selectCreateRol) {
+    selectCreateRol.addEventListener('change', () => {
+      ui.actualizarCamposCrearUsuarioPorRol(selectCreateRol.value);
+    });
+  }
+
+  // Cierre de modales de usuario con backdrop click
+  const userCreateModal = document.getElementById('user-create-modal');
+  if (userCreateModal) {
+    userCreateModal.addEventListener('click', (e) => {
+      if (e.target === userCreateModal) ui.closeModalCrearUsuario();
+    });
+  }
+
+  const userPwdModal = document.getElementById('user-password-modal');
+  if (userPwdModal) {
+    userPwdModal.addEventListener('click', (e) => {
+      if (e.target === userPwdModal) ui.closeModalPassword();
+    });
+  }
+
+  // Tecla Escape para cerrar modales de usuario
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (userCreateModal && userCreateModal.style.display === 'flex') {
+        ui.closeModalCrearUsuario();
+      }
+      if (userPwdModal && userPwdModal.style.display === 'flex') {
+        ui.closeModalPassword();
+      }
+    }
+  });
+
+  // Ojo para mostrar / ocultar contraseñas en los modales de administración
+  document.querySelectorAll('.modal-input-pwd-box .btn-toggle-pwd').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const targetId = btn.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      if (!input) return;
+      const isPwd = input.type === 'password';
+      input.type = isPwd ? 'text' : 'password';
+      btn.classList.toggle('active', isPwd);
+      btn.title = isPwd ? 'Ocultar contraseña' : 'Ver contraseña';
+    });
+  });
+
+  // Validación reactiva en tiempo real para cambio de contraseña
+  const pwdInputNew = document.getElementById('pwd-input-new');
+  const pwdInputConfirm = document.getElementById('pwd-input-confirm');
+  const pwdMatchHint = document.getElementById('pwd-match-hint');
+
+  function actualizarIndicadorPassword() {
+    if (!pwdMatchHint) return;
+    const valNew = pwdInputNew ? pwdInputNew.value : '';
+    const valConf = pwdInputConfirm ? pwdInputConfirm.value : '';
+
+    if (!valNew && !valConf) {
+      pwdMatchHint.className = 'pwd-feedback-hint neutral';
+      pwdMatchHint.innerHTML = '<span>Ingresa al menos 6 caracteres</span>';
+      return;
+    }
+
+    if (valNew.length < 6) {
+      pwdMatchHint.className = 'pwd-feedback-hint invalid';
+      pwdMatchHint.innerHTML = `<span>Mínimo 6 caracteres (${valNew.length}/6)</span>`;
+      return;
+    }
+
+    if (!valConf) {
+      pwdMatchHint.className = 'pwd-feedback-hint neutral';
+      pwdMatchHint.innerHTML = '<span>Escribe la confirmación de la contraseña</span>';
+      return;
+    }
+
+    if (valNew === valConf) {
+      pwdMatchHint.className = 'pwd-feedback-hint valid';
+      pwdMatchHint.innerHTML = '<span>✓ Las contraseñas coinciden perfectamente</span>';
+    } else {
+      pwdMatchHint.className = 'pwd-feedback-hint invalid';
+      pwdMatchHint.innerHTML = '<span>✕ Las contraseñas no coinciden aún</span>';
+    }
+  }
+
+  if (pwdInputNew) pwdInputNew.addEventListener('input', actualizarIndicadorPassword);
+  if (pwdInputConfirm) pwdInputConfirm.addEventListener('input', actualizarIndicadorPassword);
+
+  const formCreateUser = document.getElementById('user-create-form');
+  if (formCreateUser) {
+    formCreateUser.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nombreCompleto = document.getElementById('user-create-name').value.trim();
+      const correoElectronico = document.getElementById('user-create-email').value.trim();
+      const rol = document.getElementById('user-create-rol').value;
+      const password = document.getElementById('user-create-password').value;
+      const areaInteres = document.getElementById('user-create-area').value.trim();
+      const nivelExperiencia = document.getElementById('user-create-nivel').value;
+      const departamentoFacultad = document.getElementById('user-create-facultad').value.trim();
+
+      if (!nombreCompleto) {
+        ui.showToast('Por favor ingresa el nombre completo del usuario', 'warning');
+        document.getElementById('user-create-name').focus();
+        return;
+      }
+
+      if (!correoElectronico || !correoElectronico.includes('@') || !correoElectronico.includes('.')) {
+        ui.showToast('Por favor ingresa un correo electrónico institucional válido', 'warning');
+        document.getElementById('user-create-email').focus();
+        return;
+      }
+
+      if (!password || password.length < 6) {
+        ui.showToast('La contraseña debe tener un mínimo de 6 caracteres', 'warning');
+        document.getElementById('user-create-password').focus();
+        return;
+      }
+
+      const saveBtn = document.getElementById('btn-save-user');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>Guardando usuario...</span>';
+      }
+
+      try {
+        await api.crearUsuario({
+          nombreCompleto,
+          correoElectronico,
+          password,
+          rol,
+          areaInteres,
+          nivelExperiencia,
+          departamentoFacultad
+        });
+        ui.closeModalCrearUsuario();
+        ui.showToast(`Usuario ${correoElectronico} (${rol}) creado exitosamente`, 'success');
+        await cargarUsuariosAdmin();
+      } catch (err) {
+        ui.showToast('Error al crear usuario: ' + err.message, 'error');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>Crear Usuario</span><span class="btn-arrow">➔</span>';
+        }
+      }
+    });
+  }
+
+  const btnRefreshUsers = document.getElementById('btn-admin-refresh-users');
+  if (btnRefreshUsers) {
+    btnRefreshUsers.addEventListener('click', () => {
+      cargarUsuariosAdmin();
+      ui.showToast('Lista de usuarios actualizada', 'info');
+    });
+  }
+
+  const userFilterInput = document.getElementById('admin-user-filter');
+  if (userFilterInput) {
+    userFilterInput.addEventListener('input', () => {
+      aplicarFiltrosUsuariosAdmin();
+    });
+  }
+
+  const userRoleFilterSelect = document.getElementById('admin-user-role-filter');
+  if (userRoleFilterSelect) {
+    userRoleFilterSelect.addEventListener('change', () => {
+      aplicarFiltrosUsuariosAdmin();
+    });
+  }
+
+  // Modales de Contraseña
+  const btnClosePwdModal = document.getElementById('btn-close-pwd-modal');
+  const btnCancelPwdModal = document.getElementById('btn-cancel-pwd-modal');
+  if (btnClosePwdModal) btnClosePwdModal.addEventListener('click', () => ui.closeModalPassword());
+  if (btnCancelPwdModal) btnCancelPwdModal.addEventListener('click', () => ui.closeModalPassword());
+
+  const formChangePwd = document.getElementById('user-password-form');
+  if (formChangePwd) {
+    formChangePwd.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('pwd-modal-user-id').value;
+      const pwdNew = document.getElementById('pwd-input-new').value;
+      const pwdConfirm = document.getElementById('pwd-input-confirm').value;
+
+      if (!pwdNew || pwdNew.length < 6) {
+        ui.showToast('La nueva contraseña debe tener al menos 6 caracteres.', 'error');
+        document.getElementById('pwd-input-new').focus();
+        return;
+      }
+
+      if (pwdNew !== pwdConfirm) {
+        ui.showToast('Las contraseñas no coinciden. Por favor verifícalas.', 'error');
+        document.getElementById('pwd-input-confirm').focus();
+        return;
+      }
+
+      const saveBtn = document.getElementById('btn-save-pwd');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>Actualizando contraseña...</span>';
+      }
+
+      try {
+        await api.cambiarPasswordUsuario(userId, pwdNew);
+        ui.closeModalPassword();
+        ui.showToast('Contraseña de usuario actualizada exitosamente', 'success');
+        await cargarUsuariosAdmin();
+      } catch (err) {
+        ui.showToast('Error al actualizar contraseña: ' + err.message, 'error');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>Guardar Contraseña</span><span class="btn-arrow">➔</span>';
+        }
+      }
+    });
+  }
 
   // Eventos para filtros y refresco de estadísticas globales y auditoría
   const btnRefreshStats = document.getElementById('btn-admin-refresh-stats');
@@ -1177,13 +1442,6 @@ function initAdminPanel() {
     btnRefreshAudit.addEventListener('click', () => {
       cargarEstadisticasAdmin();
       ui.showToast('Bitácora de auditoría actualizada', 'info');
-    });
-  }
-
-  const btnGotoAuditoria = document.getElementById('btn-goto-auditoria');
-  if (btnGotoAuditoria) {
-    btnGotoAuditoria.addEventListener('click', () => {
-      cambiarVista('auditoria');
     });
   }
 
@@ -1316,6 +1574,64 @@ async function toggleActivoCurso(curso) {
   } catch (err) {
     ui.showToast('Error al modificar estado del curso: ' + err.message, 'error');
   }
+}
+
+// ==========================================================================
+// 11b. GESTIÓN DE USUARIOS Y ROLES (SUPERADMIN & ADMINISTRADOR)
+// ==========================================================================
+let cacheUsuariosAdmin = [];
+
+export async function cargarUsuariosAdmin() {
+  try {
+    const usuarios = await api.getUsuarios();
+    cacheUsuariosAdmin = usuarios || [];
+    aplicarFiltrosUsuariosAdmin();
+  } catch (err) {
+    console.error('Error al cargar usuarios:', err);
+    ui.showToast('Error al cargar usuarios: ' + err.message, 'error');
+  }
+}
+
+export function aplicarFiltrosUsuariosAdmin() {
+  const filterInput = document.getElementById('admin-user-filter');
+  const roleSelect = document.getElementById('admin-user-role-filter');
+
+  const q = filterInput ? filterInput.value.toLowerCase().trim() : '';
+  const rolFilter = roleSelect ? roleSelect.value : 'todos';
+
+  let filtrados = cacheUsuariosAdmin || [];
+
+  // Si no es Superadmin (es decir, es Administrador), solo se le enlisten Docentes y Estudiantes
+  if (!state.esSuperAdmin()) {
+    filtrados = filtrados.filter(u => {
+      const r = (u.rol || '').toUpperCase();
+      return r === 'DOCENTE' || r === 'ESTUDIANTE';
+    });
+  }
+
+  if (rolFilter !== 'todos') {
+    filtrados = filtrados.filter(u => (u.rol || '').toUpperCase() === rolFilter.toUpperCase());
+  }
+
+  if (q) {
+    filtrados = filtrados.filter(u =>
+      (u.nombreCompleto && u.nombreCompleto.toLowerCase().includes(q)) ||
+      (u.correoElectronico && u.correoElectronico.toLowerCase().includes(q)) ||
+      (u.rol && u.rol.toLowerCase().includes(q)) ||
+      (u.areaInteres && u.areaInteres.toLowerCase().includes(q)) ||
+      (u.departamentoFacultad && u.departamentoFacultad.toLowerCase().includes(q))
+    );
+  }
+
+  const currentRole = state.usuario ? (state.usuario.rol || '').toUpperCase() : 'ADMINISTRADOR';
+
+  ui.renderUsuariosAdmin(filtrados, (usuario) => {
+    if ((usuario.rol === 'SUPERADMIN' || usuario.rol === 'ADMINISTRADOR') && !state.esSuperAdmin()) {
+      ui.showToast('Un Administrador solo puede configurar contraseñas de Docentes y Estudiantes.', 'error');
+      return;
+    }
+    ui.openModalPassword(usuario);
+  }, currentRole);
 }
 
 // ==========================================================================

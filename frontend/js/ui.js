@@ -75,7 +75,10 @@ export const ui = {
 
     const rol = (estudiante.rol || 'ESTUDIANTE').toUpperCase();
     if (badgeEl) {
-      if (rol === 'ADMINISTRADOR') {
+      if (rol === 'SUPERADMIN') {
+        badgeEl.textContent = 'Superadmin';
+        badgeEl.className = 'user-role-badge role-badge-superadmin';
+      } else if (rol === 'ADMINISTRADOR') {
         badgeEl.textContent = 'Administrador';
         badgeEl.className = 'user-role-badge role-badge-admin';
       } else if (rol === 'DOCENTE') {
@@ -87,7 +90,6 @@ export const ui = {
       }
     }
 
-    
     // Widgets del perfil en barra lateral / Bento
     if (widgetLevelEl) widgetLevelEl.textContent = estudiante.nivelExperiencia || estudiante.nivel || 'Principiante';
     if (widgetAreaEl) widgetAreaEl.textContent = estudiante.areaInteres || estudiante.area || 'Tecnología';
@@ -100,9 +102,14 @@ export const ui = {
     const navMetricas = document.getElementById('nav-metricas-item');
     const navAudit = document.getElementById('nav-audit-item');
     const navDocente = document.getElementById('nav-docente-item');
-    const esAdmin = usuario && usuario.rol === 'ADMINISTRADOR';
+    const rol = usuario ? (usuario.rol || '').toUpperCase() : '';
+    const esAdmin = rol === 'ADMINISTRADOR' || rol === 'SUPERADMIN';
     if (navAdmin) {
       navAdmin.style.display = esAdmin ? 'flex' : 'none';
+      const label = navAdmin.querySelector('.nav-label');
+      if (label) {
+        label.textContent = rol === 'SUPERADMIN' ? 'Panel Superadmin' : 'Panel Administrador';
+      }
     }
     if (navMetricas) {
       navMetricas.style.display = esAdmin ? 'flex' : 'none';
@@ -111,7 +118,7 @@ export const ui = {
       navAudit.style.display = esAdmin ? 'flex' : 'none';
     }
     if (navDocente) {
-      navDocente.style.display = (usuario && usuario.rol === 'DOCENTE') ? 'flex' : 'none';
+      navDocente.style.display = rol === 'DOCENTE' ? 'flex' : 'none';
     }
   },
 
@@ -2545,11 +2552,11 @@ export const ui = {
             <table class="docente-roster-table">
               <thead>
                 <tr>
-                  <th style="width: 32%;">Estudiante</th>
-                  <th style="width: 29%;">Correo Institucional</th>
-                  <th style="width: 14%;">Nivel</th>
-                  <th style="width: 13%;">Fecha</th>
-                  <th style="width: 12%; text-align: right;">Estado</th>
+                  <th>Estudiante</th>
+                  <th>Correo Institucional</th>
+                  <th>Nivel</th>
+                  <th>Fecha Matrícula</th>
+                  <th style="text-align: right;">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -2586,7 +2593,7 @@ export const ui = {
                         <span class="docente-date-badge">${fecha}</span>
                       </td>
                       <td style="text-align: right;">
-                        <span class="status-badge status-badge-active" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                        <span class="status-badge status-badge-active" style="font-size: 0.72rem; padding: 0.2rem 0.65rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;">
                           <span class="status-dot"></span> ${this.escapeHtml(estado)}
                         </span>
                       </td>
@@ -2950,5 +2957,276 @@ export const ui = {
         </tr>
       `;
     }).join('');
+  },
+
+  // ==========================================================
+  // GESTIÓN DE USUARIOS Y ROLES (SUPERADMIN & ADMINISTRADOR)
+  // ==========================================================
+  renderUsuariosAdmin(usuarios, onCambiarPassword, currentRole = 'ADMINISTRADOR') {
+    const tbody = document.getElementById('admin-users-tbody');
+    const totalEl = document.getElementById('users-count-total');
+    const superEl = document.getElementById('users-count-superadmin');
+    const adminEl = document.getElementById('users-count-admin');
+    const docEl = document.getElementById('users-count-docente');
+    const estEl = document.getElementById('users-count-estudiante');
+    const subtitleEl = document.getElementById('admin-users-subtitle');
+    const badgeTagEl = document.getElementById('admin-users-badge-tag');
+
+    // Adaptar métricas y filtros según rol
+    const isSuper = currentRole === 'SUPERADMIN';
+    const superCard = superEl ? superEl.closest('.admin-summary-card') : null;
+    const adminCard = adminEl ? adminEl.closest('.admin-summary-card') : null;
+
+    if (superCard) superCard.style.display = isSuper ? '' : 'none';
+    if (adminCard) adminCard.style.display = isSuper ? '' : 'none';
+
+    const roleFilterSelect = document.getElementById('admin-user-role-filter');
+    if (roleFilterSelect) {
+      const optSuper = roleFilterSelect.querySelector('option[value="SUPERADMIN"]');
+      const optAdmin = roleFilterSelect.querySelector('option[value="ADMINISTRADOR"]');
+      if (optSuper) optSuper.style.display = isSuper ? '' : 'none';
+      if (optAdmin) optAdmin.style.display = isSuper ? '' : 'none';
+      if (!isSuper && (roleFilterSelect.value === 'SUPERADMIN' || roleFilterSelect.value === 'ADMINISTRADOR')) {
+        roleFilterSelect.value = 'todos';
+      }
+    }
+
+    if (subtitleEl && badgeTagEl) {
+      if (isSuper) {
+        badgeTagEl.textContent = 'Permisos Superadmin Totales';
+        badgeTagEl.style.background = 'rgba(124, 58, 237, 0.15)';
+        badgeTagEl.style.color = '#7C3AED';
+        subtitleEl.innerHTML = '<strong>Permisos totales de Superadmin:</strong> Puedes crear Administradores, Docentes y Estudiantes, y configurar las contraseñas de todos los usuarios del sistema.';
+      } else {
+        badgeTagEl.textContent = 'Gestión Docentes y Estudiantes';
+        badgeTagEl.style.background = 'rgba(37, 99, 235, 0.12)';
+        badgeTagEl.style.color = '#2563EB';
+        subtitleEl.innerHTML = '<strong>Gestión de Usuarios Académicos:</strong> Vista filtrada de Docentes y Estudiantes. Puedes registrar nuevos perfiles académicos y configurar sus contraseñas.';
+      }
+    }
+
+    // Al Administrador solo se le enlisten usuarios (Estudiantes) y Docentes, nunca Superadmins ni otros Administradores
+    const usuariosVisibles = isSuper
+      ? usuarios
+      : usuarios.filter(u => {
+          const r = (u.rol || '').toUpperCase();
+          return r === 'DOCENTE' || r === 'ESTUDIANTE';
+        });
+
+    if (totalEl) totalEl.textContent = usuariosVisibles.length;
+    if (superEl) superEl.textContent = usuarios.filter(u => (u.rol || '').toUpperCase() === 'SUPERADMIN').length;
+    if (adminEl) adminEl.textContent = usuarios.filter(u => (u.rol || '').toUpperCase() === 'ADMINISTRADOR').length;
+    if (docEl) docEl.textContent = usuariosVisibles.filter(u => (u.rol || '').toUpperCase() === 'DOCENTE').length;
+    if (estEl) estEl.textContent = usuariosVisibles.filter(u => (u.rol || '').toUpperCase() === 'ESTUDIANTE').length;
+
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (usuariosVisibles.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+            No hay usuarios registrados con los criterios seleccionados.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    usuariosVisibles.forEach(u => {
+      const tr = document.createElement('tr');
+      const initials = (u.nombreCompleto || 'U').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      const fecha = u.fechaCreacion ? new Date(u.fechaCreacion).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Registrado';
+
+      let roleBadgeHtml = '';
+      const r = (u.rol || '').toUpperCase();
+      if (r === 'SUPERADMIN') {
+        roleBadgeHtml = `<span class="user-role-badge role-badge-superadmin">★ Superadmin</span>`;
+      } else if (r === 'ADMINISTRADOR') {
+        roleBadgeHtml = `<span class="user-role-badge role-badge-admin">Administrador</span>`;
+      } else if (r === 'DOCENTE') {
+        roleBadgeHtml = `<span class="user-role-badge role-badge-docente">Docente</span>`;
+      } else {
+        roleBadgeHtml = `<span class="user-role-badge role-badge-student">Estudiante</span>`;
+      }
+
+      const areaText = u.areaInteres || u.departamentoFacultad || u.nivelExperiencia || 'General';
+
+      tr.innerHTML = `
+        <td style="font-weight: 700; color: var(--text-muted); font-size: 0.82rem;">#${u.id}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: ${r === 'SUPERADMIN' ? '#7C3AED' : (r === 'ADMINISTRADOR' ? '#2563EB' : (r === 'DOCENTE' ? '#4F46E5' : '#D7F338'))}; color: ${r === 'ESTUDIANTE' ? '#18191E' : '#FFFFFF'}; font-weight: 800; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              ${initials}
+            </div>
+            <div>
+              <div style="font-weight: 700; color: #18191E;">${u.nombreCompleto}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span style="font-family: monospace; font-size: 0.84rem; color: #475569;">${u.correoElectronico}</span>
+        </td>
+        <td>${roleBadgeHtml}</td>
+        <td><span style="font-size: 0.84rem; font-weight: 600; color: #334155;">${areaText}</span></td>
+        <td style="font-size: 0.8rem; color: var(--text-muted);">${fecha}</td>
+        <td style="text-align: right;">
+          <button type="button" class="btn-table-action btn-action-change-pwd" data-id="${u.id}" style="background: #0F172A; color: #FFFFFF; padding: 0.4rem 0.85rem; border-radius: 8px; font-weight: 700; font-size: 0.78rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.2s;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2l-2 2m-1.5 1.5L14 9l-3 3-4-1-4 4 4 4 1 4 4-4-1-4 3.5-3.5L20 4l2-2z"></path>
+            </svg>
+            <span>Contraseña</span>
+          </button>
+        </td>
+      `;
+
+      const btnPwd = tr.querySelector('.btn-action-change-pwd');
+      if (btnPwd && onCambiarPassword) {
+        btnPwd.addEventListener('click', () => onCambiarPassword(u));
+      }
+
+      tbody.appendChild(tr);
+    });
+  },
+
+  openModalCrearUsuario(rolesPermitidos = ['DOCENTE', 'ESTUDIANTE']) {
+    const modal = document.getElementById('user-create-modal');
+    const selectRol = document.getElementById('user-create-rol');
+    const form = document.getElementById('user-create-form');
+    if (form) form.reset();
+
+    // Resetear visibilidad de contraseña
+    const pwdInput = document.getElementById('user-create-password');
+    if (pwdInput) pwdInput.type = 'password';
+
+    if (selectRol) {
+      selectRol.innerHTML = '';
+      const labels = {
+        'SUPERADMIN': 'Super Administrador (Control Total Institucional)',
+        'ADMINISTRADOR': 'Administrador (Gestión Curricular y Cursos)',
+        'DOCENTE': 'Docente (Cátedra y Seguimiento)',
+        'ESTUDIANTE': 'Estudiante (Consultas RAG y Matrícula)'
+      };
+      rolesPermitidos.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = labels[r] || r;
+        selectRol.appendChild(opt);
+      });
+
+      this.actualizarCamposCrearUsuarioPorRol(selectRol.value);
+    }
+
+    if (modal) modal.style.display = 'flex';
+    const nameInput = document.getElementById('user-create-name');
+    if (nameInput) setTimeout(() => nameInput.focus(), 80);
+  },
+
+  actualizarCamposCrearUsuarioPorRol(rol) {
+    const r = (rol || '').toUpperCase();
+    const labelArea = document.getElementById('label-user-create-area');
+    const inputArea = document.getElementById('user-create-area');
+    const selectNivel = document.getElementById('user-create-nivel');
+    const inputFacultad = document.getElementById('user-create-facultad');
+
+    if (!selectNivel) return;
+
+    if (r === 'DOCENTE') {
+      if (labelArea) labelArea.textContent = 'Área de especialidad docente';
+      if (inputArea) inputArea.placeholder = 'Ej: Inteligencia Artificial, Cloud, Redes';
+      selectNivel.innerHTML = `
+        <option value="Docente Titular">Docente Titular</option>
+        <option value="Docente Asistente">Docente Asistente</option>
+        <option value="Docente Catedrático">Docente Catedrático</option>
+      `;
+      if (inputFacultad && !inputFacultad.value) inputFacultad.value = 'Facultad de Ingeniería';
+    } else if (r === 'ADMINISTRADOR') {
+      if (labelArea) labelArea.textContent = 'Área de gestión académica';
+      if (inputArea) inputArea.placeholder = 'Ej: Coordinación Curricular, Vicerrectoría';
+      selectNivel.innerHTML = `
+        <option value="Coordinador">Coordinador Académico</option>
+        <option value="Director de Programa">Director de Programa</option>
+        <option value="Administrador General">Administrador General</option>
+      `;
+      if (inputFacultad && !inputFacultad.value) inputFacultad.value = 'Dirección Académica';
+    } else if (r === 'SUPERADMIN') {
+      if (labelArea) labelArea.textContent = 'Área de gobierno institucional';
+      if (inputArea) inputArea.placeholder = 'Ej: Gobierno Institucional y Superadministración';
+      selectNivel.innerHTML = `
+        <option value="Superadmin">Super Administrador</option>
+      `;
+      if (inputFacultad) inputFacultad.value = 'Rectoría';
+    } else {
+      // ESTUDIANTE
+      if (labelArea) labelArea.textContent = 'Área de interés académico';
+      if (inputArea) inputArea.placeholder = 'Ej: Desarrollo Web, Ciberseguridad, Datos';
+      selectNivel.innerHTML = `
+        <option value="Principiante">Principiante</option>
+        <option value="Intermedio" selected>Intermedio</option>
+        <option value="Avanzado">Avanzado</option>
+      `;
+      if (inputFacultad) inputFacultad.value = 'Pregrado - Ingeniería de Sistemas';
+    }
+  },
+
+  closeModalCrearUsuario() {
+    const modal = document.getElementById('user-create-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  openModalPassword(usuario) {
+    const modal = document.getElementById('user-password-modal');
+    const form = document.getElementById('user-password-form');
+    const inputId = document.getElementById('pwd-modal-user-id');
+    const nameEl = document.getElementById('pwd-modal-user-name');
+    const emailEl = document.getElementById('pwd-modal-user-email');
+    const avatarEl = document.getElementById('pwd-modal-avatar');
+    const roleWrap = document.getElementById('pwd-modal-user-role-wrap');
+    const hintEl = document.getElementById('pwd-match-hint');
+
+    if (form) form.reset();
+
+    // Restablecer campos password a tipo 'password'
+    const newPwd = document.getElementById('pwd-input-new');
+    const confPwd = document.getElementById('pwd-input-confirm');
+    if (newPwd) newPwd.type = 'password';
+    if (confPwd) confPwd.type = 'password';
+
+    if (hintEl) {
+      hintEl.className = 'pwd-feedback-hint neutral';
+      hintEl.innerHTML = '<span>Ingresa al menos 6 caracteres</span>';
+    }
+
+    if (inputId) inputId.value = usuario.id;
+    if (nameEl) nameEl.textContent = usuario.nombreCompleto || 'Usuario';
+    if (emailEl) emailEl.textContent = usuario.correoElectronico || '';
+
+    // Generar iniciales del avatar
+    if (avatarEl) {
+      const parts = (usuario.nombreCompleto || 'U').trim().split(/\s+/);
+      const initials = parts.length > 1 ? (parts[0][0] + parts[1][0]).toUpperCase() : parts[0].slice(0, 2).toUpperCase();
+      avatarEl.textContent = initials;
+    }
+
+    if (roleWrap) {
+      const r = (usuario.rol || '').toUpperCase();
+      if (r === 'SUPERADMIN') {
+        roleWrap.innerHTML = `<span class="user-role-badge role-badge-superadmin">★ Superadmin</span>`;
+      } else if (r === 'ADMINISTRADOR') {
+        roleWrap.innerHTML = `<span class="user-role-badge role-badge-admin">Administrador</span>`;
+      } else if (r === 'DOCENTE') {
+        roleWrap.innerHTML = `<span class="user-role-badge role-badge-docente">Docente</span>`;
+      } else {
+        roleWrap.innerHTML = `<span class="user-role-badge role-badge-student">Estudiante</span>`;
+      }
+    }
+
+    if (modal) modal.style.display = 'flex';
+    if (newPwd) setTimeout(() => newPwd.focus(), 80);
+  },
+
+  closeModalPassword() {
+    const modal = document.getElementById('user-password-modal');
+    if (modal) modal.style.display = 'none';
   }
 };
