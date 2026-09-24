@@ -15,6 +15,7 @@ export const state = {
   cursosDocente: [],
   docenteFeedback: [],
   docenteEstadisticas: null,
+  estudiantesDocente: [],
   inscripcionesCursoIds: new Set(),
 
   initUsuario() {
@@ -306,6 +307,10 @@ export const state = {
 
   setDocenteEstadisticas(stats) {
     this.docenteEstadisticas = stats;
+  },
+
+  setEstudiantesDocente(estudiantes) {
+    this.estudiantesDocente = estudiantes || [];
   }
 };
 

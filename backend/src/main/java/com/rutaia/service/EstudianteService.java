@@ -49,15 +49,6 @@ public class EstudianteService {
         this.auditoriaService = auditoriaService;
     }
 
-    private final AuditoriaService auditoriaService;
-
-    public EstudianteService(EstudianteRepository estudianteRepository, ConsultaRepository consultaRepository, AuditoriaService auditoriaService) {
-        this.estudianteRepository = estudianteRepository;
-        this.consultaRepository = consultaRepository;
-        this.auditoriaService = auditoriaService;
-
-    }
-
     @Transactional
     public EstudianteResponseDTO registrar(EstudianteRegistroDTO dto) {
         if (estudianteRepository.existsByCorreoElectronico(dto.getCorreoElectronico().trim().toLowerCase())) {

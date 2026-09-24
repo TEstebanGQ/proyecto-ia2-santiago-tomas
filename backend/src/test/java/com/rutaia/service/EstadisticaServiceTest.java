@@ -131,6 +131,7 @@ class EstadisticaServiceTest {
         assertEquals(6, adminDto.getTotalUsuarios()); // 5 estudiantes + 1 admin
         assertEquals(10, adminDto.getTotalConsultas());
         assertEquals(4.7, adminDto.getPromedioCalificaciones());
+        assertNotNull(adminDto.getTopCursosRecomendados());
         assertNotNull(adminDto.getAccionesPorUsuario());
         assertNotNull(adminDto.getAccionesPorDia());
         assertNotNull(adminDto.getAuditoria());

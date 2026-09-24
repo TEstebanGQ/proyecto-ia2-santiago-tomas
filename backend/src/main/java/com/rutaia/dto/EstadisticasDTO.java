@@ -1,5 +1,8 @@
 package com.rutaia.dto;
 
+import java.util.List;
+import java.util.ArrayList;
+
 public class EstadisticasDTO {
 
     private long totalConsultas;
@@ -8,6 +11,7 @@ public class EstadisticasDTO {
     private long consultasError;
     private Double promedioCalificaciones;
     private String cursoMasRecomendado;
+    private List<String> topCursosRecomendados = new ArrayList<>();
 
     public EstadisticasDTO() {
     }
@@ -67,5 +71,13 @@ public class EstadisticasDTO {
 
     public void setCursoMasRecomendado(String cursoMasRecomendado) {
         this.cursoMasRecomendado = cursoMasRecomendado;
+    }
+
+    public List<String> getTopCursosRecomendados() {
+        return topCursosRecomendados;
+    }
+
+    public void setTopCursosRecomendados(List<String> topCursosRecomendados) {
+        this.topCursosRecomendados = topCursosRecomendados;
     }
 }

@@ -3,15 +3,18 @@ package com.rutaia.controller;
 import com.rutaia.dto.EstudianteRegistroDTO;
 import com.rutaia.dto.EstudianteResponseDTO;
 import com.rutaia.dto.HistorialConsultaDTO;
+import com.rutaia.service.DocenteService;
 import com.rutaia.service.EstudianteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/estudiantes")
@@ -19,9 +22,19 @@ import java.util.List;
 public class EstudianteController {
 
     private final EstudianteService estudianteService;
+    private final DocenteService docenteService;
 
-    public EstudianteController(EstudianteService estudianteService) {
+    public EstudianteController(EstudianteService estudianteService, DocenteService docenteService) {
         this.estudianteService = estudianteService;
+        this.docenteService = docenteService;
+    }
+
+    private boolean isDocente(Authentication auth) {
+        if (auth == null || auth.getAuthorities() == null) return false;
+        return auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equalsIgnoreCase("ROLE_DOCENTE") ||
+                a.getAuthority().equalsIgnoreCase("DOCENTE")
+        );
     }
 
     @PostMapping
@@ -33,25 +46,58 @@ public class EstudianteController {
 
     @GetMapping
     @Operation(summary = "Listar todos los estudiantes registrados (RF 02)")
-    public ResponseEntity<List<EstudianteResponseDTO>> listarTodos() {
+    public ResponseEntity<List<EstudianteResponseDTO>> listarTodos(Authentication authentication) {
+        if (isDocente(authentication)) {
+            String email = authentication.getName();
+            List<com.rutaia.dto.DocenteEstudianteDTO> docentesEst = docenteService.listarEstudiantesDocente(email);
+            List<EstudianteResponseDTO> resp = docentesEst.stream().map(d -> new EstudianteResponseDTO(
+                    d.getId(), d.getNombreCompleto(), d.getCorreoElectronico(), d.getNivelExperiencia(), d.getAreaInteres(), d.getFechaCreacion()
+            )).collect(Collectors.toList());
+            return ResponseEntity.ok(resp);
+        }
         return ResponseEntity.ok(estudianteService.listarTodos());
     }
 
     @GetMapping("/buscar")
     @Operation(summary = "Buscar estudiantes por nombre o correo (RF 02)")
-    public ResponseEntity<List<EstudianteResponseDTO>> buscarPorNombre(@RequestParam String query) {
+    public ResponseEntity<List<EstudianteResponseDTO>> buscarPorNombre(
+            @RequestParam String query,
+            Authentication authentication) {
+        if (isDocente(authentication)) {
+            String email = authentication.getName();
+            List<com.rutaia.dto.DocenteEstudianteDTO> docentesEst = docenteService.buscarEstudiantesDocente(email, query);
+            List<EstudianteResponseDTO> resp = docentesEst.stream().map(d -> new EstudianteResponseDTO(
+                    d.getId(), d.getNombreCompleto(), d.getCorreoElectronico(), d.getNivelExperiencia(), d.getAreaInteres(), d.getFechaCreacion()
+            )).collect(Collectors.toList());
+            return ResponseEntity.ok(resp);
+        }
         return ResponseEntity.ok(estudianteService.buscarPorNombre(query));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Consultar un estudiante por identificador (RF 02)")
-    public ResponseEntity<EstudianteResponseDTO> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<EstudianteResponseDTO> obtenerPorId(
+            @PathVariable Long id,
+            Authentication authentication) {
+        if (isDocente(authentication)) {
+            String email = authentication.getName();
+            com.rutaia.dto.DocenteEstudianteDTO d = docenteService.obtenerEstudianteDocente(email, id);
+            return ResponseEntity.ok(new EstudianteResponseDTO(
+                    d.getId(), d.getNombreCompleto(), d.getCorreoElectronico(), d.getNivelExperiencia(), d.getAreaInteres(), d.getFechaCreacion()
+            ));
+        }
         return ResponseEntity.ok(estudianteService.obtenerPorId(id));
     }
 
     @GetMapping("/{id}/historial")
     @Operation(summary = "Consultar el historial de consultas y recomendaciones de un estudiante (RF 02, RF 16)")
-    public ResponseEntity<List<HistorialConsultaDTO>> obtenerHistorial(@PathVariable Long id) {
+    public ResponseEntity<List<HistorialConsultaDTO>> obtenerHistorial(
+            @PathVariable Long id,
+            Authentication authentication) {
+        if (isDocente(authentication)) {
+            String email = authentication.getName();
+            return ResponseEntity.ok(docenteService.obtenerHistorialEstudianteDocente(email, id));
+        }
         return ResponseEntity.ok(estudianteService.obtenerHistorial(id));
     }
 

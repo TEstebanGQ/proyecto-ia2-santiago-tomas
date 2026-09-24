@@ -55,16 +55,21 @@ public class EstadisticaService {
                 promedio = Math.round(promedio * 100.0) / 100.0;
             }
 
+            List<String> topCursosList = new ArrayList<>();
             String cursoTop = "Ninguno aún";
             List<Object[]> topCursos = cursoRepository.findCursoMasRecomendadoPorEstudiante(estudianteId);
-            if (topCursos != null && !topCursos.isEmpty() && topCursos.get(0) != null) {
-                Object[] row = topCursos.get(0);
-                if (row.length > 0 && row[0] != null) {
-                    cursoTop = row[0].toString() + " (" + row[1] + " recomendaciones)";
+            if (topCursos != null && !topCursos.isEmpty()) {
+                for (Object[] row : topCursos) {
+                    if (row != null && row.length > 0 && row[0] != null) {
+                        topCursosList.add(row[0].toString() + " (" + row[1] + " recomendaciones)");
+                    }
+                }
+                if (!topCursosList.isEmpty()) {
+                    cursoTop = topCursosList.get(0);
                 }
             }
 
-            return new EstadisticasDTO(
+            EstadisticasDTO dto = new EstadisticasDTO(
                     total,
                     respondidas,
                     sinResultados,
@@ -72,6 +77,8 @@ public class EstadisticaService {
                     promedio,
                     cursoTop
             );
+            dto.setTopCursosRecomendados(topCursosList);
+            return dto;
         }
 
         long total = consultaRepository.count();
@@ -84,16 +91,21 @@ public class EstadisticaService {
             promedio = Math.round(promedio * 100.0) / 100.0;
         }
 
+        List<String> topCursosList = new ArrayList<>();
         String cursoTop = "Ninguno aún";
         List<Object[]> topCursos = cursoRepository.findCursoMasRecomendado();
-        if (topCursos != null && !topCursos.isEmpty() && topCursos.get(0) != null) {
-            Object[] row = topCursos.get(0);
-            if (row.length > 0 && row[0] != null) {
-                cursoTop = row[0].toString() + " (" + row[1] + " recomendaciones)";
+        if (topCursos != null && !topCursos.isEmpty()) {
+            for (Object[] row : topCursos) {
+                if (row != null && row.length > 0 && row[0] != null) {
+                    topCursosList.add(row[0].toString() + " (" + row[1] + " recomendaciones)");
+                }
+            }
+            if (!topCursosList.isEmpty()) {
+                cursoTop = topCursosList.get(0);
             }
         }
 
-        return new EstadisticasDTO(
+        EstadisticasDTO dto = new EstadisticasDTO(
                 total,
                 respondidas,
                 sinResultados,
@@ -101,6 +113,8 @@ public class EstadisticaService {
                 promedio,
                 cursoTop
         );
+        dto.setTopCursosRecomendados(topCursosList);
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -131,7 +145,7 @@ public class EstadisticaService {
         // 6. Acciones por día (Agrupación de actividad diaria)
         List<AccionDiaDTO> accionesPorDia = calcularAccionesPorDia(bitacora);
 
-        return new EstadisticasAdminDTO(
+        EstadisticasAdminDTO adminDto = new EstadisticasAdminDTO(
                 totalUsuarios,
                 usuariosActivos,
                 baseStats.getTotalConsultas(),
@@ -144,6 +158,8 @@ public class EstadisticaService {
                 accionesPorDia,
                 bitacora
         );
+        adminDto.setTopCursosRecomendados(baseStats.getTopCursosRecomendados());
+        return adminDto;
     }
 
     private List<AccionUsuarioDTO> calcularAccionesPorUsuario() {

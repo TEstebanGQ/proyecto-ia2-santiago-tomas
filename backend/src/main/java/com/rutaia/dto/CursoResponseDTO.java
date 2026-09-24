@@ -132,5 +132,4 @@ public class CursoResponseDTO {
     public void setTotalCalificaciones(Long totalCalificaciones) {
         this.totalCalificaciones = totalCalificaciones;
     }
-    }
 }

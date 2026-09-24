@@ -74,7 +74,7 @@ Antes de comenzar, asegúrate de tener instalado en tu equipo las siguientes her
 | Herramienta | Versión Recomendada | Comando de Comprobación | Propósito |
 | :--- | :--- | :--- | :--- |
 | **Git** | 2.x o superior | `git --version` | Clonar y versionar el código fuente |
-| **Java JDK** | **Java 21 LTS** | `java -version` | Requerido para compilar y ejecutar Spring Boot 3.4 |
+| **Java JDK** | **Java 17 LTS** | `java -version` | Requerido para compilar y ejecutar Spring Boot 3.4 |
 | **Docker & Docker Compose** | Docker Desktop 4.x+ | `docker --version` y `docker compose version` | Orquestar PostgreSQL, Qdrant, Redis y n8n |
 | **Node.js** | v18.x o superior | `node -v` | Servir el frontend y scripts de verificación |
 | **Cuenta OpenRouter** | Gratuita / Saldo | [openrouter.ai](https://openrouter.ai) | API Key para embeddings (`text-embedding-3-small`) y LLM |

@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import com.rutaia.dto.DocenteEstudianteDTO;
+import com.rutaia.dto.HistorialConsultaDTO;
 import com.rutaia.dto.InscripcionResponseDTO;
 import com.rutaia.entity.Estudiante;
 import com.rutaia.entity.Inscripcion;
@@ -34,19 +36,25 @@ public class DocenteService {
     private final FuenteRepository fuenteRepository;
     private final CalificacionRepository calificacionRepository;
     private final InscripcionRepository inscripcionRepository;
+    private final EstudianteRepository estudianteRepository;
+    private final EstudianteService estudianteService;
 
     public DocenteService(DocenteRepository docenteRepository,
                           CursoRepository cursoRepository,
                           CursoService cursoService,
                           FuenteRepository fuenteRepository,
                           CalificacionRepository calificacionRepository,
-                          InscripcionRepository inscripcionRepository) {
+                          InscripcionRepository inscripcionRepository,
+                          EstudianteRepository estudianteRepository,
+                          EstudianteService estudianteService) {
         this.docenteRepository = docenteRepository;
         this.cursoRepository = cursoRepository;
         this.cursoService = cursoService;
         this.fuenteRepository = fuenteRepository;
         this.calificacionRepository = calificacionRepository;
         this.inscripcionRepository = inscripcionRepository;
+        this.estudianteRepository = estudianteRepository;
+        this.estudianteService = estudianteService;
     }
 
     @Transactional
@@ -201,6 +209,73 @@ public class DocenteService {
                 promedio,
                 cursoTop,
                 totalCalificaciones
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocenteEstudianteDTO> listarEstudiantesDocente(String emailDocente) {
+        Docente docente = obtenerDocentePorEmail(emailDocente);
+        String categoria = docente.getAreaEspecialidad();
+        List<Estudiante> estudiantes = inscripcionRepository.findEstudiantesByCursoCategoria(categoria);
+        return estudiantes.stream()
+                .map(e -> mapToDocenteEstudianteDTO(e, categoria))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocenteEstudianteDTO> buscarEstudiantesDocente(String emailDocente, String query) {
+        Docente docente = obtenerDocentePorEmail(emailDocente);
+        String categoria = docente.getAreaEspecialidad();
+        String q = (query != null) ? query.trim() : "";
+        List<Estudiante> estudiantes = inscripcionRepository.buscarEstudiantesPorCursoCategoria(categoria, q);
+        return estudiantes.stream()
+                .map(e -> mapToDocenteEstudianteDTO(e, categoria))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public DocenteEstudianteDTO obtenerEstudianteDocente(String emailDocente, Long estudianteId) {
+        Docente docente = obtenerDocentePorEmail(emailDocente);
+        String categoria = docente.getAreaEspecialidad();
+
+        boolean estaInscrito = inscripcionRepository.existsByEstudianteIdAndCursoCategoria(estudianteId, categoria);
+        if (!estaInscrito) {
+            throw new ResourceNotFoundException("El estudiante #" + estudianteId + " no está matriculado en ningún curso de su especialidad (" + categoria + ")");
+        }
+
+        Estudiante estudiante = estudianteRepository.findById(estudianteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudiante no encontrado con ID: " + estudianteId));
+
+        return mapToDocenteEstudianteDTO(estudiante, categoria);
+    }
+
+    @Transactional(readOnly = true)
+    public List<HistorialConsultaDTO> obtenerHistorialEstudianteDocente(String emailDocente, Long estudianteId) {
+        Docente docente = obtenerDocentePorEmail(emailDocente);
+        String categoria = docente.getAreaEspecialidad();
+
+        boolean estaInscrito = inscripcionRepository.existsByEstudianteIdAndCursoCategoria(estudianteId, categoria);
+        if (!estaInscrito) {
+            throw new ResourceNotFoundException("Frontera de datos: Solo puede consultar el historial de estudiantes matriculados en sus cátedras");
+        }
+
+        return estudianteService.obtenerHistorial(estudianteId);
+    }
+
+    private DocenteEstudianteDTO mapToDocenteEstudianteDTO(Estudiante e, String categoria) {
+        List<Inscripcion> inscripciones = inscripcionRepository.findByEstudianteIdAndCursoCategoria(e.getId(), categoria);
+        List<String> nombresCursos = inscripciones.stream()
+                .map(i -> i.getCurso().getNombre())
+                .collect(Collectors.toList());
+
+        return new DocenteEstudianteDTO(
+                e.getId(),
+                e.getNombreCompleto(),
+                e.getCorreoElectronico(),
+                e.getNivelExperiencia(),
+                e.getAreaInteres(),
+                e.getFechaCreacion(),
+                nombresCursos
         );
     }
 }

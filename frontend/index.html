@@ -65,7 +65,7 @@
   
   <!-- Estilos del Sistema -->
   <link rel="stylesheet" href="css/variables.css?v=5.0">
-  <link rel="stylesheet" href="css/styles.css?v=6.4">
+  <link rel="stylesheet" href="css/styles.css?v=6.9">
 
   <!-- Enrutador y Control de Autenticación: si no hay sesión, ir a login.html -->
   <script>
@@ -176,17 +176,43 @@
             </svg>
             <span class="nav-label">Panel Administrador</span>
           </button>
+          <button class="nav-item nav-item-admin" data-view="metricas" id="nav-metricas-item" style="display: none;">
+            <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+              <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+            <span class="nav-label">Métricas del Sistema</span>
+          </button>
+          <button class="nav-item nav-item-admin" data-view="auditoria" id="nav-audit-item" style="display: none;">
+            <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <polyline points="9 12 11 14 15 10"></polyline>
+            </svg>
+            <span class="nav-label">Auditoría del Sistema</span>
+          </button>
         </nav>
       </div>
 
-      <!-- Tarjeta Inferior Editorial Decorativa -->
-      <div class="sidebar-footer-card">
-        <div class="organic-art">
-          <span class="leaf leaf-lime"></span>
-          <span class="leaf leaf-coral"></span>
-        </div>
-        <div class="footer-quote">
-          <p class="quote-text">Buenas preguntas.<br><strong>Mejores oportunidades.</strong></p>
+      <!-- Contenedor Inferior de la Barra Lateral: Perfil de Usuario y Salir -->
+      <div class="sidebar-footer-container">
+        <div class="sidebar-user-card">
+          <div class="sidebar-user-profile">
+            <div class="user-avatar" id="user-avatar">TG</div>
+            <div class="user-meta">
+              <span class="user-name" id="user-name" title="Santiago Gómez Morales">Santiago Gómez Morales</span>
+              <div class="user-role-container">
+                <span class="user-role-badge role-badge-student" id="user-role-badge">Estudiante</span>
+              </div>
+            </div>
+          </div>
+          <button class="sidebar-logout-btn" id="btn-logout" title="Cerrar sesión">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Salir</span>
+          </button>
         </div>
       </div>
 
@@ -232,37 +258,6 @@
         </svg>
       </div>
 
-      <!-- Barra Superior (Header) -->
-      <header class="top-header">
-        <div class="header-search">
-          <svg class="search-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input type="text" id="quick-search-input" placeholder="Buscar cursos, tecnologías o habilidades..." />
-        </div>
-
-        <div class="header-user-pill">
-          <div class="user-avatar" id="user-avatar">TG</div>
-          <div class="user-meta">
-            <span class="user-name" id="user-name">Santiago Gómez Morales</span>
-            <div class="user-role-container">
-              <span class="user-role-badge role-badge-student" id="user-role-badge">Estudiante</span>
-            </div>
-          </div>
-          <div class="header-user-actions">
-            <button class="btn-header-action btn-header-logout" id="btn-logout" title="Cerrar sesión y volver al login">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-              <span>Salir</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
       <!-- Contenedor Dinámico de Vistas -->
       <main class="views-wrapper">
 
@@ -271,52 +266,68 @@
              ========================================================== -->
         <section class="view-section active" id="view-asesor">
 
-          <!-- Cuadrícula Bento Principal (Izquierda: Chat Conversacional / Derecha: Catálogo y Widgets) -->
-          <div class="bento-grid">
+          <!-- Contenedor Conversacional Centrado Estilo Claude / ChatGPT -->
+          <div class="claude-chat-container">
 
-            <!-- Columna Izquierda — Chat Conversacional Natural -->
-            <div class="bento-col-main chat-layout">
-
-              <!-- Barra de Sesión de Chat (Fija arriba) -->
-              <div class="chat-session-bar" id="chat-session-bar">
-                <div class="session-progress-info">
-                  <span class="session-badge" id="session-badge">Sesión: <strong id="session-turn-count">0</strong> / 5 consultas</span>
-                  <span class="session-hint" id="session-hint">Conversación activa: puedes hacer preguntas de seguimiento.</span>
-                </div>
-                <button type="button" class="btn-clean-session" id="btn-reset-chat" title="Comenzar nueva conversación desde cero">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                  </svg>
-                  <span>Nueva conversación</span>
-                </button>
+            <!-- Barra Superior de Sesión (Limpia y Discreta) -->
+            <div class="chat-session-bar" id="chat-session-bar">
+              <div class="session-progress-info">
+                <span class="session-badge" id="session-badge">Sesión: <strong id="session-turn-count">0</strong> / 5 consultas</span>
+                <span class="session-hint" id="session-hint">Conversación activa: puedes hacer preguntas de seguimiento.</span>
               </div>
+              <button type="button" class="btn-clean-session" id="btn-reset-chat" title="Comenzar nueva conversación desde cero">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Nueva conversación</span>
+              </button>
+            </div>
 
-              <!-- Área de Conversación (scrollable) -->
-              <div class="chat-scroll-area" id="chat-scroll-area">
+            <!-- Área de Scroll de la Conversación -->
+            <div class="chat-scroll-area" id="chat-scroll-area">
 
-                <!-- Welcome State (se oculta cuando hay mensajes) -->
-                <div class="chat-welcome-state" id="chat-welcome-state">
-                  <div class="chat-welcome-icon">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D7F338" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="4" y="4" width="16" height="16" rx="2"></rect>
-                      <rect x="9" y="9" width="6" height="6"></rect>
-                      <line x1="9" y1="1" x2="9" y2="4"></line>
-                      <line x1="15" y1="1" x2="15" y2="4"></line>
-                      <line x1="9" y1="20" x2="9" y2="23"></line>
-                      <line x1="15" y1="20" x2="15" y2="23"></line>
-                      <line x1="20" y1="9" x2="23" y2="9"></line>
-                      <line x1="20" y1="15" x2="23" y2="15"></line>
-                      <line x1="1" y1="9" x2="4" y2="9"></line>
-                      <line x1="1" y1="15" x2="4" y2="15"></line>
+              <!-- Estado de Bienvenida Centrado Estilo Claude (De vuelta a ello, Tomas) -->
+              <div class="chat-welcome-state" id="chat-welcome-state">
+                <div class="claude-welcome-hero">
+                  <!-- Emblema Asterisco Terracota / Ámbar Estilo Claude -->
+                  <div class="claude-welcome-emblem">
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2C12.4 2 12.8 2.2 13 2.6L14.6 6.3C14.8 6.7 15.2 7 15.7 7.1L19.7 7.7C20.3 7.8 20.7 8.3 20.8 8.9C20.8 9.5 20.5 10 20 10.3L16.8 12.6C16.4 12.9 16.2 13.4 16.3 13.9L17.2 17.8C17.4 18.4 17.1 19 16.6 19.3C16.1 19.6 15.5 19.5 15 19.1L11.7 16.8C11.3 16.5 10.7 16.5 10.3 16.8L7 19.1C6.5 19.5 5.9 19.6 5.4 19.3C4.9 19 4.6 18.4 4.8 17.8L5.7 13.9C5.8 13.4 5.6 12.9 5.2 12.6L2 10.3C1.5 10 1.2 9.5 1.2 8.9C1.3 8.3 1.7 7.8 2.3 7.7L6.3 7.1C6.8 7 7.2 6.7 7.4 6.3L9 2.6C9.2 2.2 9.6 2 12 2Z" fill="#D9774E" />
                     </svg>
                   </div>
-                  <h2 class="chat-welcome-title">¡Hola! Soy <span class="lime-mark">RutaIA</span></h2>
-                  <p class="chat-welcome-desc">Tu asistente académico con IA. Cuéntame qué quieres aprender y te recomendaré los mejores cursos.</p>
-                  
-                  <!-- Chips de Consultas Sugeridas (dentro del welcome) -->
+
+                  <h1 class="claude-welcome-title">
+                    De vuelta a ello, <span id="claude-student-name">Tomas</span>
+                  </h1>
+
+                  <!-- Caja Central de Entrada (Estilo Claude Prompt Box) -->
+                  <div class="claude-central-input-box">
+                    <div class="claude-input-card">
+                      <textarea 
+                        id="query-input-welcome" 
+                        class="claude-textarea" 
+                        placeholder="¿Cómo puedo ayudarte hoy?" 
+                        rows="2"
+                      ></textarea>
+                      <div class="claude-input-bottom-row">
+                        <div class="claude-mode-pill">
+                          <span class="claude-mode-dot"></span>
+                          <span>Asesor Vocacional RAG</span>
+                        </div>
+                        <button type="button" class="claude-send-btn" id="submit-query-welcome-btn" title="Enviar consulta">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="19" x2="12" y2="5"></line>
+                            <polyline points="5 12 12 5 19 12"></polyline>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Chips de Sugerencias Rápidas -->
                   <div class="chat-welcome-chips" id="chat-welcome-chips">
-                    <span class="chips-title">Prueba con alguna de estas consultas:</span>
+                    <span class="chips-title">O explora directamente un área de interés:</span>
                     <div class="chips-group">
                       <button class="chip-item" data-query="Quiero aprender a crear páginas web.">🌐 Páginas Web</button>
                       <button class="chip-item" data-query="Necesito aprender Java para trabajar con Spring Boot.">☕ Java + Spring Boot</button>
@@ -328,73 +339,75 @@
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- Contenedor del Hilo de Conversación -->
-                <div class="chat-thread-container" id="chat-thread-container"></div>
+              <!-- Hilo de Conversación (Centrado, max-width: 860px) -->
+              <div class="chat-thread-container" id="chat-thread-container"></div>
 
-                <!-- Indicador de Carga Animado (dentro del scroll) -->
-                <div class="chat-loading-indicator" id="loading-box" style="display: none;">
-                  <div class="chat-loading-avatar">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D7F338" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
-                  </div>
-                  <div class="chat-loading-dots">
-                    <span></span><span></span><span></span>
-                  </div>
-                  <span class="chat-loading-text">RutaIA está pensando...</span>
+              <!-- Indicador de Carga Animado -->
+              <div class="chat-loading-indicator" id="loading-box" style="display: none;">
+                <div class="chat-loading-avatar">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D9774E" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path></svg>
+                </div>
+                <div class="chat-loading-dots">
+                  <span></span><span></span><span></span>
+                </div>
+                <span class="chat-loading-text" id="loading-title">RutaIA está pensando...</span>
+                <span style="display:none;" id="loading-desc"></span>
+              </div>
+
+              <!-- Tarjeta de Resultados RAG (Para detalle del historial) -->
+              <div class="result-bento-card" id="result-card" style="display: none; margin: 1rem auto; width: 100%; max-width: 860px; box-sizing: border-box;">
+                <div class="result-history-nav-bar" style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #E2E8F0; padding-bottom: 0.75rem;">
+                  <button type="button" class="btn-clean-session" id="btn-back-to-active-chat" onclick="window.volverAlChatActivo && window.volverAlChatActivo()">
+                    ← Volver a la conversación activa
+                  </button>
+                  <span style="font-size: 0.8rem; color: #64748B; font-weight: 700;">Consulta del historial</span>
                 </div>
 
-                <!-- Tarjeta de Resultados RAG (para detalle del historial, ahora dentro del scroll para poder bajar y revisarlo completo) -->
-                <div class="result-bento-card" id="result-card" style="display: none; margin-top: 0.5rem; width: 100%; box-sizing: border-box;">
-                  <div class="result-history-nav-bar" style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #E2E8F0; padding-bottom: 0.75rem;">
-                    <button type="button" class="btn-clean-session" id="btn-back-to-active-chat" onclick="window.volverAlChatActivo && window.volverAlChatActivo()">
-                      ← Volver a la conversación activa
-                    </button>
-                    <span style="font-size: 0.8rem; color: #64748B; font-weight: 700;">Consulta del historial</span>
+                <div class="result-top-badge-row">
+                  <div class="badge-spark-group">
+                    <span class="sparkle-icon">✦</span>
+                    <span class="badge-spark-text">Curso recomendado</span>
                   </div>
-
-                  <div class="result-top-badge-row">
-                    <div class="badge-spark-group">
-                      <span class="sparkle-icon">✦</span>
-                      <span class="badge-spark-text">Curso recomendado</span>
+                  <span class="status-pill respondida" id="result-status-badge">Respondida</span>
+                </div>
+                <div class="query-recap-box">
+                  <span class="recap-label">Consulta realizada:</span>
+                  <span class="recap-query" id="result-pregunta">-</span>
+                </div>
+                <div id="course-success-view">
+                  <div class="featured-course-card" id="featured-course-container"></div>
+                  <div class="ai-rationale-box">
+                    <div class="rationale-header">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                      <span class="rationale-title">Orientación Académica Institucional</span>
                     </div>
-                    <span class="status-pill respondida" id="result-status-badge">Respondida</span>
+                    <div class="rationale-body" id="result-ai-text">Cargando orientación...</div>
                   </div>
-                  <div class="query-recap-box">
-                    <span class="recap-label">Consulta realizada:</span>
-                    <span class="recap-query" id="result-pregunta">-</span>
+                  <div class="sources-bento-section" id="sources-section">
+                    <div class="sources-section-title">
+                      <span>Fuentes de la recomendación</span>
+                      <span class="sources-counter" id="sources-counter">1 curso</span>
+                    </div>
+                    <div class="sources-list" id="sources-container"></div>
                   </div>
-                  <div id="course-success-view">
-                    <div class="featured-course-card" id="featured-course-container"></div>
-                    <div class="ai-rationale-box">
-                      <div class="rationale-header">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                        <span class="rationale-title">Orientación Académica Institucional</span>
-                      </div>
-                      <div class="rationale-body" id="result-ai-text">Cargando orientación...</div>
-                    </div>
-                    <div class="sources-bento-section" id="sources-section">
-                      <div class="sources-section-title">
-                        <span>Fuentes de la recomendación</span>
-                        <span class="sources-counter" id="sources-counter">1 curso</span>
-                      </div>
-                      <div class="sources-list" id="sources-container"></div>
-                    </div>
+                </div>
+                <div class="fallback-bento-card" id="fallback-box" style="display: none;">
+                  <div class="fallback-icon-box">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                   </div>
-                  <div class="fallback-bento-card" id="fallback-box" style="display: none;">
-                    <div class="fallback-icon-box">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    </div>
-                    <div class="fallback-content">
-                      <h4 class="fallback-title">No encontramos cursos para tu consulta</h4>
-                      <p class="fallback-message" id="fallback-message-text">No hay cursos relacionados con tu búsqueda en nuestro catálogo institucional.</p>
-                    </div>
-                    <button class="btn-secondary-pill" id="fallback-catalog-btn" data-view="catalogo">Ver catálogo de cursos</button>
+                  <div class="fallback-content">
+                    <h4 class="fallback-title">No encontramos cursos para tu consulta</h4>
+                    <p class="fallback-message" id="fallback-message-text">No hay cursos relacionados con tu búsqueda en nuestro catálogo institucional.</p>
                   </div>
-                  <div class="rating-bento-section" id="rating-section">
-                    <div class="rating-header-row">
-                      <span class="rating-label">¿Qué tan útil fue esta orientación?</span>
-                      <span class="rating-status-hint" id="rating-status-message"></span>
-                    </div>
+                  <button class="btn-secondary-pill" id="fallback-catalog-btn" data-view="catalogo">Ver catálogo de cursos</button>
+                </div>
+                <div class="rating-bento-section" id="rating-section">
+                  <div class="rating-header-row">
+                    <span class="rating-label">¿Qué tan útil fue esta orientación?</span>
+                  </div>
+                  <div class="rating-stars-row">
                     <div class="star-rating" id="star-rating">
                       <button class="star-btn" data-rating="1">★</button>
                       <button class="star-btn" data-rating="2">★</button>
@@ -402,17 +415,20 @@
                       <button class="star-btn" data-rating="4">★</button>
                       <button class="star-btn" data-rating="5">★</button>
                     </div>
-                    <div class="rating-input-row">
-                      <input type="text" id="rating-comment" class="rating-input-field" placeholder="Deja un comentario o feedback opcional..." />
-                      <button class="btn-dark-pill" id="rating-submit-btn">Enviar Calificación</button>
-                    </div>
+                    <span class="rating-status-hint" id="rating-status-message"></span>
+                  </div>
+                  <div class="rating-input-row" id="rating-input-container">
+                    <input type="text" id="rating-comment" class="rating-input-field" placeholder="Deja un comentario o feedback opcional..." />
+                    <button class="btn-dark-pill" id="rating-submit-btn">Enviar Calificación</button>
                   </div>
                 </div>
-
               </div>
 
-              <!-- Input de Chat (Fijo abajo) -->
-              <div class="chat-input-bar" id="chat-input-bar">
+            </div>
+
+            <!-- Barra Inferior Fija de Conversación Activa (Estilo Claude Floating Input) -->
+            <div class="chat-input-bar" id="chat-input-bar" style="display: none;">
+              <div class="claude-bottom-input-container">
                 <!-- Banner de Límite Alcanzado -->
                 <div class="session-limit-banner" id="session-limit-banner" style="display: none;">
                   <div class="limit-content">
@@ -422,137 +438,34 @@
                     Nueva conversación
                   </button>
                 </div>
-                <div class="chat-input-row">
+
+                <div class="claude-bottom-input-card">
                   <textarea 
                     id="query-input" 
-                    class="chat-textarea" 
+                    class="claude-bottom-textarea" 
                     rows="1"
-                    placeholder="Escribe tu pregunta aquí..."
+                    placeholder="Escribe tu consulta o seguimiento aquí..."
                   ></textarea>
-                  <button class="chat-send-btn" id="submit-query-btn" title="Enviar consulta">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <button class="claude-send-btn" id="submit-query-btn" title="Enviar consulta">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="12" y1="19" x2="12" y2="5"></line>
                       <polyline points="5 12 12 5 19 12"></polyline>
                     </svg>
                   </button>
                 </div>
+                <div class="claude-disclaimer">
+                  <span>RutaIA es un orientador vocacional impulsado por IA. Verifica siempre los programas curriculares oficiales.</span>
+                </div>
               </div>
-
             </div>
 
-            <!-- Columna Derecha (Exploración, Perfil e Historial) -->
-            <div class="bento-col-side">
-
-              <!-- Mosaicos Pastel de Categorías (Explora el Catálogo) -->
-              <div class="catalog-tiles-section">
-                <div class="section-header-inline">
-                  <div>
-                    <h3 class="bento-title">Explora el catálogo</h3>
-                    <p class="bento-subtitle">Descubre cursos disponibles por área formativa.</p>
-                  </div>
-                  <button class="link-see-all" id="btn-see-catalog" data-view="catalogo">Ver catálogo ➔</button>
-                </div>
-
-                <div class="pastel-tiles-grid">
-                  <div class="pastel-tile tile-web" data-query="Quiero aprender desarrollo web moderno con HTML5, CSS3, JavaScript y React.">
-                    <div class="tile-icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                    </div>
-                    <div class="tile-name">Desarrollo web</div>
-                  </div>
-
-                  <div class="pastel-tile tile-java" data-query="Necesito aprender Java para trabajar con Spring Boot y APIs REST.">
-                    <div class="tile-icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-                    </div>
-                    <div class="tile-name">Java y Spring Boot</div>
-                  </div>
-
-                  <div class="pastel-tile tile-data" data-query="Me interesa analizar datos y construir dashboards interactivos con Power BI.">
-                    <div class="tile-icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                    </div>
-                    <div class="tile-name">Análisis de datos</div>
-                  </div>
-
-                  <div class="pastel-tile tile-rpa" data-query="Quiero automatizar procesos empresariales y tareas repetitivas con Python.">
-                    <div class="tile-icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                    </div>
-                    <div class="tile-name">Automatización</div>
-                  </div>
-
-                  <div class="pastel-tile tile-ai" data-query="¿Qué puedo estudiar para trabajar con inteligencia artificial, LLMs y RAG?">
-                    <div class="tile-icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
-                    </div>
-                    <div class="tile-name">Inteligencia artificial</div>
-                  </div>
-
-                  <div class="pastel-tile tile-security" data-query="Quiero aprender a proteger aplicaciones web contra vulnerabilidades OWASP.">
-                    <div class="tile-icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    </div>
-                    <div class="tile-name">Seguridad web</div>
-                  </div>
-
-                  <div class="pastel-tile tile-docker" data-query="Necesito desplegar aplicaciones usando contenedores y Docker.">
-                    <div class="tile-icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                    </div>
-                    <div class="tile-name">Contenedores</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Widget: Resumen de tu Perfil -->
-              <div class="side-widget profile-widget">
-                <h4 class="widget-heading">Resumen de tu perfil</h4>
-                <div class="profile-meta-list">
-                  <div class="profile-meta-item">
-                    <span class="meta-icon">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                    </span>
-                    <div class="meta-texts">
-                      <span class="meta-title">Nivel de experiencia</span>
-                      <span class="meta-value" id="profile-widget-level">Intermedio</span>
-                    </div>
-                  </div>
-
-                  <div class="profile-meta-item">
-                    <span class="meta-icon">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
-                    </span>
-                    <div class="meta-texts">
-                      <span class="meta-title">Área de interés</span>
-                      <span class="meta-value" id="profile-widget-area">Desarrollo web</span>
-                    </div>
-                  </div>
-
-                  <div class="profile-meta-item">
-                    <span class="meta-icon">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                    </span>
-                    <div class="meta-texts">
-                      <span class="meta-title">Semestre académico</span>
-                      <span class="meta-value">Estudiante activo</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Widget: Historial Rápido de Consultas -->
-              <div class="side-widget history-widget">
-                <div class="widget-header-inline">
-                  <h4 class="widget-heading">Historial de consultas</h4>
-                  <button class="link-see-all-side" data-view="historial">Ver todos</button>
-                </div>
-                <div class="quick-history-list" id="quick-history-container">
-                  <div class="quick-history-empty">Cargando consultas recientes...</div>
-                </div>
-              </div>
-
-            </div>
+            <!-- Botón Flotante para Bajar al Último Mensaje (Estilo Claude ↓) -->
+            <button type="button" class="claude-floating-scroll-btn" id="btn-scroll-bottom" title="Bajar al último mensaje" style="display: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <polyline points="19 12 12 19 5 12"></polyline>
+              </svg>
+            </button>
 
           </div>
 
@@ -791,14 +704,6 @@
               </svg>
               <span>Configuración del Umbral RAG</span>
             </button>
-            <button type="button" class="admin-subtab" id="subtab-admin-stats" data-admintab="stats">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10"></line>
-                <line x1="12" y1="20" x2="12" y2="4"></line>
-                <line x1="6" y1="20" x2="6" y2="14"></line>
-              </svg>
-              <span>Estadísticas Globales y Auditoría</span>
-            </button>
           </div>
 
           <!-- ==========================================================
@@ -927,7 +832,12 @@
 
               <form id="admin-student-search-form" class="student-search-form">
                 <div class="student-search-input-wrap">
-                  <span class="id-prefix">👤</span>
+                  <span class="id-prefix">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </span>
                   <input type="text" id="admin-student-name-input" placeholder="Ingresa nombre o correo del estudiante (ej: Santiago, Ana, carlos@...)" required />
                 </div>
                 <button type="submit" class="btn-primary-lime" id="btn-search-student-name">
@@ -1008,7 +918,11 @@
               <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 280px;">
                   <h3 style="font-size: 1.2rem; font-weight: 800; color: #18191E; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <span>⚙️ Umbral de Relevancia Semántica</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Umbral de Relevancia Semántica</span>
                     <span class="status-pill respondida" id="admin-umbral-badge-status" style="font-size: 0.78rem;">Equilibrado</span>
                   </h3>
                   <p style="color: #4B5563; font-size: 0.9rem; line-height: 1.55;">
@@ -1040,8 +954,13 @@
                 </div>
 
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-                  <div style="font-size: 0.82rem; color: #6B7280;">
-                    💡 <em>Nota: El nuevo umbral se aplicará inmediatamente a todas las consultas RAG entrantes.</em>
+                  <div style="display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.83rem; color: #6B7280;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <em>Nota: El nuevo umbral se aplicará inmediatamente a todas las consultas RAG entrantes.</em>
                   </div>
                   <button type="submit" class="btn-primary-lime" id="btn-save-threshold" style="padding: 0.65rem 1.4rem;">
                     <span>Guardar Configuración de Umbral</span>
@@ -1052,141 +971,222 @@
             </div>
           </div>
 
-          <!-- ==========================================================
-               SUB-PANEL 4: ESTADÍSTICAS GLOBALES Y AUDITORÍA
-               ========================================================== -->
-          <div class="admin-pane" id="admin-pane-stats" style="display: none;">
-            <div class="editorial-view-header admin-header-flex">
-              <div>
-                <div class="admin-badge-tag">Auditoría y Análisis Institucional</div>
-                <h2 class="view-title">Estadísticas Globales y Panel de Auditoría</h2>
-                <p class="view-subtitle">Consolidado general del sistema: medición de usuarios totales, activos, acciones por usuario, actividad diaria y bitácora de auditoría para cada ingreso y registro.</p>
+        </section>
+
+        <!-- ==========================================================
+             VISTA: MÉTRICAS Y ANALÍTICAS GLOBALES (DEDICADA)
+             ========================================================== -->
+        <section class="view-section" id="view-metricas">
+          <div class="editorial-view-header admin-header-flex">
+            <div>
+              <div class="admin-badge-tag" style="background: rgba(124, 58, 237, 0.12); color: #7C3AED; border-color: rgba(124, 58, 237, 0.25);">
+                Métricas Institucionales
               </div>
-              <div class="admin-header-cta">
-                <button type="button" class="btn-refresh-pill" id="btn-admin-refresh-stats" title="Actualizar estadísticas globales">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <polyline points="1 20 1 14 7 14"></polyline>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                  </svg>
-                  <span>Refrescar Métricas</span>
-                </button>
-              </div>
+              <h2 class="view-title">Métricas y Analíticas Globales</h2>
+              <p class="view-subtitle">Consolidado operativo del sistema: medición de usuarios totales, activos, satisfacción promedio, actividad diaria y transacciones por usuario.</p>
             </div>
-
-            <!-- Métricas KPI Globales -->
-            <div class="admin-summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 2rem;">
-              <div class="admin-summary-card">
-                <span class="admin-card-label">Total Usuarios</span>
-                <span class="admin-card-number" id="global-stat-total-usuarios">0</span>
-                <span class="admin-card-note">Estudiantes + Admins</span>
-              </div>
-              <div class="admin-summary-card">
-                <span class="admin-card-label">Usuarios Activos</span>
-                <span class="admin-card-number text-success" id="global-stat-usuarios-activos">0</span>
-                <span class="admin-card-note">Con sesiones/acciones</span>
-              </div>
-              <div class="admin-summary-card">
-                <span class="admin-card-label">Total Consultas</span>
-                <span class="admin-card-number text-warning" id="global-stat-total-consultas">0</span>
-                <span class="admin-card-note">Búsquedas vocacionales</span>
-              </div>
-              <div class="admin-summary-card">
-                <span class="admin-card-label">Satisfacción</span>
-                <span class="admin-card-number" style="color:#7C3AED;" id="global-stat-promedio-calificacion">0.0</span>
-                <span class="admin-card-note">Calificación promedio</span>
-              </div>
+            <div class="admin-header-cta">
+              <button type="button" class="btn-refresh-pill" id="btn-admin-refresh-stats" title="Actualizar estadísticas globales">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                <span>Refrescar Métricas</span>
+              </button>
             </div>
+          </div>
 
-            <!-- Sección Acciones por Día y Curso Más Popular -->
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-              <div class="admin-student-search-card" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem;">
-                <h3 style="font-size:1.1rem; font-weight:800; color:#18191E; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
-                  <span>📅 Acciones y Actividad por Día</span>
-                </h3>
-                <div id="admin-actions-per-day-container">
-                  <!-- Renderizado dinámico de días -->
-                </div>
-              </div>
-
-              <div class="admin-student-search-card" style="background:#FAF8F2; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem;">
-                <h3 style="font-size:1.1rem; font-weight:800; color:#18191E; margin-bottom:0.8rem;">🏆 Curso Más Recomendado</h3>
-                <div id="global-stat-curso-top" style="font-size:1.05rem; font-weight:700; color:#374151; line-height:1.4;">Cargando...</div>
-                <p style="font-size:0.82rem; color:#6B7280; margin-top:0.8rem;">Generado por el motor de recomendaciones vectoriales RAG.</p>
-              </div>
+          <!-- Métricas KPI Globales -->
+          <div class="admin-summary-grid admin-summary-grid-4">
+            <div class="admin-summary-card">
+              <span class="admin-card-label">Total Usuarios</span>
+              <span class="admin-card-number" id="global-stat-total-usuarios">0</span>
+              <span class="admin-card-note">Estudiantes + Admins</span>
             </div>
-
-            <!-- Sección Acciones por Usuario -->
-            <div class="admin-student-search-card" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem; margin-bottom:2rem;">
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;">
-                <h3 style="font-size:1.1rem; font-weight:800; color:#18191E; display:flex; align-items:center; gap:0.5rem;">
-                  <span>👥 Acciones Realizadas por Usuario</span>
-                </h3>
-                <div class="admin-search-box" style="max-width:280px;">
-                  <input type="text" id="admin-user-actions-filter" placeholder="Filtrar por nombre o email..." />
-                </div>
-              </div>
-              <div class="admin-table-container">
-                <table class="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Usuario</th>
-                      <th>Correo Electrónico</th>
-                      <th>Rol</th>
-                      <th style="text-align:right;">Total Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody id="admin-user-actions-tbody">
-                    <!-- Renderizado dinámico -->
-                  </tbody>
-                </table>
-              </div>
+            <div class="admin-summary-card">
+              <span class="admin-card-label">Usuarios Activos</span>
+              <span class="admin-card-number text-success" id="global-stat-usuarios-activos">0</span>
+              <span class="admin-card-note">Con sesiones/acciones</span>
             </div>
+            <div class="admin-summary-card">
+              <span class="admin-card-label">Total Consultas</span>
+              <span class="admin-card-number text-warning" id="global-stat-total-consultas">0</span>
+              <span class="admin-card-note">Búsquedas vocacionales</span>
+            </div>
+            <div class="admin-summary-card">
+              <span class="admin-card-label">Satisfacción</span>
+              <span class="admin-card-number" style="color:#7C3AED;" id="global-stat-promedio-calificacion">0.0</span>
+              <span class="admin-card-note">Calificación promedio</span>
+            </div>
+          </div>
 
-            <!-- Sección Panel de Auditoría (Ingresos y Registros) -->
+          <!-- Sección Acciones por Día y Curso Más Popular -->
+          <div class="metricas-columns-grid">
             <div class="admin-student-search-card" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem;">
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.2rem; flex-wrap:wrap; gap:1rem;">
-                <div>
-                  <h3 style="font-size:1.2rem; font-weight:800; color:#18191E; display:flex; align-items:center; gap:0.5rem;">
-                    <span>🛡️ Bitácora y Panel de Auditoría</span>
-                    <span class="status-pill respondida" style="font-size:0.75rem;">En vivo</span>
-                  </h3>
-                  <p style="font-size:0.85rem; color:#6B7280; margin-top:0.2rem;">
-                    Historial auditado de cada ingreso y registro realizado por cualquier estudiante o administrador.
-                  </p>
-                </div>
-                <div style="display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap;">
-                  <select id="admin-audit-type-filter" style="padding:0.45rem 0.8rem; border:1px solid #CBD5E1; border-radius:8px; font-weight:700; font-size:0.85rem;">
-                    <option value="TODOS">Todos los Eventos</option>
-                    <option value="INGRESO">Solo Ingresos (Logins)</option>
-                    <option value="REGISTRO">Solo Registros</option>
-                  </select>
-                  <div class="admin-search-box" style="max-width:240px;">
-                    <input type="text" id="admin-audit-search" placeholder="Buscar en auditoría..." />
-                  </div>
-                </div>
-              </div>
-
-              <div class="admin-table-container">
-                <table class="admin-table">
-                  <thead>
-                    <tr>
-                      <th style="width:50px;">ID</th>
-                      <th>Fecha y Hora</th>
-                      <th>Tipo Evento</th>
-                      <th>Usuario</th>
-                      <th>Correo Electrónico</th>
-                      <th>Rol</th>
-                      <th>Detalle</th>
-                    </tr>
-                  </thead>
-                  <tbody id="admin-audit-tbody">
-                    <!-- Renderizado dinámico -->
-                  </tbody>
-                </table>
+              <h3 style="font-size:1.1rem; font-weight:800; color:#18191E; margin-bottom:1rem; display:flex; align-items:center; gap:0.55rem;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span>Acciones y Actividad por Día</span>
+              </h3>
+              <div id="admin-actions-per-day-container">
+                <!-- Renderizado dinámico de días -->
               </div>
             </div>
 
+            <div class="admin-student-search-card" style="background:#FAF8F2; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem;">
+              <h3 style="font-size:1.1rem; font-weight:800; color:#18191E; margin-bottom:0.8rem; display:flex; align-items:center; gap:0.5rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="8" r="7"></circle>
+                  <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+                </svg>
+                <span>Top Cursos Más Recomendados</span>
+              </h3>
+              <div id="global-stat-curso-top" style="display:flex; flex-direction:column; gap:0.6rem;">Cargando...</div>
+              <p style="font-size:0.82rem; color:#6B7280; margin-top:0.8rem;">Generado por el motor de recomendaciones vectoriales RAG.</p>
+            </div>
+          </div>
+
+          <!-- Sección Acciones por Usuario -->
+          <div class="admin-student-search-card" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:1.5rem; margin-bottom:2rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;">
+              <h3 style="font-size:1.1rem; font-weight:800; color:#18191E; display:flex; align-items:center; gap:0.55rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18191E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <span>Acciones Realizadas por Usuario</span>
+              </h3>
+              <div class="admin-search-box" style="max-width:280px;">
+                <input type="text" id="admin-user-actions-filter" placeholder="Filtrar por nombre o email..." />
+              </div>
+            </div>
+            <div class="admin-table-container">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Correo Electrónico</th>
+                    <th>Rol</th>
+                    <th style="text-align:right;">Total Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-user-actions-tbody">
+                  <!-- Renderizado dinámico -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Banner hacia Auditoría Dedicada -->
+          <div class="admin-quick-audit-banner" style="background: linear-gradient(135deg, #18191E 0%, #2A2C35 100%); border-radius: 18px; padding: 1.75rem 2rem; color: #FFFFFF; display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap; box-shadow: 0 10px 25px -5px rgba(24,25,30,0.2);">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
+                <span style="background: rgba(215, 243, 56, 0.2); color: #D7F338; font-weight: 800; font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px;">Seguridad & Trazabilidad</span>
+                <span style="color: #94A3B8; font-size: 0.8rem;">• Módulo Dedicado</span>
+              </div>
+              <h4 style="font-size: 1.2rem; font-weight: 800; margin: 0; color: #FFFFFF; font-family: var(--font-heading);">Bitácora de Auditoría del Sistema</h4>
+              <p style="font-size: 0.88rem; color: #94A3B8; margin: 0.35rem 0 0; max-width: 580px; line-height: 1.45;">
+                Los registros de accesos, inicios de sesión y altas de usuarios están centralizados en su propia vista para una navegación más rápida y ordenada.
+              </p>
+            </div>
+            <button type="button" class="btn-primary-lime" id="btn-goto-auditoria" style="white-space: nowrap; padding: 0.65rem 1.4rem;">
+              <span>Ver Bitácora de Auditoría</span>
+              <span class="btn-arrow">➔</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ==========================================================
+             VISTA: AUDITORÍA Y BITÁCORA DEL SISTEMA (DEDICADA)
+             ========================================================== -->
+        <section class="view-section" id="view-auditoria">
+          <div class="editorial-view-header admin-header-flex">
+            <div>
+              <div class="admin-badge-tag" style="background: rgba(124, 58, 237, 0.12); color: #7C3AED; border-color: rgba(124, 58, 237, 0.25);">
+                Seguridad & Trazabilidad
+              </div>
+              <h2 class="view-title">Bitácora de Auditoría del Sistema</h2>
+              <p class="view-subtitle">Registro cronológico y auditable de cada ingreso al sistema, registros de usuarios y eventos de autenticación institucional.</p>
+            </div>
+            <div class="admin-header-cta">
+              <button type="button" class="btn-refresh-pill" id="btn-admin-refresh-audit" title="Refrescar registros de auditoría">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                <span>Actualizar Bitácora</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Métricas Rápidas de Auditoría -->
+          <div class="admin-summary-grid admin-summary-grid-4">
+            <div class="admin-summary-card">
+              <span class="admin-card-label">Total Eventos</span>
+              <span class="admin-card-number" id="audit-kpi-total">0</span>
+              <span class="admin-card-note">Trazabilidad histórica</span>
+            </div>
+            <div class="admin-summary-card">
+              <span class="admin-card-label">Ingresos / Logins</span>
+              <span class="admin-card-number text-success" id="audit-kpi-ingresos">0</span>
+              <span class="admin-card-note">Accesos autenticados</span>
+            </div>
+            <div class="admin-summary-card">
+              <span class="admin-card-label">Nuevos Registros</span>
+              <span class="admin-card-number text-warning" id="audit-kpi-registros">0</span>
+              <span class="admin-card-note">Altas de estudiantes</span>
+            </div>
+            <div class="admin-summary-card">
+              <span class="admin-card-label">Usuarios Auditados</span>
+              <span class="admin-card-number" style="color: #7C3AED;" id="audit-kpi-usuarios">0</span>
+              <span class="admin-card-note">Cuentas con actividad</span>
+            </div>
+          </div>
+
+          <!-- Barra de Filtros de Auditoría -->
+          <div class="admin-toolbar" style="background: #FFFFFF; border: 1px solid rgba(226, 220, 208, 0.9); border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;">
+            <div class="admin-search-box" style="flex: 1; min-width: 260px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="admin-audit-search" placeholder="Buscar por usuario, correo electrónico, rol o detalle..." />
+            </div>
+            <div class="admin-filter-status">
+              <select id="admin-audit-type-filter" style="padding: 0.55rem 1rem; border-radius: 10px; border: 1px solid var(--border-medium); font-weight: 700; font-size: 0.85rem; background: var(--bg-card-subtle); color: #18191E;">
+                <option value="TODOS">Todos los eventos</option>
+                <option value="INGRESO">Solo Ingresos (Logins)</option>
+                <option value="REGISTRO">Solo Registros</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tabla Editorial de Auditoría -->
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width: 55px;">ID</th>
+                  <th style="width: 140px;">Fecha y Hora</th>
+                  <th style="width: 120px;">Tipo Evento</th>
+                  <th style="width: 150px;">Usuario</th>
+                  <th style="width: 200px;">Correo Electrónico</th>
+                  <th style="width: 120px;">Rol</th>
+                  <th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody id="admin-audit-tbody">
+                <!-- Renderizado dinámico -->
+              </tbody>
+            </table>
           </div>
         </section>
 
@@ -1218,6 +1218,15 @@
                 <line x1="6" y1="20" x2="6" y2="14"></line>
               </svg>
               <span>Analíticas Curriculares</span>
+            </button>
+            <button type="button" class="admin-subtab" id="subtab-docente-students" data-docentetab="students">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span>Consulta de Estudiantes</span>
             </button>
           </div>
 
@@ -1325,6 +1334,113 @@
                 <div class="stat-number" style="font-size: 1.3rem; margin-top: 0.5rem;" id="docente-stat-top-curso">-</div>
                 <div class="stat-sublabel">Asignatura con mayor número de recomendaciones efectivas en el sistema</div>
               </div>
+            </div>
+          </div>
+
+          <!-- ==========================================================
+               SUB-PANEL 4: CONSULTA DE ESTUDIANTES DE TU CÁTEDRA
+               ========================================================== -->
+          <div class="admin-pane" id="docente-pane-students" style="display: none;">
+            <div class="editorial-view-header admin-header-flex">
+              <div>
+                <div class="admin-badge-tag" id="docente-students-badge-area">Cátedra Docente</div>
+                <h2 class="view-title">Consulta de Estudiantes en tus Asignaturas</h2>
+                <p class="view-subtitle">Supervisa el progreso, materias matriculadas y consultas a la IA de los alumnos pertenecientes a tus asignaturas.</p>
+              </div>
+              <div class="admin-header-cta">
+                <button type="button" class="btn-swagger-link" id="btn-docente-refresh-students" title="Refrescar lista de estudiantes">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  <span>Actualizar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tarjeta de Búsqueda de Estudiante por Nombre o Correo -->
+            <div class="admin-student-search-card">
+              <div class="student-search-header">
+                <div class="student-search-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18191E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="student-search-title">Buscar Estudiante en tus Cursos</h3>
+                  <p class="student-search-desc">Ingresa el nombre o correo del estudiante matriculado en tus asignaturas para consultar su ficha e historial vocacional.</p>
+                </div>
+              </div>
+
+              <form id="docente-student-search-form" class="student-search-form">
+                <div class="student-search-input-wrap">
+                  <span class="id-prefix">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </span>
+                  <input type="text" id="docente-student-name-input" placeholder="Nombre o correo del estudiante (ej: Santiago, Ana...)" required />
+                </div>
+                <button type="submit" class="btn-primary-lime" id="btn-search-docente-student">
+                  <span>Consultar</span>
+                  <span class="btn-arrow">➔</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Contenedor Dinámico: Ficha del Estudiante e Historial -->
+            <div id="docente-student-inspection-result" style="display: none; margin-bottom: 2rem;"></div>
+
+            <!-- Métricas de Estudiantes del Docente -->
+            <div class="admin-summary-grid">
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Estudiantes en tu Cátedra</span>
+                <span class="admin-card-number" id="docente-students-count-total">0</span>
+                <span class="admin-card-note">Alumnos matriculados</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Nivel Principiante</span>
+                <span class="admin-card-number text-success" id="docente-students-count-principiante">0</span>
+                <span class="admin-card-note">Iniciando en tu área</span>
+              </div>
+              <div class="admin-summary-card">
+                <span class="admin-card-label">Intermedio / Avanzado</span>
+                <span class="admin-card-number text-warning" id="docente-students-count-avanzado">0</span>
+                <span class="admin-card-note">Nivel consolidado</span>
+              </div>
+            </div>
+
+            <!-- Barra de Filtro de Estudiantes -->
+            <div class="admin-toolbar">
+              <div class="admin-search-box">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="docente-student-table-filter" placeholder="Filtrar por nombre, correo o materia inscrita..." />
+              </div>
+            </div>
+
+            <!-- Tabla de Estudiantes Matriculados en el Docente -->
+            <div class="admin-table-container">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th style="width: 60px;">ID</th>
+                    <th>Estudiante</th>
+                    <th>Correo Electrónico</th>
+                    <th>Cursos de tu Especialidad Matriculados</th>
+                    <th>Nivel</th>
+                    <th style="text-align: right; width: 140px;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="docente-students-tbody">
+                  <!-- Renderizado dinámico -->
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -1532,10 +1648,36 @@
     </div>
   </div>
 
+  <!-- Modal Confirmación de Cierre de Sesión -->
+  <div id="logout-confirm-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="logout-modal-title">
+    <div class="logout-modal-dialog">
+      <div class="logout-modal-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </div>
+      <h3 class="logout-modal-title" id="logout-modal-title">¿Deseas cerrar sesión?</h3>
+      <p class="logout-modal-body">Se cerrará tu sesión actual y volverás a la pantalla de inicio.</p>
+      <div class="logout-modal-actions">
+        <button type="button" class="btn-cancel-modal" id="btn-logout-cancel">Cancelar</button>
+        <button type="button" class="btn-logout-confirm" id="btn-logout-confirm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Sí, salir
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Contenedor Toast para Notificaciones -->
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts Modulares -->
-  <script type="module" src="js/app.js?v=6.4"></script>
+  <script type="module" src="js/app.js?v=6.8"></script>
 </body>
 </html>

@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTestChips();
   initQueryForm();
   initChatControls();
+  initScrollBottomButton();
   initCatalogFilters();
   initStudentModal();
   initQuickSearch();
@@ -60,16 +61,37 @@ function initNavigation() {
     seeAllHistoryBtn.addEventListener('click', () => cambiarVista('historial'));
   }
 
-  // Botón Cerrar Sesión (invalida en Redis y redirige a login.html)
+  // Botón Cerrar Sesión — muestra modal de confirmación
   const btnLogout = document.getElementById('btn-logout');
-  if (btnLogout) {
-    btnLogout.addEventListener('click', async () => {
-      try {
-        await api.logout();
-      } catch (e) {
-        console.warn('Error durante logout:', e);
-      }
-      window.location.href = 'login.html?logout=true';
+  const logoutModal = document.getElementById('logout-confirm-modal');
+  const btnLogoutConfirm = document.getElementById('btn-logout-confirm');
+  const btnLogoutCancel = document.getElementById('btn-logout-cancel');
+
+  const doLogout = async () => {
+    try {
+      await api.logout();
+    } catch (e) {
+      console.warn('Error durante logout:', e);
+    }
+    window.location.href = 'login.html?logout=true';
+  };
+
+  if (btnLogout && logoutModal) {
+    btnLogout.addEventListener('click', () => {
+      logoutModal.style.display = 'flex';
+    });
+  }
+  if (btnLogoutConfirm) {
+    btnLogoutConfirm.addEventListener('click', doLogout);
+  }
+  if (btnLogoutCancel && logoutModal) {
+    btnLogoutCancel.addEventListener('click', () => {
+      logoutModal.style.display = 'none';
+    });
+  }
+  if (logoutModal) {
+    logoutModal.addEventListener('click', (e) => {
+      if (e.target === logoutModal) logoutModal.style.display = 'none';
     });
   }
 }
@@ -209,8 +231,8 @@ export function cargarVistaRegistro() {
 }
 
 export function cambiarVista(viewId) {
-  // Proteger vista admin exclusiva para Administrador
-  if (viewId === 'admin' && (!state.usuario || state.usuario.rol !== 'ADMINISTRADOR')) {
+  // Proteger vista admin, metricas y auditoría exclusiva para Administrador
+  if ((viewId === 'admin' || viewId === 'metricas' || viewId === 'auditoria') && (!state.usuario || state.usuario.rol !== 'ADMINISTRADOR')) {
     ui.showToast('Acceso restringido: Esta vista es exclusiva para el rol de Administrador.', 'error');
     viewId = 'asesor';
   }
@@ -233,6 +255,12 @@ export function cambiarVista(viewId) {
     cargarCursosAdmin();
     cargarEstudiantesAdmin();
     cargarUmbralAdmin();
+  }
+  if (viewId === 'metricas') {
+    cargarEstadisticasAdmin();
+  }
+  if (viewId === 'auditoria') {
+    cargarEstadisticasAdmin();
   }
   if (viewId === 'docente') {
     cargarPanelDocente();
@@ -262,6 +290,7 @@ function initPastelTiles() {
 function initTestChips() {
   const chips = document.querySelectorAll('.chip-item');
   const textarea = document.getElementById('query-input');
+  const textareaWelcome = document.getElementById('query-input-welcome');
   const toggleBtn = document.getElementById('toggle-chips-btn');
   const tray = document.getElementById('suggested-chips-tray');
 
@@ -275,9 +304,9 @@ function initTestChips() {
   chips.forEach(chip => {
     chip.addEventListener('click', () => {
       const query = chip.dataset.query;
-      if (query && textarea) {
-        textarea.value = query;
-        textarea.focus();
+      if (query) {
+        if (textarea) textarea.value = query;
+        if (textareaWelcome) textareaWelcome.value = query;
         ejecutarConsulta(query);
       }
     });
@@ -289,20 +318,37 @@ function initQueryForm() {
   const submitBtn = document.getElementById('submit-query-btn');
   const textarea = document.getElementById('query-input');
 
-  if (submitBtn) {
-    submitBtn.addEventListener('click', () => {
-      const pregunta = textarea.value.trim();
-      ejecutarConsulta(pregunta);
-    });
-  }
+  const submitWelcomeBtn = document.getElementById('submit-query-welcome-btn');
+  const textareaWelcome = document.getElementById('query-input-welcome');
 
-  // Atajo Enter para enviar (Ctrl+Enter o Enter simple)
+  const enviarDesde = (inputEl, btnEl) => {
+    if (btnEl && btnEl.disabled) return;
+    if (state.chatSession && !state.puedeEnviarMensaje()) return;
+    const pregunta = inputEl ? inputEl.value.trim() : '';
+    if (inputEl) inputEl.value = '';
+    ejecutarConsulta(pregunta);
+  };
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', () => enviarDesde(textarea, submitBtn));
+  }
   if (textarea) {
     textarea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        const pregunta = textarea.value.trim();
-        ejecutarConsulta(pregunta);
+        enviarDesde(textarea, submitBtn);
+      }
+    });
+  }
+
+  if (submitWelcomeBtn) {
+    submitWelcomeBtn.addEventListener('click', () => enviarDesde(textareaWelcome, submitWelcomeBtn));
+  }
+  if (textareaWelcome) {
+    textareaWelcome.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        enviarDesde(textareaWelcome, submitWelcomeBtn);
       }
     });
   }
@@ -331,7 +377,34 @@ function initChatControls() {
   if (resetBtnFromLimit) resetBtnFromLimit.addEventListener('click', reiniciarHandler);
 }
 
+// Botón Flotante para Bajar al Último Mensaje
+function initScrollBottomButton() {
+  const scrollArea = document.getElementById('chat-scroll-area');
+  const scrollBtn = document.getElementById('btn-scroll-bottom');
+  if (!scrollArea || !scrollBtn) return;
+
+  scrollArea.addEventListener('scroll', () => {
+    const distanceToBottom = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight;
+    if (distanceToBottom > 240) {
+      scrollBtn.style.display = 'flex';
+    } else {
+      scrollBtn.style.display = 'none';
+    }
+  });
+
+  scrollBtn.addEventListener('click', () => {
+    scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: 'smooth' });
+    scrollBtn.style.display = 'none';
+  });
+}
+
 async function ejecutarConsulta(pregunta) {
+  // Validar si superó el límite de 5 consultas en esta sesión (Ventana deslizante)
+  if (!state.puedeEnviarMensaje()) {
+    ui.showToast('Has alcanzado el límite de 5 consultas en esta sesión. Inicia una nueva conversación para continuar.', 'warning');
+    return;
+  }
+
   if (!pregunta) {
     ui.showToast('Por favor escribe tu duda o consulta vocacional.', 'error');
     return;
@@ -340,12 +413,6 @@ async function ejecutarConsulta(pregunta) {
   if (!state.estudianteActivo) {
     ui.showToast('Debes seleccionar o registrar un estudiante antes de consultar.', 'error');
     abrirModalEstudiantes();
-    return;
-  }
-
-  // Validar si superó el límite de 5 consultas en esta sesión (Ventana deslizante)
-  if (!state.puedeEnviarMensaje()) {
-    ui.showToast('Has completado el límite de 5 consultas en esta sesión. Inicia una nueva conversación para continuar.', 'warning');
     return;
   }
 
@@ -361,6 +428,8 @@ async function ejecutarConsulta(pregunta) {
 
   const textarea = document.getElementById('query-input');
   if (textarea) textarea.value = '';
+  const textareaWelcome = document.getElementById('query-input-welcome');
+  if (textareaWelcome) textareaWelcome.value = '';
 
   ui.setLoading(true);
 
@@ -699,7 +768,7 @@ window.verDetalleCursoModal = (nombreCurso) => {
   ui.mostrarModalDetalleCurso(curso, handleInscribirmeEnCurso);
 };
 
-// Matricular estudiante a un curso (Exclusivo para el rol ESTUDIANTE)
+// Matricular estudiante a un curso (Exclusivo para el rol ESTUDIANTE con confirmación previa)
 window.inscribirseACurso = async (cursoId, btnEl) => {
   if (!state.esEstudiante()) {
     ui.showToast('Solo los estudiantes pueden inscribirse a los cursos.', 'warning');
@@ -713,56 +782,84 @@ window.inscribirseACurso = async (cursoId, btnEl) => {
     estudianteId = 1;
   }
 
-  const curso = state.cursos.find(c => c.id == cursoId || (c.nombre && String(cursoId) === c.nombre.toLowerCase().trim()));
-  const cId = curso ? curso.id : (Number(cursoId) || 1);
-  const cNombre = curso ? curso.nombre : 'el curso seleccionado';
+  const curso = state.cursos.find(c => c.id == cursoId || (c.nombre && String(cursoId) === c.nombre.toLowerCase().trim())) || {
+    id: Number(cursoId) || 1,
+    nombre: 'Curso Académico'
+  };
+  const cId = curso.id || Number(cursoId) || 1;
+  const cNombre = curso.nombre || 'el curso seleccionado';
 
-  try {
-    if (btnEl) {
-      btnEl.disabled = true;
-      btnEl.dataset.original = btnEl.innerHTML;
-      btnEl.innerHTML = `<span>Inscribiendo...</span> <svg class="spin-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>`;
-    }
-    await api.inscribirCurso(estudianteId, cId);
-    state.agregarInscripcion(cId);
-    ui.showToast(`Inscripción exitosa: te has matriculado en "${cNombre}".`, 'success');
-
-    const renderEnrolledState = (targetBtn) => {
-      if (targetBtn.classList.contains('btn-enroll-mini')) {
-        targetBtn.className = 'badge-enrolled-mini';
-        targetBtn.innerHTML = `
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          <span>Inscrito</span>
-        `;
-        targetBtn.disabled = true;
-      } else {
-        targetBtn.className = 'btn-enrolled-badge';
-        targetBtn.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          <span>Ya estás inscrito</span>
-        `;
-        targetBtn.disabled = true;
+  // Mostrar modal de confirmación antes de formalizar la matrícula
+  ui.mostrarModalConfirmacionInscripcion(curso, async () => {
+    try {
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.dataset.original = btnEl.innerHTML;
+        btnEl.innerHTML = `<span>Inscribiendo...</span> <svg class="spin-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>`;
       }
-    };
+      await api.inscribirCurso(estudianteId, cId);
+      state.agregarInscripcion(cId);
+      ui.showToast(`Inscripción exitosa: te has matriculado en "${cNombre}".`, 'success');
 
-    if (btnEl) {
-      renderEnrolledState(btnEl);
-    }
+      const renderEnrolledState = (targetBtn) => {
+        if (targetBtn.classList.contains('btn-enroll-mini')) {
+          targetBtn.className = 'badge-enrolled-mini';
+          targetBtn.innerHTML = `
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Inscrito</span>
+          `;
+          targetBtn.disabled = true;
+        } else {
+          targetBtn.className = 'btn-enrolled-badge';
+          targetBtn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Ya estás inscrito</span>
+          `;
+          targetBtn.disabled = true;
+        }
+      };
 
-    // Actualizar botones de este curso en todo el DOM
-    document.querySelectorAll(`button[data-curso-id="${cId}"], button[onclick*="inscribirseACurso(${cId}"]`).forEach(b => {
-      if (b !== btnEl) {
-        renderEnrolledState(b);
+      if (btnEl) {
+        renderEnrolledState(btnEl);
       }
-    });
 
-  } catch (err) {
-    ui.showToast(err.message || 'Error al procesar la inscripción.', 'error');
-    if (btnEl) {
-      btnEl.disabled = false;
-      btnEl.innerHTML = btnEl.dataset.original || `<span>Inscribirme</span> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>`;
+      // Actualizar botones de este curso en todo el DOM
+      document.querySelectorAll(`button[data-curso-id="${cId}"], button[onclick*="inscribirseACurso(${cId}"]`).forEach(b => {
+        if (b !== btnEl) {
+          renderEnrolledState(b);
+        }
+      });
+
+    } catch (err) {
+      ui.showToast(err.message || 'Error al procesar la inscripción.', 'error');
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.innerHTML = btnEl.dataset.original || `<span>Inscribirme</span> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>`;
+      }
     }
+  });
+};
+
+// Modal global para calificar un curso
+window.abrirModalCalificarCurso = (cursoId, nombreCurso) => {
+  let estudianteId = state.estudianteActivo ? state.estudianteActivo.id : (state.usuario ? state.usuario.id : null);
+  if (!estudianteId && state.estudiantes && state.estudiantes.length > 0) {
+    estudianteId = state.estudiantes[0].id;
   }
+
+  ui.mostrarModalCalificarCurso(cursoId, nombreCurso, async (cId, puntuacion, comentario) => {
+    await api.calificarCurso(cId, puntuacion, comentario, estudianteId);
+    ui.showToast(`¡Gracias! Has calificado "${nombreCurso}" con ${puntuacion} estrellas.`, 'success');
+
+    // Actualizar cursos en estado local y re-renderizar catálogo
+    try {
+      const cursosActualizados = await api.getCursos();
+      state.cursos = cursosActualizados;
+      ui.renderCatalogo(cursosActualizados, state.usuario);
+    } catch (e) {
+      console.warn('No se pudo refrescar el catálogo tras calificar:', e);
+    }
+  });
 };
 
 async function handleInscribirmeEnCurso(curso, btnEl) {
@@ -1027,20 +1124,18 @@ function initAdminPanel() {
   }
 
   // ==========================================================
-  // PESTAÑAS SUB-PANEL ADMIN (CURSOS, ESTUDIANTES, CONFIGURACIÓN UMBRAL Y ESTADÍSTICAS/AUDITORÍA)
+  // PESTAÑAS SUB-PANEL ADMIN (CURSOS, ESTUDIANTES, CONFIGURACIÓN UMBRAL)
   // ==========================================================
   const subtabCourses = document.getElementById('subtab-admin-courses');
   const subtabStudents = document.getElementById('subtab-admin-students');
   const subtabConfig = document.getElementById('subtab-admin-config');
-  const subtabStats = document.getElementById('subtab-admin-stats');
   const paneCourses = document.getElementById('admin-pane-courses');
   const paneStudents = document.getElementById('admin-pane-students');
   const paneConfig = document.getElementById('admin-pane-config');
-  const paneStats = document.getElementById('admin-pane-stats');
 
   const deactivateAllSubtabs = () => {
-    [subtabCourses, subtabStudents, subtabConfig, subtabStats].forEach(t => t && t.classList.remove('active'));
-    [paneCourses, paneStudents, paneConfig, paneStats].forEach(p => p && (p.style.display = 'none'));
+    [subtabCourses, subtabStudents, subtabConfig].forEach(t => t && t.classList.remove('active'));
+    [paneCourses, paneStudents, paneConfig].forEach(p => p && (p.style.display = 'none'));
   };
 
   if (subtabCourses) {
@@ -1067,21 +1162,28 @@ function initAdminPanel() {
       cargarUmbralAdmin();
     });
   }
-  if (subtabStats) {
-    subtabStats.addEventListener('click', () => {
-      deactivateAllSubtabs();
-      subtabStats.classList.add('active');
-      if (paneStats) paneStats.style.display = 'block';
-      cargarEstadisticasAdmin();
-    });
-  }
 
   // Eventos para filtros y refresco de estadísticas globales y auditoría
   const btnRefreshStats = document.getElementById('btn-admin-refresh-stats');
   if (btnRefreshStats) {
     btnRefreshStats.addEventListener('click', () => {
       cargarEstadisticasAdmin();
-      ui.showToast('Métricas globales y bitácora de auditoría actualizadas', 'info');
+      ui.showToast('Métricas globales actualizadas', 'info');
+    });
+  }
+
+  const btnRefreshAudit = document.getElementById('btn-admin-refresh-audit');
+  if (btnRefreshAudit) {
+    btnRefreshAudit.addEventListener('click', () => {
+      cargarEstadisticasAdmin();
+      ui.showToast('Bitácora de auditoría actualizada', 'info');
+    });
+  }
+
+  const btnGotoAuditoria = document.getElementById('btn-goto-auditoria');
+  if (btnGotoAuditoria) {
+    btnGotoAuditoria.addEventListener('click', () => {
+      cambiarVista('auditoria');
     });
   }
 
@@ -1361,29 +1463,82 @@ function initDocentePanel() {
   const subtabCourses = document.getElementById('subtab-docente-courses');
   const subtabFeedback = document.getElementById('subtab-docente-feedback');
   const subtabStats = document.getElementById('subtab-docente-stats');
+  const subtabStudents = document.getElementById('subtab-docente-students');
 
   const paneCourses = document.getElementById('docente-pane-courses');
   const paneFeedback = document.getElementById('docente-pane-feedback');
   const paneStats = document.getElementById('docente-pane-stats');
+  const paneStudents = document.getElementById('docente-pane-students');
 
   const switchDocenteTab = (targetTab) => {
     if (subtabCourses) subtabCourses.classList.toggle('active', targetTab === 'courses');
     if (subtabFeedback) subtabFeedback.classList.toggle('active', targetTab === 'feedback');
     if (subtabStats) subtabStats.classList.toggle('active', targetTab === 'stats');
+    if (subtabStudents) subtabStudents.classList.toggle('active', targetTab === 'students');
 
     if (paneCourses) paneCourses.style.display = (targetTab === 'courses') ? 'block' : 'none';
     if (paneFeedback) paneFeedback.style.display = (targetTab === 'feedback') ? 'block' : 'none';
     if (paneStats) paneStats.style.display = (targetTab === 'stats') ? 'block' : 'none';
+    if (paneStudents) paneStudents.style.display = (targetTab === 'students') ? 'block' : 'none';
+
+    if (targetTab === 'students') {
+      cargarEstudiantesDocente();
+    }
   };
 
   if (subtabCourses) subtabCourses.addEventListener('click', () => switchDocenteTab('courses'));
   if (subtabFeedback) subtabFeedback.addEventListener('click', () => switchDocenteTab('feedback'));
   if (subtabStats) subtabStats.addEventListener('click', () => switchDocenteTab('stats'));
+  if (subtabStudents) subtabStudents.addEventListener('click', () => switchDocenteTab('students'));
 
   if (openNewBtn) {
     openNewBtn.addEventListener('click', () => {
       const area = state.docentePerfil ? state.docentePerfil.areaEspecialidad : (state.usuario ? state.usuario.area : 'Programación');
       abrirModalCursoDocente(null, area);
+    });
+  }
+
+  // Búsqueda de Estudiante de tus Cursos por Nombre o Correo
+  const studentSearchForm = document.getElementById('docente-student-search-form');
+  const studentNameInput = document.getElementById('docente-student-name-input');
+  if (studentSearchForm) {
+    studentSearchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = studentNameInput ? studentNameInput.value.trim() : '';
+      if (!val) {
+        ui.showToast('Por favor ingresa un nombre o correo para consultar.', 'error');
+        return;
+      }
+      inspeccionarEstudiantePorNombreDocente(val);
+    });
+  }
+
+  // Botón Refrescar Lista de Estudiantes del Docente
+  const refreshStudentsBtn = document.getElementById('btn-docente-refresh-students');
+  if (refreshStudentsBtn) {
+    refreshStudentsBtn.addEventListener('click', () => {
+      cargarEstudiantesDocente();
+      ui.showToast('Lista de estudiantes de tu cátedra actualizada.', 'info');
+    });
+  }
+
+  // Filtrado en vivo de Estudiantes en tabla del Docente
+  const studentFilterInput = document.getElementById('docente-student-table-filter');
+  if (studentFilterInput) {
+    studentFilterInput.addEventListener('input', () => {
+      const q = studentFilterInput.value.toLowerCase().trim();
+      const filtrados = (state.estudiantesDocente || []).filter(est => {
+        return !q ||
+          (est.nombreCompleto && est.nombreCompleto.toLowerCase().includes(q)) ||
+          (est.correoElectronico && est.correoElectronico.toLowerCase().includes(q)) ||
+          (est.nivelExperiencia && est.nivelExperiencia.toLowerCase().includes(q)) ||
+          (est.cursosInscritos && est.cursosInscritos.some(c => c.toLowerCase().includes(q))) ||
+          String(est.id) === q;
+      });
+      ui.renderDocenteEstudiantes(filtrados, (est) => {
+        if (studentNameInput) studentNameInput.value = est.nombreCompleto;
+        inspeccionarEstudianteDocente(est.id);
+      });
     });
   }
 }
@@ -1476,8 +1631,103 @@ async function cargarPanelDocente() {
     );
     ui.renderDocenteFeedback(feedback);
     ui.renderDocenteEstadisticas(stats);
+    await cargarEstudiantesDocente();
   } catch (err) {
     ui.showToast('Error al cargar panel docente: ' + err.message, 'error');
   }
 }
+
+export async function cargarEstudiantesDocente() {
+  try {
+    const email = state.usuario ? state.usuario.email : null;
+    const lista = await api.getDocenteEstudiantes(email);
+    state.setEstudiantesDocente(lista);
+
+    const filterInput = document.getElementById('docente-student-table-filter');
+    const studentNameInput = document.getElementById('docente-student-name-input');
+    const q = filterInput ? filterInput.value.toLowerCase().trim() : '';
+
+    const filtrados = q ? lista.filter(e =>
+      (e.nombreCompleto && e.nombreCompleto.toLowerCase().includes(q)) ||
+      (e.correoElectronico && e.correoElectronico.toLowerCase().includes(q)) ||
+      (e.cursosInscritos && e.cursosInscritos.some(c => c.toLowerCase().includes(q))) ||
+      (e.nivelExperiencia && e.nivelExperiencia.toLowerCase().includes(q))
+    ) : lista;
+
+    ui.renderDocenteEstudiantes(filtrados, (est) => {
+      if (studentNameInput) studentNameInput.value = est.nombreCompleto;
+      inspeccionarEstudianteDocente(est.id);
+    });
+  } catch (err) {
+    console.warn('Error al listar estudiantes de cátedra docente:', err.message);
+  }
+}
+
+export async function inspeccionarEstudiantePorNombreDocente(query) {
+  const searchBtn = document.getElementById('btn-search-docente-student');
+  if (searchBtn) {
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<span>Buscando...</span>';
+  }
+
+  try {
+    const email = state.usuario ? state.usuario.email : null;
+    let resultados = [];
+    try {
+      resultados = await api.buscarDocenteEstudiantes(query, email);
+    } catch (e) {
+      console.warn('Fallback a filtrado local en cátedra:', e.message);
+      const qLower = query.toLowerCase();
+      resultados = (state.estudiantesDocente || []).filter(e =>
+        (e.nombreCompleto && e.nombreCompleto.toLowerCase().includes(qLower)) ||
+        (e.correoElectronico && e.correoElectronico.toLowerCase().includes(qLower))
+      );
+    }
+
+    if (!resultados || resultados.length === 0) {
+      ui.renderErrorEstudianteDocente(query, 'No tienes estudiantes matriculados en tus cursos con ese nombre o correo.');
+      ui.showToast(`No se encontraron estudiantes en tus asignaturas para "${query}".`, 'error');
+      return;
+    }
+
+    if (resultados.length === 1) {
+      await inspeccionarEstudianteDocente(resultados[0].id);
+    } else {
+      ui.renderResultadosBusquedaEstudiantesDocente(query, resultados, async (est) => {
+        await inspeccionarEstudianteDocente(est.id);
+      });
+      ui.showToast(`Se encontraron ${resultados.length} coincidencias en tu cátedra para "${query}".`, 'info');
+    }
+  } catch (err) {
+    ui.renderErrorEstudianteDocente(query, err.message);
+    ui.showToast(`Error al consultar estudiante: ${err.message}`, 'error');
+  } finally {
+    if (searchBtn) {
+      searchBtn.disabled = false;
+      searchBtn.innerHTML = '<span>Consultar</span><span class="btn-arrow">➔</span>';
+    }
+  }
+}
+
+export async function inspeccionarEstudianteDocente(id) {
+  try {
+    const email = state.usuario ? state.usuario.email : null;
+    const estudiante = await api.getDocenteEstudiante(id, email);
+    let historial = [];
+    try {
+      historial = await api.getDocenteEstudianteHistorial(id, email);
+    } catch (e) {
+      console.warn('Historial no disponible:', e.message);
+    }
+
+    ui.renderFichaEstudianteDocente(estudiante, historial, () => {
+      const inp = document.getElementById('docente-student-name-input');
+      if (inp) inp.value = '';
+    });
+  } catch (err) {
+    ui.renderErrorEstudianteDocente(`ID #${id}`, err.message);
+    ui.showToast(err.message || `Estudiante no encontrado en tus asignaturas.`, 'error');
+  }
+}
+
 

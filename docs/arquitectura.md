@@ -9,7 +9,7 @@ flowchart TB
     end
 
     subgraph BACKEND ["Capa de Negocio y Persistencia (Backend)"]
-        API["Spring Boot 3 REST API<br/>(Java 21)"]
+        API["Spring Boot 3 REST API<br/>(Java 17)"]
         SWAGGER["Documentación OpenAPI<br/>(Swagger UI)"]
         DB[(PostgreSQL 16<br/>Relacional)]
     end
@@ -53,7 +53,7 @@ flowchart TB
 - **Regla Estricta**: Se comunica **únicamente** con la API REST de Spring Boot (`http://localhost:8080`). Nunca realiza llamadas directas a n8n, Qdrant u OpenRouter.
 
 ### 2.2 Backend Spring Boot
-- **Tecnologías**: Java 21 LTS, Spring Boot 3, Spring Data JPA, Jakarta Validation, SpringDoc OpenAPI.
+- **Tecnologías**: Java 17 LTS, Spring Boot 3, Spring Data JPA, Jakarta Validation, SpringDoc OpenAPI.
 - **Responsabilidad**: Centralizar la lógica del negocio, validar entidades, registrar transaccionalmente las consultas, orquestar la llamada síncrona a n8n, almacenar las recomendaciones resultantes y sus fuentes con score, y exponer endpoints REST conformes a los estándares.
 - **Manejo de Errores**: Controlador global de excepciones (`@RestControllerAdvice`) que formatea las respuestas de error bajo el estándar RFC 7807 (ProblemDetail).
 

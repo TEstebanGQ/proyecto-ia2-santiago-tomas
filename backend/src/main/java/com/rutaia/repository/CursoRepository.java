@@ -18,7 +18,7 @@ public interface CursoRepository extends JpaRepository<Curso, Long> {
 
     List<Curso> findByActivoTrueAndCategoriaIgnoreCaseAndNivelIgnoreCase(String categoria, String nivel);
 
-    @Query(value = "SELECT c.nombre, COUNT(f.id) as total_recomendaciones FROM fuentes f JOIN cursos c ON f.curso_id = c.id GROUP BY c.id, c.nombre ORDER BY total_recomendaciones DESC LIMIT 1", nativeQuery = true)
+    @Query(value = "SELECT c.nombre, COUNT(f.id) as total_recomendaciones FROM fuentes f JOIN cursos c ON f.curso_id = c.id GROUP BY c.id, c.nombre ORDER BY total_recomendaciones DESC LIMIT 3", nativeQuery = true)
     List<Object[]> findCursoMasRecomendado();
 
     @Query(value = "SELECT c.nombre, COUNT(f.id) as total_recomendaciones " +
@@ -28,7 +28,7 @@ public interface CursoRepository extends JpaRepository<Curso, Long> {
                    "JOIN cursos c ON f.curso_id = c.id " +
                    "WHERE con.estudiante_id = :estudianteId " +
                    "GROUP BY c.id, c.nombre " +
-                   "ORDER BY total_recomendaciones DESC LIMIT 1", nativeQuery = true)
+                   "ORDER BY total_recomendaciones DESC LIMIT 3", nativeQuery = true)
     List<Object[]> findCursoMasRecomendadoPorEstudiante(@org.springframework.data.repository.query.Param("estudianteId") Long estudianteId);
 
     List<Curso> findByCategoriaIgnoreCaseOrderByNombreAsc(String categoria);

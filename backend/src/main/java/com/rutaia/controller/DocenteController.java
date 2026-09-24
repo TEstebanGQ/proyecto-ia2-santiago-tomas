@@ -133,4 +133,43 @@ public class DocenteController {
         String emailDocente = extraerEmail(authentication, email);
         return ResponseEntity.ok(docenteService.obtenerEstadisticas(emailDocente));
     }
+
+    @GetMapping("/estudiantes")
+    @Operation(summary = "Listar estudiantes matriculados en cursos de la cátedra del docente")
+    public ResponseEntity<List<com.rutaia.dto.DocenteEstudianteDTO>> listarEstudiantes(
+            @RequestParam(required = false) String email,
+            Authentication authentication) {
+        String emailDocente = extraerEmail(authentication, email);
+        return ResponseEntity.ok(docenteService.listarEstudiantesDocente(emailDocente));
+    }
+
+    @GetMapping("/estudiantes/buscar")
+    @Operation(summary = "Buscar estudiantes matriculados en cursos del docente por nombre o correo")
+    public ResponseEntity<List<com.rutaia.dto.DocenteEstudianteDTO>> buscarEstudiantes(
+            @RequestParam String query,
+            @RequestParam(required = false) String email,
+            Authentication authentication) {
+        String emailDocente = extraerEmail(authentication, email);
+        return ResponseEntity.ok(docenteService.buscarEstudiantesDocente(emailDocente, query));
+    }
+
+    @GetMapping("/estudiantes/{id}")
+    @Operation(summary = "Consultar detalle de un estudiante matriculado en cursos del docente")
+    public ResponseEntity<com.rutaia.dto.DocenteEstudianteDTO> obtenerEstudiante(
+            @PathVariable Long id,
+            @RequestParam(required = false) String email,
+            Authentication authentication) {
+        String emailDocente = extraerEmail(authentication, email);
+        return ResponseEntity.ok(docenteService.obtenerEstudianteDocente(emailDocente, id));
+    }
+
+    @GetMapping("/estudiantes/{id}/historial")
+    @Operation(summary = "Consultar historial de un estudiante matriculado en cursos del docente")
+    public ResponseEntity<List<com.rutaia.dto.HistorialConsultaDTO>> obtenerHistorialEstudiante(
+            @PathVariable Long id,
+            @RequestParam(required = false) String email,
+            Authentication authentication) {
+        String emailDocente = extraerEmail(authentication, email);
+        return ResponseEntity.ok(docenteService.obtenerHistorialEstudianteDocente(emailDocente, id));
+    }
 }

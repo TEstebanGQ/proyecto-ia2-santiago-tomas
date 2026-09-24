@@ -901,5 +901,56 @@ export const api = {
     }
 
     return await res.json();
+  },
+
+  async getDocenteEstudiantes(email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/estudiantes${q}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      throw new Error('Error al consultar los estudiantes de tu especialidad');
+    }
+    return await res.json();
+  },
+
+  async buscarDocenteEstudiantes(query, email = null) {
+    let url = `${API_BASE_URL}/docentes/estudiantes/buscar?query=${encodeURIComponent(query)}`;
+    if (email) {
+      url += `&email=${encodeURIComponent(email)}`;
+    }
+    const res = await fetch(url, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      throw new Error('Error al buscar estudiantes en tu cátedra');
+    }
+    return await res.json();
+  },
+
+  async getDocenteEstudiante(id, email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/estudiantes/${id}${q}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      throw new Error(`Estudiante #${id} no encontrado en tu cátedra`);
+    }
+    return await res.json();
+  },
+
+  async getDocenteEstudianteHistorial(id, email = null) {
+    const q = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE_URL}/docentes/estudiantes/${id}/historial${q}`, {
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      throw new Error(`Historial no disponible para el estudiante #${id}`);
+    }
+    return await res.json();
   }
 };
