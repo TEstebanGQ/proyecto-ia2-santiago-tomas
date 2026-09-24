@@ -85,16 +85,24 @@ public class UsuarioDataLoader implements CommandLineRunner {
             );
             usuarioRepository.save(docente);
 
-            if (!docenteRepository.findByCorreoElectronicoIgnoreCase("profesor.programacion@universidad.edu.co").isPresent()) {
-                Docente d = new Docente(
-                        "Profesor de Programación",
-                        "profesor.programacion@universidad.edu.co",
-                        "Programación",
-                        "Facultad de Ingeniería"
-                );
-                docenteRepository.save(d);
-            }
-            log.info("Usuario Docente inicial creado: profesor.programacion@universidad.edu.co");
+            docenteRepository.findByCorreoElectronicoIgnoreCase("profesor.programacion@universidad.edu.co").ifPresentOrElse(
+                    d -> {
+                        if (d.getNombreCompleto() == null || d.getNombreCompleto().isBlank()) {
+                            d.setNombreCompleto("Profesor de Programación");
+                            docenteRepository.save(d);
+                        }
+                    },
+                    () -> {
+                        Docente d = new Docente(
+                                "Profesor de Programación",
+                                "profesor.programacion@universidad.edu.co",
+                                "Programación",
+                                "Facultad de Ingeniería"
+                        );
+                        docenteRepository.save(d);
+                    }
+            );
+            log.info("Usuario Docente inicial verificado y sincronizado: profesor.programacion@universidad.edu.co");
         }
 
         // 4. Sincronizar todos los estudiantes existentes en la tabla estudiantes a la tabla usuarios

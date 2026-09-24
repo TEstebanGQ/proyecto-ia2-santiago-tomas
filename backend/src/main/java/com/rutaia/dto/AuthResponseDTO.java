@@ -10,6 +10,9 @@ public class AuthResponseDTO {
     private String areaInteres;
     private String token;
     private String proveedor;
+    private Boolean requiereCompletarPerfil = false;
+    private String mensaje;
+    private String departamentoFacultad;
 
     public AuthResponseDTO() {
     }
@@ -23,6 +26,21 @@ public class AuthResponseDTO {
         this.areaInteres = areaInteres;
         this.token = token;
         this.proveedor = proveedor;
+        this.requiereCompletarPerfil = false;
+    }
+
+    public AuthResponseDTO(Long id, String nombre, String email, String rol, String nivelExperiencia, String areaInteres, String token, String proveedor, Boolean requiereCompletarPerfil, String mensaje, String departamentoFacultad) {
+        this.id = id;
+        this.nombre = nombre;
+        this.email = email;
+        this.rol = rol;
+        this.nivelExperiencia = nivelExperiencia;
+        this.areaInteres = areaInteres;
+        this.token = token;
+        this.proveedor = proveedor;
+        this.requiereCompletarPerfil = requiereCompletarPerfil;
+        this.mensaje = mensaje;
+        this.departamentoFacultad = departamentoFacultad;
     }
 
     public Long getId() {
@@ -87,5 +105,29 @@ public class AuthResponseDTO {
 
     public void setProveedor(String proveedor) {
         this.proveedor = proveedor;
+    }
+
+    public Boolean getRequiereCompletarPerfil() {
+        return requiereCompletarPerfil;
+    }
+
+    public void setRequiereCompletarPerfil(Boolean requiereCompletarPerfil) {
+        this.requiereCompletarPerfil = requiereCompletarPerfil;
+    }
+
+    public String getMensaje() {
+        return mensaje;
+    }
+
+    public void setMensaje(String mensaje) {
+        this.mensaje = mensaje;
+    }
+
+    public String getDepartamentoFacultad() {
+        return departamentoFacultad;
+    }
+
+    public void setDepartamentoFacultad(String departamentoFacultad) {
+        this.departamentoFacultad = departamentoFacultad;
     }
 }

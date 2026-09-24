@@ -10,17 +10,24 @@ public class DocenteResponseDTO {
     private String areaEspecialidad;
     private String departamentoFacultad;
     private LocalDateTime fechaCreacion;
+    private Boolean activo;
 
     public DocenteResponseDTO() {
     }
 
-    public DocenteResponseDTO(Long id, String nombreCompleto, String correoElectronico, String areaEspecialidad, String departamentoFacultad, LocalDateTime fechaCreacion) {
+    public DocenteResponseDTO(Long id, String nombreCompleto, String correoElectronico, String areaEspecialidad, String departamentoFacultad, LocalDateTime fechaCreacion, Boolean activo) {
         this.id = id;
         this.nombreCompleto = nombreCompleto;
         this.correoElectronico = correoElectronico;
         this.areaEspecialidad = areaEspecialidad;
         this.departamentoFacultad = departamentoFacultad;
         this.fechaCreacion = fechaCreacion;
+        this.activo = activo;
+    }
+
+    // Backward compatibility constructor (defaults activo to true)
+    public DocenteResponseDTO(Long id, String nombreCompleto, String correoElectronico, String areaEspecialidad, String departamentoFacultad, LocalDateTime fechaCreacion) {
+        this(id, nombreCompleto, correoElectronico, areaEspecialidad, departamentoFacultad, fechaCreacion, true);
     }
 
     public Long getId() {
@@ -69,5 +76,13 @@ public class DocenteResponseDTO {
 
     public void setFechaCreacion(LocalDateTime fechaCreacion) {
         this.fechaCreacion = fechaCreacion;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
     }
 }

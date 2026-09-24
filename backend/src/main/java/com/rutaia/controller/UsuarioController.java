@@ -3,6 +3,8 @@ package com.rutaia.controller;
 import com.rutaia.dto.UsuarioDTO;
 import com.rutaia.dto.UsuarioPasswordDTO;
 import com.rutaia.dto.UsuarioRegistroDTO;
+import com.rutaia.dto.UsuarioRolUpdateDTO;
+import com.rutaia.dto.UsuarioUpdateDTO;
 import com.rutaia.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -59,11 +61,33 @@ public class UsuarioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERADMIN')")
+    @Operation(summary = "Editar datos básicos de un usuario (nombre, área, nivel, departamento)")
+    public ResponseEntity<UsuarioDTO> actualizarUsuario(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody UsuarioUpdateDTO dto,
+            Authentication auth
+    ) {
+        return ResponseEntity.ok(usuarioService.actualizarUsuario(id, dto, auth));
+    }
+
+    @PatchMapping("/{id}/activo")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERADMIN')")
+    @Operation(summary = "Activar o desactivar un usuario del sistema")
+    public ResponseEntity<UsuarioDTO> toggleActivo(
+            @PathVariable("id") Long id,
+            @RequestParam("activo") boolean activo,
+            Authentication auth
+    ) {
+        return ResponseEntity.ok(usuarioService.toggleActivoUsuario(id, activo, auth));
+    }
+
     @PutMapping("/{id}/password")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SUPERADMIN')")
     @Operation(summary = "Configurar o restablecer contraseña de un usuario")
     public ResponseEntity<Map<String, String>> cambiarPassword(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody UsuarioPasswordDTO dto,
             Authentication auth
     ) {
@@ -72,5 +96,16 @@ public class UsuarioController {
                 "mensaje", "Contraseña configurada exitosamente para el usuario.",
                 "estado", "OK"
         ));
+    }
+
+    @PatchMapping("/{id}/rol")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Cambiar el rol de un usuario del sistema (Exclusivo Superadmin: puede cambiar a ADMINISTRADOR, DOCENTE o ESTUDIANTE)")
+    public ResponseEntity<UsuarioDTO> cambiarRol(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody UsuarioRolUpdateDTO dto,
+            Authentication auth
+    ) {
+        return ResponseEntity.ok(usuarioService.cambiarRolUsuario(id, dto, auth));
     }
 }

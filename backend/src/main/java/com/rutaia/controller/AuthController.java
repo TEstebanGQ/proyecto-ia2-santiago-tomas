@@ -278,15 +278,53 @@ public class AuthController {
                 ));
     }
 
+    @GetMapping("/google/check")
+    @Operation(summary = "Comprobar si una cuenta de Google ya existe en RutaIA y si su perfil académico está completo")
+    public ResponseEntity<Map<String, Object>> checkGoogle(@RequestParam("email") String email) {
+        String emailLimpio = email != null ? email.trim().toLowerCase() : "";
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("email", emailLimpio);
+
+        Optional<Usuario> uOpt = usuarioRepository.findByCorreoElectronicoIgnoreCase(emailLimpio);
+        if (uOpt.isPresent()) {
+            Usuario u = uOpt.get();
+            String rol = u.getRol() != null ? u.getRol().toUpperCase() : "ESTUDIANTE";
+            resp.put("existe", true);
+            resp.put("nombre", u.getNombreCompleto());
+            resp.put("rol", rol);
+            resp.put("nivelExperiencia", u.getNivelExperiencia());
+            resp.put("areaInteres", u.getAreaInteres());
+            resp.put("departamentoFacultad", u.getDepartamentoFacultad());
+
+            // Si es SUPERADMIN o ADMINISTRADOR, no requiere datos de estudiante
+            if ("SUPERADMIN".equals(rol) || "ADMINISTRADOR".equals(rol)) {
+                resp.put("perfilCompleto", true);
+                resp.put("requiereCompletarPerfil", false);
+            } else {
+                boolean completo = u.getNivelExperiencia() != null && !u.getNivelExperiencia().isBlank()
+                        && u.getAreaInteres() != null && !u.getAreaInteres().isBlank();
+                resp.put("perfilCompleto", completo);
+                resp.put("requiereCompletarPerfil", !completo);
+            }
+        } else {
+            resp.put("existe", false);
+            resp.put("perfilCompleto", false);
+            resp.put("requiereCompletarPerfil", true);
+        }
+
+        return ResponseEntity.ok(resp);
+    }
+
     @PostMapping("/google")
     @Operation(summary = "Autenticar o registrar mediante Google Sign-In (Genera JWT y almacena en Redis)")
     public ResponseEntity<AuthResponseDTO> googleLogin(@RequestBody AuthRequestDTO request) {
         String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "usuario.google@universidad.edu.co";
         String nombre = request.getNombre() != null && !request.getNombre().isBlank() ? request.getNombre().trim() : "Usuario Google";
-        String rol;
+        String rol = request.getRol() != null && !request.getRol().isBlank() ? request.getRol().trim().toUpperCase() : "ESTUDIANTE";
+        String nivel = request.getNivelExperiencia() != null ? request.getNivelExperiencia().trim() : null;
+        String area = request.getAreaInteres() != null ? request.getAreaInteres().trim() : null;
+        String facultad = request.getDepartamentoFacultad() != null ? request.getDepartamentoFacultad().trim() : null;
         Long id;
-        String nivel;
-        String area;
 
         // Comprobar si existe en tabla usuarios
         Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreoElectronicoIgnoreCase(email);
@@ -295,41 +333,107 @@ public class AuthController {
             rol = u.getRol().toUpperCase();
             id = u.getId();
             nombre = u.getNombreCompleto();
-            nivel = u.getNivelExperiencia() != null ? u.getNivelExperiencia() : "Principiante";
-            area = u.getAreaInteres() != null ? u.getAreaInteres() : "Tecnología";
-        } else if (email.contains("superadmin") || (request.getRol() != null && request.getRol().equalsIgnoreCase("SUPERADMIN"))) {
+
+            // Si es Administrador o Superadmin, ingresa directamente
+            if ("SUPERADMIN".equals(rol) || "ADMINISTRADOR".equals(rol)) {
+                nivel = u.getNivelExperiencia() != null ? u.getNivelExperiencia() : ("SUPERADMIN".equals(rol) ? "Superadmin" : "Coordinador");
+                area = u.getAreaInteres() != null ? u.getAreaInteres() : ("SUPERADMIN".equals(rol) ? "Gobierno Institucional y Superadministración" : "Administración y Gestión Curricular");
+            } else {
+                // Verificar si tiene perfil completo
+                boolean tieneNivel = u.getNivelExperiencia() != null && !u.getNivelExperiencia().isBlank();
+                boolean tieneArea = u.getAreaInteres() != null && !u.getAreaInteres().isBlank();
+
+                // Si le falta información y la petición la incluye, actualizarla
+                if ((!tieneNivel || !tieneArea) && (nivel != null && !nivel.isBlank() && area != null && !area.isBlank())) {
+                    u.setNivelExperiencia(nivel);
+                    u.setAreaInteres(area);
+                    if (facultad != null && !facultad.isBlank()) {
+                        u.setDepartamentoFacultad(facultad);
+                    }
+                    u = usuarioRepository.save(u);
+                    tieneNivel = true;
+                    tieneArea = true;
+
+                    final Usuario usuarioActualizado = u;
+                    if ("ESTUDIANTE".equals(rol)) {
+                        estudianteRepository.findByCorreoElectronicoIgnoreCase(email).ifPresent(est -> {
+                            est.setNivelExperiencia(usuarioActualizado.getNivelExperiencia());
+                            est.setAreaInteres(usuarioActualizado.getAreaInteres());
+                            estudianteRepository.save(est);
+                        });
+                    }
+                }
+
+                // Si aún le falta información obligatoria, requerirla
+                if (!tieneNivel || !tieneArea) {
+                    AuthResponseDTO incompleteResp = new AuthResponseDTO();
+                    incompleteResp.setEmail(email);
+                    incompleteResp.setNombre(nombre);
+                    incompleteResp.setRol(rol);
+                    incompleteResp.setRequiereCompletarPerfil(true);
+                    incompleteResp.setMensaje("Para continuar con Google, es obligatorio completar el nivel de experiencia y área de interés.");
+                    return ResponseEntity.ok(incompleteResp);
+                }
+
+                nivel = u.getNivelExperiencia();
+                area = u.getAreaInteres();
+            }
+        } else if (email.contains("superadmin") || "SUPERADMIN".equalsIgnoreCase(rol)) {
             id = 0L;
             rol = "SUPERADMIN";
             nivel = "Superadmin";
             area = "Gobierno Institucional y Superadministración";
-        } else if (email.contains("admin") || (request.getRol() != null && request.getRol().equalsIgnoreCase("ADMINISTRADOR"))) {
+        } else if (email.contains("admin") || "ADMINISTRADOR".equalsIgnoreCase(rol)) {
             id = 0L;
             rol = "ADMINISTRADOR";
             nivel = "Coordinador";
             area = "Administración y Gestión Curricular";
         } else {
-            rol = "ESTUDIANTE";
-            Optional<Estudiante> optEst = estudianteRepository.findByCorreoElectronicoIgnoreCase(email);
-            Estudiante est;
-            if (optEst.isPresent()) {
-                est = optEst.get();
-            } else {
-                est = new Estudiante(
-                        nombre,
-                        email,
-                        "Principiante",
-                        "Tecnología e Inteligencia Artificial"
-                );
-                est = estudianteRepository.save(est);
+            // Usuario NUEVO por Google
+            // Validar obligatoriedad de nivelExperiencia y areaInteres
+            if (nivel == null || nivel.isBlank() || area == null || area.isBlank()) {
+                AuthResponseDTO incompleteResp = new AuthResponseDTO();
+                incompleteResp.setEmail(email);
+                incompleteResp.setNombre(nombre);
+                incompleteResp.setRol(rol);
+                incompleteResp.setRequiereCompletarPerfil(true);
+                incompleteResp.setMensaje("Para registrarte con Google, es obligatorio completar el nivel de experiencia académica y el área de interés vocacional.");
+                return ResponseEntity.ok(incompleteResp);
             }
-            id = est.getId();
-            nombre = est.getNombreCompleto();
-            email = est.getCorreoElectronico();
-            nivel = est.getNivelExperiencia();
-            area = est.getAreaInteres();
 
-            Usuario u = new Usuario(nombre, email, passwordEncoder.encode(UUID.randomUUID().toString()), rol, nivel, area, "Google Pregrado");
-            usuarioRepository.save(u);
+            // Normalizar rol para registro nuevo (solo ESTUDIANTE o DOCENTE)
+            if (!"DOCENTE".equalsIgnoreCase(rol)) {
+                rol = "ESTUDIANTE";
+            } else {
+                rol = "DOCENTE";
+            }
+
+            if (facultad == null || facultad.isBlank()) {
+                facultad = "DOCENTE".equals(rol) ? "Facultad de Ingeniería" : "Google Pregrado";
+            }
+
+            Usuario u = new Usuario(nombre, email, passwordEncoder.encode(UUID.randomUUID().toString()), rol, nivel, area, facultad);
+            u = usuarioRepository.save(u);
+            id = u.getId();
+
+            if ("DOCENTE".equals(rol)) {
+                if (!docenteRepository.findByCorreoElectronicoIgnoreCase(email).isPresent()) {
+                    Docente doc = new Docente(nombre, email, area, facultad);
+                    docenteRepository.save(doc);
+                }
+            } else {
+                Optional<Estudiante> optEst = estudianteRepository.findByCorreoElectronicoIgnoreCase(email);
+                if (optEst.isPresent()) {
+                    Estudiante est = optEst.get();
+                    est.setNivelExperiencia(nivel);
+                    est.setAreaInteres(area);
+                    estudianteRepository.save(est);
+                } else {
+                    Estudiante est = new Estudiante(nombre, email, nivel, area);
+                    est = estudianteRepository.save(est);
+                    id = est.getId();
+                }
+            }
         }
 
         // Generar JWT y guardar sesión completa en Redis
@@ -347,18 +451,22 @@ public class AuthController {
                 .sameSite("Lax")
                 .build();
 
+        AuthResponseDTO authResp = new AuthResponseDTO(
+                id,
+                nombre,
+                email,
+                rol,
+                nivel,
+                area,
+                tokenJwt,
+                "google"
+        );
+        authResp.setRequiereCompletarPerfil(false);
+        authResp.setDepartamentoFacultad(facultad);
+
         return ResponseEntity.ok()
                 .header(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new AuthResponseDTO(
-                        id,
-                        nombre,
-                        email,
-                        rol,
-                        nivel,
-                        area,
-                        tokenJwt,
-                        "google"
-                ));
+                .body(authResp);
     }
 
     @GetMapping("/me")

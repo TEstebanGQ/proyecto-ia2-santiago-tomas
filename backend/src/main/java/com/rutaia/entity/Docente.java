@@ -23,6 +23,9 @@ public class Docente {
     @Column(name = "departamento_facultad", length = 100)
     private String departamentoFacultad;
 
+    @Column(name = "activo", nullable = false)
+    private Boolean activo = true;
+
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
@@ -34,12 +37,24 @@ public class Docente {
         this.correoElectronico = correoElectronico;
         this.areaEspecialidad = areaEspecialidad;
         this.departamentoFacultad = departamentoFacultad;
+        this.activo = true;
+    }
+
+    public Docente(String nombreCompleto, String correoElectronico, String areaEspecialidad, String departamentoFacultad, Boolean activo) {
+        this.nombreCompleto = nombreCompleto;
+        this.correoElectronico = correoElectronico;
+        this.areaEspecialidad = areaEspecialidad;
+        this.departamentoFacultad = departamentoFacultad;
+        this.activo = activo != null ? activo : true;
     }
 
     @PrePersist
     protected void onCreate() {
         if (this.fechaCreacion == null) {
             this.fechaCreacion = LocalDateTime.now();
+        }
+        if (this.activo == null) {
+            this.activo = true;
         }
     }
 
@@ -81,6 +96,14 @@ public class Docente {
 
     public void setDepartamentoFacultad(String departamentoFacultad) {
         this.departamentoFacultad = departamentoFacultad;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
     }
 
     public LocalDateTime getFechaCreacion() {

@@ -93,8 +93,27 @@ public class DocenteService {
                 d.getCorreoElectronico(),
                 d.getAreaEspecialidad(),
                 d.getDepartamentoFacultad(),
-                d.getFechaCreacion()
+                d.getFechaCreacion(),
+                d.getActivo() != null ? d.getActivo() : true
         )).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public DocenteResponseDTO toggleActivo(Long docenteId, Boolean nuevoEstado) {
+        Docente docente = docenteRepository.findById(docenteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Docente no encontrado con ID: " + docenteId));
+        boolean activo = (nuevoEstado != null) ? nuevoEstado : (docente.getActivo() == null || !docente.getActivo());
+        docente.setActivo(activo);
+        Docente guardado = docenteRepository.save(docente);
+        return new DocenteResponseDTO(
+                guardado.getId(),
+                guardado.getNombreCompleto(),
+                guardado.getCorreoElectronico(),
+                guardado.getAreaEspecialidad(),
+                guardado.getDepartamentoFacultad(),
+                guardado.getFechaCreacion(),
+                guardado.getActivo()
+        );
     }
 
     @Transactional(readOnly = true)
