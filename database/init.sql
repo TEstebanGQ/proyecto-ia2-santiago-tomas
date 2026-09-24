@@ -6,6 +6,7 @@
 
 -- Limpieza si existen tablas previas
 DROP TABLE IF EXISTS auditoria CASCADE;
+DROP TABLE IF EXISTS usuarios CASCADE;
 DROP TABLE IF EXISTS calificaciones_curso CASCADE;
 DROP TABLE IF EXISTS calificaciones CASCADE;
 DROP TABLE IF EXISTS fuentes CASCADE;
@@ -128,8 +129,27 @@ CREATE TABLE auditoria (
 );
 
 CREATE INDEX idx_auditoria_fecha ON auditoria(fecha DESC);
-CREATE INDEX idx_auditoria_tipo ON auditoria(tipo_evento);
-CREATE INDEX idx_auditoria_usuario ON auditoria(usuario_email);
+
+-- ----------------------------------------------------------
+-- 8. TABLA: usuarios (Gestión de Roles, Credenciales y Contraseñas)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS usuarios (
+    id BIGSERIAL PRIMARY KEY,
+    nombre_completo VARCHAR(150) NOT NULL,
+    correo_electronico VARCHAR(150) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    rol VARCHAR(50) NOT NULL CHECK (rol IN ('SUPERADMIN', 'ADMINISTRADOR', 'DOCENTE', 'ESTUDIANTE')),
+    nivel_experiencia VARCHAR(50),
+    area_interes VARCHAR(100),
+    departamento_facultad VARCHAR(100),
+    activo BOOLEAN DEFAULT TRUE NOT NULL,
+    fecha_creacion TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_correo ON usuarios(correo_electronico);
+CREATE INDEX IF NOT EXISTS idx_usuarios_rol ON usuarios(rol);
+CREATE INDEX IF NOT EXISTS idx_auditoria_tipo ON auditoria(tipo_evento);
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_email);
 
 -- ==========================================================
 -- DATOS SEMILLA (SEED DATA)
@@ -436,5 +456,18 @@ INSERT INTO auditoria (tipo_evento, usuario_email, usuario_nombre, rol, detalle,
 ('INGRESO', 'admin@universidad.edu.co', 'Administrador Académico', 'ADMINISTRADOR', 'Inicio de sesión panel administrador', NOW() - INTERVAL '2 hours');
 
 SELECT setval('auditoria_id_seq', (SELECT MAX(id) FROM auditoria));
+
+-- ----------------------------------------------------------
+-- USUARIOS INICIALES (SUPERADMIN, ADMIN, DOCENTE, ESTUDIANTE)
+-- Contraseña por defecto: password123 (hasheada con BCrypt)
+-- ----------------------------------------------------------
+INSERT INTO usuarios (nombre_completo, correo_electronico, password, rol, nivel_experiencia, area_interes, departamento_facultad) VALUES
+('Super Administrador del Sistema', 'superadmin@universidad.edu.co', '$2a$10$wTqSfvHhP5wVn27tA5L8c.e6f1pPsmP5R.xX.tT6b2u1lq8s1P6aK', 'SUPERADMIN', 'Superadmin', 'Gobierno Institucional y Superadministración', 'Rectoría'),
+('Administrador Académico', 'admin@universidad.edu.co', '$2a$10$wTqSfvHhP5wVn27tA5L8c.e6f1pPsmP5R.xX.tT6b2u1lq8s1P6aK', 'ADMINISTRADOR', 'Coordinador', 'Administración y Gestión Curricular', 'Dirección Académica'),
+('Profesor de Programación', 'profesor.programacion@universidad.edu.co', '$2a$10$wTqSfvHhP5wVn27tA5L8c.e6f1pPsmP5R.xX.tT6b2u1lq8s1P6aK', 'DOCENTE', 'Docente Titular', 'Programación', 'Facultad de Ingeniería'),
+('Santiago Gómez Morales', 'santiago.gomez@universidad.edu.co', '$2a$10$wTqSfvHhP5wVn27tA5L8c.e6f1pPsmP5R.xX.tT6b2u1lq8s1P6aK', 'ESTUDIANTE', 'Principiante', 'Desarrollo Web', 'Pregrado')
+ON CONFLICT (correo_electronico) DO NOTHING;
+
+SELECT setval('usuarios_id_seq', (SELECT COALESCE(MAX(id), 1) FROM usuarios));
 
 
