@@ -375,11 +375,11 @@ export const ui = {
 
     if (sessionHint) {
       if (isFull) {
-        sessionHint.textContent = 'Has alcanzado el límite de 5 consultas en esta sesión.';
+        sessionHint.textContent = 'Has alcanzado el límite de 10 consultas en esta sesión.';
       } else if (turnCount > 0) {
         sessionHint.textContent = 'Puedes profundizar o hacer preguntas de seguimiento sobre los cursos anteriores.';
       } else {
-        sessionHint.textContent = 'Conversación activa: puedes hacer hasta 5 consultas en esta sesión.';
+        sessionHint.textContent = 'Conversación activa: puedes hacer hasta 10 consultas en esta sesión.';
       }
     }
 
@@ -390,7 +390,7 @@ export const ui = {
     if (queryInput) {
       queryInput.disabled = isFull;
       if (isFull) {
-        queryInput.placeholder = 'Límite de 5 consultas completado. Inicia una nueva conversación para consultar otro tema.';
+        queryInput.placeholder = 'Límite de 10 consultas completado. Inicia una nueva conversación para consultar otro tema.';
       } else {
         queryInput.placeholder = 'Escribe tu pregunta o seguimiento aquí...';
       }
@@ -1660,12 +1660,22 @@ export const ui = {
 
       let docenteHtml = '';
       if (docentesAsignados.length > 0) {
-        docenteHtml = docentesAsignados.map(d => `
-          <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
-            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4F46E5; flex-shrink: 0;"></span>
-            <span style="font-weight: 600; font-size: 0.82rem; color: #1E293B;">${d.nombre}</span>
+        docenteHtml = docentesAsignados.map(d => {
+          const rawNombre = d.nombreCompleto || d.nombre;
+          const docNombre = (rawNombre && rawNombre !== 'undefined') ? rawNombre : (d.correoElectronico || 'Docente Institucional');
+          const esDocActivo = d.activo !== false;
+          return `
+          <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.25rem;">
+            <div style="width: 22px; height: 22px; border-radius: 6px; background: ${esDocActivo ? '#EEF2FF' : '#F1F5F9'}; color: ${esDocActivo ? '#4F46E5' : '#64748B'}; font-size: 0.65rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid ${esDocActivo ? '#C7D2FE' : '#CBD5E1'};">
+              ${docNombre.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase()}
+            </div>
+            <div>
+              <span style="font-weight: 700; font-size: 0.82rem; color: #0F172A; display: block; line-height: 1.2;">${this.escapeHtml(docNombre)}</span>
+              ${!esDocActivo ? '<span style="font-size: 0.68rem; color: #DC2626; font-weight: 600;">(Inactivo)</span>' : ''}
+            </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
       } else {
         docenteHtml = `<span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">Sin docente asignado</span>`;
       }
@@ -1738,13 +1748,17 @@ export const ui = {
     if (docenteGroup) docenteGroup.style.display = 'block';
 
     if (docenteSelect) {
-      docenteSelect.innerHTML = '<option value="">-- Seleccionar Docente / Cátedra --</option>';
+      docenteSelect.innerHTML = '<option value="">-- Seleccionar Docente Asignado --</option>';
       (docentes || []).forEach(d => {
+        const rawNombre = d.nombreCompleto || d.nombre;
+        const docNombre = (rawNombre && rawNombre !== 'undefined') ? rawNombre : (d.correoElectronico || 'Docente Institucional');
+        const especialidad = d.areaEspecialidad || 'General';
+        const inactivoTag = d.activo === false ? ' [Inactivo]' : '';
         const opt = document.createElement('option');
         opt.value = d.areaEspecialidad || '';
-        opt.dataset.docenteNombre = d.nombre;
+        opt.dataset.docenteNombre = docNombre;
         opt.dataset.docenteId = d.id;
-        opt.textContent = `${d.nombre} — Cátedra: ${d.areaEspecialidad || 'General'}`;
+        opt.textContent = `${docNombre} — Cátedra: ${especialidad}${inactivoTag}`;
         if (curso && curso.categoria && d.areaEspecialidad &&
             curso.categoria.trim().toLowerCase() === d.areaEspecialidad.trim().toLowerCase()) {
           opt.selected = true;
@@ -2999,7 +3013,7 @@ export const ui = {
   // ==========================================================
   // GESTIÓN DE USUARIOS Y ROLES (SUPERADMIN & ADMINISTRADOR)
   // ==========================================================
-  renderUsuariosAdmin(usuarios, onCambiarPassword, currentRole = 'ADMINISTRADOR', cursos = [], onVerCursosDocente = null) {
+  renderUsuariosAdmin(usuarios, onCambiarPassword, currentRole = 'ADMINISTRADOR', cursos = [], onVerCursosDocente = null, onToggleActivoUsuario = null, onCambiarRol = null, onEditarUsuario = null) {
     const tbody = document.getElementById('admin-users-tbody');
     const totalEl = document.getElementById('users-count-total');
     const superEl = document.getElementById('users-count-superadmin');
@@ -3033,12 +3047,12 @@ export const ui = {
         badgeTagEl.textContent = 'Permisos Superadmin Totales';
         badgeTagEl.style.background = 'rgba(124, 58, 237, 0.15)';
         badgeTagEl.style.color = '#7C3AED';
-        subtitleEl.innerHTML = '<strong>Permisos totales de Superadmin:</strong> Puedes crear Administradores, Docentes y Estudiantes, y configurar las contraseñas de todos los usuarios del sistema.';
+        subtitleEl.innerHTML = '<strong>Permisos totales de Superadmin:</strong> Puedes crear Administradores, Docentes y Estudiantes, editar sus perfiles, activar o desactivar sus cuentas y configurar sus contraseñas.';
       } else {
         badgeTagEl.textContent = 'Gestión Docentes y Estudiantes';
         badgeTagEl.style.background = 'rgba(37, 99, 235, 0.12)';
         badgeTagEl.style.color = '#2563EB';
-        subtitleEl.innerHTML = '<strong>Gestión de Usuarios Académicos:</strong> Vista filtrada de Docentes y Estudiantes. Puedes registrar nuevos perfiles académicos y configurar sus contraseñas.';
+        subtitleEl.innerHTML = '<strong>Gestión de Usuarios Académicos:</strong> Puedes editar información de Docentes y Estudiantes, activar o desactivar sus cuentas y configurar sus contraseñas.';
       }
     }
 
@@ -3062,7 +3076,7 @@ export const ui = {
     if (usuariosVisibles.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+          <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
             No hay usuarios registrados con los criterios seleccionados.
           </td>
         </tr>
@@ -3094,6 +3108,12 @@ export const ui = {
         ? (cursos || []).filter(c => c.categoria && areaText && c.categoria.trim().toLowerCase() === areaText.trim().toLowerCase())
         : [];
 
+      const esUsuarioActivo = u.activo !== false;
+      const puedeToggle = (!isSuper && (r === 'DOCENTE' || r === 'ESTUDIANTE')) ||
+                          (isSuper && r !== 'SUPERADMIN');
+      const puedeEditar = (!isSuper && (r === 'DOCENTE' || r === 'ESTUDIANTE')) ||
+                          (isSuper && r !== 'SUPERADMIN');
+
       tr.innerHTML = `
         <td style="font-weight: 700; color: var(--text-muted); font-size: 0.82rem;">#${u.id}</td>
         <td>
@@ -3102,7 +3122,9 @@ export const ui = {
               ${initials}
             </div>
             <div>
-              <div style="font-weight: 700; color: #18191E;">${u.nombreCompleto}</div>
+              <div style="font-weight: 700; color: #18191E; display: flex; align-items: center; gap: 0.4rem;">
+                <span>${this.escapeHtml(u.nombreCompleto)}</span>
+              </div>
             </div>
           </div>
         </td>
@@ -3120,6 +3142,12 @@ export const ui = {
             </div>
           ` : ''}
         </td>
+        <td>
+          ${esUsuarioActivo 
+            ? `<span style="background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.75rem; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;"><span style="width:6px;height:6px;border-radius:50%;background:#059669;display:inline-block;"></span>Activo</span>`
+            : `<span style="background: rgba(239, 68, 68, 0.1); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.25); font-size: 0.75rem; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;"><span style="width:6px;height:6px;border-radius:50%;background:#DC2626;display:inline-block;"></span>Inactivo</span>`
+          }
+        </td>
         <td style="font-size: 0.8rem; color: var(--text-muted);">${fecha}</td>
         <td style="text-align: right; white-space: nowrap;">
           ${r === 'DOCENTE' ? `
@@ -3131,6 +3159,28 @@ export const ui = {
               <span>Ver Cursos</span>
             </button>
           ` : ''}
+          ${isSuper && r !== 'SUPERADMIN' ? `
+            <button type="button" class="btn-table-action btn-action-change-role" data-id="${u.id}" title="Cambiar rol del usuario (Exclusivo Superadmin)" style="background: rgba(124, 58, 237, 0.1); color: #7C3AED; border: 1px solid rgba(124, 58, 237, 0.25); padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 0.4rem; transition: all 0.2s;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+              </svg>
+              <span>Cambiar Rol</span>
+            </button>
+          ` : ''}
+          ${puedeEditar ? `
+            <button type="button" class="btn-table-action btn-action-edit-user" data-id="${u.id}" title="Editar datos del usuario" style="background: rgba(37, 99, 235, 0.08); color: #2563EB; border: 1px solid rgba(37, 99, 235, 0.25); padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 0.4rem; transition: all 0.2s;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              <span>Editar</span>
+            </button>
+          ` : ''}
+          ${puedeToggle ? `
+            <button type="button" class="btn-table-action btn-action-toggle-user" data-id="${u.id}" data-activo="${esUsuarioActivo}" style="background: ${esUsuarioActivo ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)'}; color: ${esUsuarioActivo ? '#DC2626' : '#059669'}; border: 1px solid ${esUsuarioActivo ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.25)'}; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 0.4rem; transition: all 0.2s;">
+              <span>${esUsuarioActivo ? 'Desactivar' : 'Activar'}</span>
+            </button>
+          ` : ''}
           <button type="button" class="btn-table-action btn-action-change-pwd" data-id="${u.id}" style="background: #0F172A; color: #FFFFFF; padding: 0.4rem 0.85rem; border-radius: 8px; font-weight: 700; font-size: 0.78rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.2s;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 2l-2 2m-1.5 1.5L14 9l-3 3-4-1-4 4 4 4 1 4 4-4-1-4 3.5-3.5L20 4l2-2z"></path>
@@ -3139,6 +3189,16 @@ export const ui = {
           </button>
         </td>
       `;
+
+      const btnRole = tr.querySelector('.btn-action-change-role');
+      if (btnRole && onCambiarRol) {
+        btnRole.addEventListener('click', () => onCambiarRol(u));
+      }
+
+      const btnEdit = tr.querySelector('.btn-action-edit-user');
+      if (btnEdit && onEditarUsuario) {
+        btnEdit.addEventListener('click', () => onEditarUsuario(u));
+      }
 
       const btnPwd = tr.querySelector('.btn-action-change-pwd');
       if (btnPwd && onCambiarPassword) {
@@ -3150,8 +3210,148 @@ export const ui = {
         btnViewCourses.addEventListener('click', () => onVerCursosDocente(u, cursosDocente));
       }
 
+      const btnToggleUser = tr.querySelector('.btn-action-toggle-user');
+      if (btnToggleUser && onToggleActivoUsuario) {
+        btnToggleUser.addEventListener('click', () => onToggleActivoUsuario(u));
+      }
+
       tbody.appendChild(tr);
     });
+  },
+
+  // Modal exclusivo de Superadmin para cambiar roles de usuarios
+  mostrarModalCambioRol(usuario, onConfirmar) {
+    const modal = document.getElementById('modal-change-user-role');
+    if (!modal) return;
+
+    const idInput = document.getElementById('change-role-user-id');
+    const nameEl = document.getElementById('change-role-user-name');
+    const emailEl = document.getElementById('change-role-user-email');
+    const avatarEl = document.getElementById('change-role-user-avatar');
+    const badgeEl = document.getElementById('change-role-current-badge');
+    const closeBtn = document.getElementById('btn-close-change-role-modal');
+    const cancelBtn = document.getElementById('btn-cancel-change-role');
+    const form = document.getElementById('form-change-user-role');
+
+    const fieldsDocente = document.getElementById('change-role-fields-docente');
+    const fieldsStudent = document.getElementById('change-role-fields-student');
+
+    const docenteAreaInput = document.getElementById('change-role-docente-area');
+    const docenteFacultyInput = document.getElementById('change-role-docente-faculty');
+    const studentLevelSelect = document.getElementById('change-role-student-level');
+    const studentAreaInput = document.getElementById('change-role-student-area');
+
+    const currentRol = (usuario.rol || 'ESTUDIANTE').toUpperCase();
+    const initials = (usuario.nombreCompleto || 'U').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+    if (idInput) idInput.value = usuario.id;
+    if (nameEl) nameEl.textContent = usuario.nombreCompleto;
+    if (emailEl) emailEl.textContent = usuario.correoElectronico;
+    if (avatarEl) avatarEl.textContent = initials;
+    if (badgeEl) {
+      badgeEl.textContent = currentRol;
+      badgeEl.className = `user-role-badge ${currentRol === 'DOCENTE' ? 'role-badge-docente' : (currentRol === 'ADMINISTRADOR' ? 'role-badge-admin' : 'role-badge-student')}`;
+    }
+
+    // Configurar selección de radio por defecto (si es Estudiante, sugerir Docente o Admin)
+    const radioStudent = document.getElementById('opt-role-student')?.querySelector('input');
+    const radioDocente = document.getElementById('opt-role-docente')?.querySelector('input');
+    const radioAdmin = document.getElementById('opt-role-admin')?.querySelector('input');
+
+    if (currentRol === 'ESTUDIANTE') {
+      if (radioDocente) radioDocente.checked = true;
+    } else if (currentRol === 'DOCENTE') {
+      if (radioAdmin) radioAdmin.checked = true;
+    } else {
+      if (radioDocente) radioDocente.checked = true;
+    }
+
+    // Prefill fields
+    if (docenteAreaInput) docenteAreaInput.value = usuario.areaInteres || '';
+    if (docenteFacultyInput) docenteFacultyInput.value = usuario.departamentoFacultad || 'Facultad de Ingeniería';
+    if (studentLevelSelect) studentLevelSelect.value = usuario.nivelExperiencia || 'Principiante';
+    if (studentAreaInput) studentAreaInput.value = usuario.areaInteres || '';
+
+    const actualizarCamposDinamicos = () => {
+      const selectedRadio = form.querySelector('input[name="new_user_role"]:checked');
+      const selectedRol = selectedRadio ? selectedRadio.value : 'ESTUDIANTE';
+      if (fieldsDocente) fieldsDocente.style.display = selectedRol === 'DOCENTE' ? 'block' : 'none';
+      if (fieldsStudent) fieldsStudent.style.display = selectedRol === 'ESTUDIANTE' ? 'block' : 'none';
+    };
+
+    form.querySelectorAll('input[name="new_user_role"]').forEach(radio => {
+      radio.onchange = actualizarCamposDinamicos;
+    });
+    actualizarCamposDinamicos();
+
+    const cerrarModal = () => {
+      modal.style.display = 'none';
+    };
+
+    if (closeBtn) closeBtn.onclick = cerrarModal;
+    if (cancelBtn) cancelBtn.onclick = cerrarModal;
+
+    modal.onclick = (e) => {
+      if (e.target === modal) cerrarModal();
+    };
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const selectedRadio = form.querySelector('input[name="new_user_role"]:checked');
+      const nuevoRol = selectedRadio ? selectedRadio.value : '';
+
+      if (!nuevoRol) {
+        this.showToast('Por favor selecciona el nuevo rol.', 'error');
+        return;
+      }
+
+      let detalles = {};
+      if (nuevoRol === 'DOCENTE') {
+        const area = docenteAreaInput?.value.trim();
+        const fac = docenteFacultyInput?.value.trim();
+        if (!area) {
+          this.showToast('La cátedra o especialidad del docente es obligatoria.', 'error');
+          docenteAreaInput?.focus();
+          return;
+        }
+        detalles.areaInteres = area;
+        detalles.departamentoFacultad = fac || 'Facultad de Ingeniería';
+      } else if (nuevoRol === 'ESTUDIANTE') {
+        const nivel = studentLevelSelect?.value;
+        const area = studentAreaInput?.value.trim();
+        if (!nivel) {
+          this.showToast('El nivel de experiencia es obligatorio.', 'error');
+          return;
+        }
+        if (!area) {
+          this.showToast('El área de interés del estudiante es obligatoria.', 'error');
+          studentAreaInput?.focus();
+          return;
+        }
+        detalles.nivelExperiencia = nivel;
+        detalles.areaInteres = area;
+      }
+
+      const submitBtn = document.getElementById('btn-submit-change-role');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Actualizando rol institucional...</span>';
+      }
+
+      try {
+        await onConfirmar(usuario.id, nuevoRol, detalles);
+        cerrarModal();
+      } catch (err) {
+        this.showToast('Error al cambiar rol: ' + err.message, 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Confirmar Cambio de Rol</span>';
+        }
+      }
+    };
+
+    modal.style.display = 'flex';
   },
 
   // Modal para ver cursos asignados al docente
@@ -3303,6 +3503,64 @@ export const ui = {
 
   closeModalCrearUsuario() {
     const modal = document.getElementById('user-create-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  openModalEditarUsuario(usuario) {
+    const modal = document.getElementById('user-edit-modal');
+    if (!modal) return;
+
+    const idInput = document.getElementById('user-edit-id');
+    const nameInput = document.getElementById('user-edit-name');
+    const emailInput = document.getElementById('user-edit-email');
+    const rolInput = document.getElementById('user-edit-rol-display');
+    const areaInput = document.getElementById('user-edit-area');
+    const nivelSelect = document.getElementById('user-edit-nivel');
+    const facultadInput = document.getElementById('user-edit-facultad');
+
+    if (idInput) idInput.value = usuario.id;
+    if (nameInput) nameInput.value = usuario.nombreCompleto || '';
+    if (emailInput) emailInput.value = usuario.correoElectronico || '';
+    if (rolInput) rolInput.value = usuario.rol || '';
+    if (areaInput) areaInput.value = usuario.areaInteres || '';
+    if (facultadInput) facultadInput.value = usuario.departamentoFacultad || '';
+
+    const rol = (usuario.rol || '').toUpperCase();
+    if (nivelSelect) {
+      if (rol === 'DOCENTE') {
+        nivelSelect.innerHTML = `
+          <option value="Docente Titular">Docente Titular</option>
+          <option value="Docente Asistente">Docente Asistente</option>
+          <option value="Docente Catedrático">Docente Catedrático</option>
+        `;
+      } else if (rol === 'ADMINISTRADOR') {
+        nivelSelect.innerHTML = `
+          <option value="Coordinador">Coordinador Académico</option>
+          <option value="Director de Programa">Director de Programa</option>
+          <option value="Administrador General">Administrador General</option>
+        `;
+      } else if (rol === 'SUPERADMIN') {
+        nivelSelect.innerHTML = `
+          <option value="Superadmin">Super Administrador</option>
+        `;
+      } else {
+        nivelSelect.innerHTML = `
+          <option value="Principiante">Principiante</option>
+          <option value="Intermedio">Intermedio</option>
+          <option value="Avanzado">Avanzado</option>
+        `;
+      }
+      if (usuario.nivelExperiencia) {
+        nivelSelect.value = usuario.nivelExperiencia;
+      }
+    }
+
+    modal.style.display = 'flex';
+    if (nameInput) setTimeout(() => nameInput.focus(), 80);
+  },
+
+  closeModalEditarUsuario() {
+    const modal = document.getElementById('user-edit-modal');
     if (modal) modal.style.display = 'none';
   },
 

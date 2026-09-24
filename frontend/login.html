@@ -502,6 +502,169 @@
 
   </div>
 
+  <!-- Modal Google Sign-In con Onboarding Obligatorio -->
+  <div class="google-modal-overlay" id="modal-google-auth" style="display: none;">
+    <div class="google-modal-card">
+      <button type="button" class="google-modal-close" id="btn-close-google-modal" aria-label="Cerrar">&times;</button>
+      
+      <!-- Paso 1: Selección de Cuenta de Google -->
+      <div class="google-step" id="google-step-select">
+        <div class="google-modal-header">
+          <svg width="34" height="34" viewBox="0 0 48 48" class="google-svg">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          <h3 style="margin-top: 0.5rem; font-size: 1.25rem; font-weight: 800; color: #0F172A;">Acceder con Google</h3>
+          <p style="font-size: 0.88rem; color: #64748B; margin-top: 0.25rem;">Elige una cuenta institucional o ingresa una nueva para ingresar a <strong>RutaIA</strong></p>
+        </div>
+
+        <div class="google-accounts-list">
+          <div class="google-account-item" data-email="santiago.gomez@universidad.edu.co" data-name="Santiago Gómez Morales" data-avatar="SG">
+            <div class="google-acc-avatar">SG</div>
+            <div class="google-acc-info">
+              <span class="google-acc-name">Santiago Gómez Morales</span>
+              <span class="google-acc-email">santiago.gomez@universidad.edu.co</span>
+              <span class="google-acc-role-pill">Estudiante (Cuenta activa)</span>
+            </div>
+            <span class="google-acc-arrow">➔</span>
+          </div>
+
+          <div class="google-account-item" data-email="admin@universidad.edu.co" data-name="Administrador Académico" data-avatar="AD">
+            <div class="google-acc-avatar" style="background: #2563EB;">AD</div>
+            <div class="google-acc-info">
+              <span class="google-acc-name">Administrador Académico</span>
+              <span class="google-acc-email">admin@universidad.edu.co</span>
+              <span class="google-acc-role-pill" style="background: #DBEAFE; color: #1E40AF;">Administrador (Acceso Directo)</span>
+            </div>
+            <span class="google-acc-arrow">➔</span>
+          </div>
+
+          <div class="google-account-item" data-email="superadmin@universidad.edu.co" data-name="Super Administrador del Sistema" data-avatar="SA">
+            <div class="google-acc-avatar" style="background: #7C3AED;">SA</div>
+            <div class="google-acc-info">
+              <span class="google-acc-name">Super Administrador del Sistema</span>
+              <span class="google-acc-email">superadmin@universidad.edu.co</span>
+              <span class="google-acc-role-pill" style="background: #EDE9FE; color: #6D28D9;">Superadmin (Acceso Directo)</span>
+            </div>
+            <span class="google-acc-arrow">➔</span>
+          </div>
+
+          <div class="google-account-custom-toggle" id="btn-toggle-custom-google">
+            <div class="google-acc-avatar" style="background: #F8FAFC; color: #475569; border: 1.5px dashed #CBD5E1;">+</div>
+            <div class="google-acc-info">
+              <span class="google-acc-name" style="color: #2563EB; font-weight: 700;">Usar otra cuenta de Google</span>
+              <span class="google-acc-email">Ingresar cualquier correo @gmail.com o institucional</span>
+            </div>
+          </div>
+        </div>
+
+        <form id="google-custom-account-form" style="display: none; margin-top: 1.25rem;">
+          <div class="pro-field">
+            <label for="google-custom-email">Correo de Google *</label>
+            <div class="pro-input-wrapper">
+              <input type="email" id="google-custom-email" required placeholder="tu.cuenta@gmail.com o tu@universidad.edu.co" />
+            </div>
+          </div>
+          <div class="pro-field">
+            <label for="google-custom-name">Nombre y apellido *</label>
+            <div class="pro-input-wrapper">
+              <input type="text" id="google-custom-name" required placeholder="Ej: Valentina Morales Torres" />
+            </div>
+          </div>
+          <button type="submit" class="pro-btn-primary" style="margin-top: 0.75rem;">
+            <span>Continuar con esta cuenta</span>
+            <span class="pro-btn-arrow">➔</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Paso 2: Completar Información Obligatoria de Perfil -->
+      <div class="google-step" id="google-step-profile" style="display: none;">
+        <div class="google-modal-header">
+          <div class="google-verified-badge">
+            <div class="google-acc-avatar" id="google-profile-avatar">G</div>
+            <div style="text-align: left; flex: 1;">
+              <div id="google-profile-name" style="font-weight: 800; font-size: 0.95rem; color: #0F172A;">Usuario Google</div>
+              <div id="google-profile-email" style="font-size: 0.8rem; color: #64748B;">correo@gmail.com</div>
+            </div>
+            <span class="google-check-pill">✓ Verificado</span>
+          </div>
+          <h3 style="margin-top: 0.9rem; font-size: 1.15rem; font-weight: 800; color: #0F172A;">Completar Información Obligatoria</h3>
+          <p class="google-req-banner">
+            ⚠️ <strong>Requisito Académico:</strong> Para ingresar a RutaIA por Google, debes completar obligatoriamente tu rol, nivel y área de formación académica.
+          </p>
+        </div>
+
+        <form id="google-complete-profile-form" novalidate>
+          <!-- Rol -->
+          <div class="pro-field">
+            <label>Rol en la Institución *</label>
+            <div class="pro-segmented-roles" role="radiogroup" style="margin-top: 0.25rem;">
+              <button type="button" class="role-segment active" id="google-role-student" data-role="ESTUDIANTE">
+                <span>Estudiante 🎓</span>
+              </button>
+              <button type="button" class="role-segment" id="google-role-docente" data-role="DOCENTE">
+                <span>Docente 📚</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Nivel de Experiencia -->
+          <div class="pro-field">
+            <label for="google-input-level">Nivel de experiencia académica * <span style="color: #DC2626; font-weight: 700;">(Obligatorio)</span></label>
+            <div class="pro-select-wrapper">
+              <select id="google-input-level" required>
+                <option value="">-- Selecciona tu nivel obligatoriamente --</option>
+                <option value="Principiante">Principiante (Desde cero, explorando fundamentos)</option>
+                <option value="Intermedio">Intermedio (Con conocimientos previos)</option>
+                <option value="Avanzado">Avanzado (Especialización y dominio técnico)</option>
+              </select>
+            </div>
+            <div class="input-validation-msg" id="google-level-msg"></div>
+          </div>
+
+          <!-- Área de Interés -->
+          <div class="pro-field">
+            <label for="google-input-area">Área de interés vocacional o especialidad * <span style="color: #DC2626; font-weight: 700;">(Obligatorio)</span></label>
+            <div class="pro-input-wrapper">
+              <input type="text" id="google-input-area" required placeholder="Ej: Inteligencia Artificial, Desarrollo Web..." />
+            </div>
+            <div class="pro-chips-row" style="margin-top: 0.5rem;">
+              <span class="pro-mini-chip google-chip" data-val="Inteligencia Artificial">IA & Modelos</span>
+              <span class="pro-mini-chip google-chip" data-val="Desarrollo Web Fullstack">Desarrollo Web</span>
+              <span class="pro-mini-chip google-chip" data-val="Cloud y DevOps">Cloud & DevOps</span>
+              <span class="pro-mini-chip google-chip" data-val="Ciberseguridad">Ciberseguridad</span>
+              <span class="pro-mini-chip google-chip" data-val="Ciencia de Datos">Ciencia de Datos</span>
+            </div>
+            <div class="input-validation-msg" id="google-area-msg"></div>
+          </div>
+
+          <!-- Facultad o Departamento -->
+          <div class="pro-field">
+            <label for="google-input-faculty">Facultad o Departamento Académico <span id="google-faculty-req-label" style="font-size: 0.78rem; color: #64748B;">(Opcional Estudiante / Requerido Docente)</span></label>
+            <div class="pro-input-wrapper">
+              <input type="text" id="google-input-faculty" placeholder="Ej: Facultad de Ingeniería de Sistemas" value="Facultad de Ingeniería" />
+            </div>
+            <div class="input-validation-msg" id="google-faculty-msg"></div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+            <button type="button" class="pro-btn-secondary" id="btn-back-to-google-accounts" style="flex: 1; padding: 0.75rem; font-size: 0.85rem; font-weight: 700; border-radius: 12px; border: 1.5px solid #CBD5E1; background: #FFFFFF; cursor: pointer;">
+              <span>← Cambiar cuenta</span>
+            </button>
+            <button type="submit" class="pro-btn-primary" id="btn-submit-google-profile" style="flex: 2;">
+              <span>Completar Registro e Ingresar</span>
+              <span class="pro-btn-arrow">➔</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Contenedor Toast para Notificaciones -->
   <div class="toast-container" id="toast-container"></div>
 

@@ -3,9 +3,9 @@
  * Concepto: Editorial Learning Lab
  */
 
-import { api } from './api.js';
-import { state } from './state.js';
-import { ui } from './ui.js';
+import { api } from './api.js?v=7.7';
+import { state } from './state.js?v=7.7';
+import { ui } from './ui.js?v=7.7';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Obtener y validar sesión activa directamente desde Redis (vía HttpOnly Cookie)
@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initStudentModal();
   initQuickSearch();
   initAuthModal();
+  initGoogleAuthModal();
   initAdminPanel();
   initDocentePanel();
   initRegisterView();
@@ -948,23 +949,9 @@ function initAuthModal() {
 
   // Autenticación con Google
   if (googleBtn) {
-    googleBtn.addEventListener('click', async () => {
-      try {
-        const authData = await api.loginGoogle('estudiante.google@universidad.edu.co', 'Estudiante Google Demo', 'ESTUDIANTE');
-        state.setUsuario(authData);
-        ui.renderUsuarioHeader(authData);
-        if (modal) modal.style.display = 'none';
-        ui.showToast(`¡Autenticado con Google! Sesión activa: ${authData.nombre} (${authData.rol})`, 'success');
-        
-        if (authData.rol === 'ESTUDIANTE') {
-          actualizarHistorialesEstudiante();
-          cambiarVista('asesor');
-        } else {
-          cambiarVista('admin');
-        }
-      } catch (err) {
-        ui.showToast('Error en autenticación con Google: ' + err.message, 'error');
-      }
+    googleBtn.addEventListener('click', () => {
+      if (modal) modal.style.display = 'none';
+      abrirModalGoogleApp();
     });
   }
 
@@ -1062,6 +1049,230 @@ function initAuthModal() {
   }
 }
 
+let activeGoogleAccountApp = {
+  email: '',
+  nombre: '',
+  rol: 'ESTUDIANTE'
+};
+
+function abrirModalGoogleApp() {
+  const modal = document.getElementById('modal-google-auth');
+  const stepSelect = document.getElementById('google-step-select');
+  const stepProfile = document.getElementById('google-step-profile');
+  if (!modal) return;
+  if (stepSelect) stepSelect.style.display = 'block';
+  if (stepProfile) stepProfile.style.display = 'none';
+  modal.style.display = 'flex';
+}
+
+function initGoogleAuthModal() {
+  const modal = document.getElementById('modal-google-auth');
+  const closeBtn = document.getElementById('btn-close-google-modal');
+  const stepSelect = document.getElementById('google-step-select');
+  const stepProfile = document.getElementById('google-step-profile');
+  const accountItems = document.querySelectorAll('.google-account-item');
+  const btnToggleCustom = document.getElementById('btn-toggle-custom-google-index');
+  const customForm = document.getElementById('google-custom-account-form-index');
+  const profileForm = document.getElementById('google-complete-profile-form-index');
+  const btnBack = document.getElementById('btn-back-to-google-accounts-index');
+
+  if (!modal) return;
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+
+  if (btnToggleCustom && customForm) {
+    btnToggleCustom.addEventListener('click', () => {
+      const isHidden = customForm.style.display === 'none';
+      customForm.style.display = isHidden ? 'block' : 'none';
+      if (isHidden) {
+        document.getElementById('google-custom-email-index')?.focus();
+      }
+    });
+  }
+
+  accountItems.forEach(item => {
+    item.addEventListener('click', async () => {
+      const email = item.dataset.email;
+      const nombre = item.dataset.name;
+      await procesarCuentaGoogleApp(email, nombre);
+    });
+  });
+
+  if (customForm) {
+    customForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('google-custom-email-index')?.value.trim();
+      const nombre = document.getElementById('google-custom-name-index')?.value.trim();
+      if (!email || !nombre) {
+        ui.showToast('Ingresa tu correo y nombre completo de Google.', 'error');
+        return;
+      }
+      await procesarCuentaGoogleApp(email, nombre);
+    });
+  }
+
+  async function procesarCuentaGoogleApp(email, nombre) {
+    activeGoogleAccountApp.email = email;
+    activeGoogleAccountApp.nombre = nombre;
+
+    ui.showToast('Verificando cuenta de Google...', 'info');
+
+    try {
+      const check = await api.checkGoogleUser(email);
+      if (check.existe && check.perfilCompleto && !check.requiereCompletarPerfil) {
+        const authData = await api.loginGoogle({
+          email,
+          nombre: check.nombre || nombre,
+          rol: check.rol || 'ESTUDIANTE'
+        });
+        aplicarSesionGoogleApp(authData);
+        return;
+      }
+
+      abrirPasoCompletarPerfilApp(email, check.nombre || nombre, check.rol || 'ESTUDIANTE', check);
+    } catch (err) {
+      console.warn('Error verificando cuenta Google:', err);
+      abrirPasoCompletarPerfilApp(email, nombre, 'ESTUDIANTE', {});
+    }
+  }
+
+  function abrirPasoCompletarPerfilApp(email, nombre, rolSugerido, checkData) {
+    if (stepSelect) stepSelect.style.display = 'none';
+    if (stepProfile) stepProfile.style.display = 'block';
+
+    const nameEl = document.getElementById('google-profile-name-index');
+    const emailEl = document.getElementById('google-profile-email-index');
+    const avatarEl = document.getElementById('google-profile-avatar-index');
+
+    if (nameEl) nameEl.textContent = nombre;
+    if (emailEl) emailEl.textContent = email;
+    if (avatarEl) {
+      avatarEl.textContent = (nombre || 'G').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    }
+
+    const segStudent = document.getElementById('google-role-student-index');
+    const segDocente = document.getElementById('google-role-docente-index');
+    const facultyReqLabel = document.getElementById('google-faculty-req-label-index');
+
+    let rolActual = rolSugerido === 'DOCENTE' ? 'DOCENTE' : 'ESTUDIANTE';
+    activeGoogleAccountApp.rol = rolActual;
+
+    const actualizarVisualRol = (rol) => {
+      activeGoogleAccountApp.rol = rol;
+      if (segStudent) segStudent.classList.toggle('active', rol === 'ESTUDIANTE');
+      if (segDocente) segDocente.classList.toggle('active', rol === 'DOCENTE');
+      if (facultyReqLabel) {
+        facultyReqLabel.innerHTML = rol === 'DOCENTE'
+          ? '<strong style="color: #DC2626;">(Obligatorio para docentes)</strong>'
+          : '(Opcional para estudiantes)';
+      }
+    };
+
+    if (segStudent) segStudent.onclick = () => actualizarVisualRol('ESTUDIANTE');
+    if (segDocente) segDocente.onclick = () => actualizarVisualRol('DOCENTE');
+    actualizarVisualRol(rolActual);
+
+    const levelInput = document.getElementById('google-input-level-index');
+    const areaInput = document.getElementById('google-input-area-index');
+    const facultyInput = document.getElementById('google-input-faculty-index');
+
+    if (levelInput) levelInput.value = checkData.nivelExperiencia || '';
+    if (areaInput) areaInput.value = checkData.areaInteres || '';
+    if (facultyInput && checkData.departamentoFacultad) facultyInput.value = checkData.departamentoFacultad;
+  }
+
+  const chips = document.querySelectorAll('.google-chip-index');
+  const areaInput = document.getElementById('google-input-area-index');
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      if (areaInput) {
+        areaInput.value = chip.dataset.val;
+      }
+    });
+  });
+
+  if (btnBack) {
+    btnBack.addEventListener('click', () => {
+      if (stepSelect) stepSelect.style.display = 'block';
+      if (stepProfile) stepProfile.style.display = 'none';
+    });
+  }
+
+  if (profileForm) {
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nivel = document.getElementById('google-input-level-index')?.value.trim();
+      const area = document.getElementById('google-input-area-index')?.value.trim();
+      const faculty = document.getElementById('google-input-faculty-index')?.value.trim();
+
+      if (!nivel) {
+        ui.showToast('El nivel de experiencia es obligatorio.', 'error');
+        return;
+      }
+      if (!area || area.length < 3) {
+        ui.showToast('El área de interés vocacional es obligatoria.', 'error');
+        return;
+      }
+      if (activeGoogleAccountApp.rol === 'DOCENTE' && !faculty) {
+        ui.showToast('Para el rol de docente, la facultad es obligatoria.', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btn-submit-google-profile-index');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Completando ingreso...</span>';
+      }
+
+      try {
+        const authData = await api.loginGoogle({
+          email: activeGoogleAccountApp.email,
+          nombre: activeGoogleAccountApp.nombre,
+          rol: activeGoogleAccountApp.rol,
+          nivelExperiencia: nivel,
+          areaInteres: area,
+          departamentoFacultad: faculty || 'Google Pregrado'
+        });
+
+        aplicarSesionGoogleApp(authData);
+      } catch (err) {
+        ui.showToast('Error al completar vinculación: ' + err.message, 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Completar Registro e Ingresar ➔</span>';
+        }
+      }
+    });
+  }
+
+  function aplicarSesionGoogleApp(authData) {
+    state.setUsuario(authData);
+    ui.renderUsuarioHeader(authData);
+    modal.style.display = 'none';
+    ui.showToast(`¡Sesión iniciada con Google! Bienvenido(a), ${authData.nombre}`, 'success');
+
+    if (authData.rol === 'ESTUDIANTE') {
+      actualizarHistorialesEstudiante();
+      cambiarVista('asesor');
+    } else if (authData.rol === 'DOCENTE') {
+      cambiarVista('docente');
+    } else {
+      cambiarVista('admin');
+    }
+  }
+}
+
 // ==========================================================================
 // 11. PANEL DE ADMINISTRACIÓN DE CURSOS (RF 03)
 // ==========================================================================
@@ -1092,10 +1303,21 @@ function initAdminPanel() {
     const status = statusFilter ? statusFilter.value : 'todos';
 
     const filtrados = (state.cursosAdmin || []).filter(c => {
+      // Buscar docentes asignados a este curso por especialidad / cátedra
+      const docentesAsignados = (state.docentes || []).filter(d =>
+        d.areaEspecialidad && c.categoria &&
+        d.areaEspecialidad.trim().toLowerCase() === c.categoria.trim().toLowerCase()
+      );
+      const nombresDocentes = docentesAsignados.map(d => {
+        const raw = d.nombreCompleto || d.nombre || '';
+        return (raw !== 'undefined' ? raw : (d.correoElectronico || '')).toLowerCase();
+      }).join(' ');
+
       const matchText = !query ||
         c.nombre.toLowerCase().includes(query) ||
         (c.categoria && c.categoria.toLowerCase().includes(query)) ||
-        (c.nivel && c.nivel.toLowerCase().includes(query));
+        (c.nivel && c.nivel.toLowerCase().includes(query)) ||
+        nombresDocentes.includes(query);
 
       const esActivo = c.activo !== false;
       const matchStatus = status === 'todos' ||
@@ -1366,6 +1588,56 @@ function initAdminPanel() {
         if (saveBtn) {
           saveBtn.disabled = false;
           saveBtn.innerHTML = '<span>Crear Usuario</span><span class="btn-arrow">➔</span>';
+        }
+      }
+    });
+  }
+
+  const formEditUser = document.getElementById('user-edit-form');
+  const btnCloseEditUser = document.getElementById('btn-close-edit-user-modal');
+  const btnCancelEditUser = document.getElementById('btn-cancel-edit-user-modal');
+
+  if (btnCloseEditUser) btnCloseEditUser.addEventListener('click', () => ui.closeModalEditarUsuario());
+  if (btnCancelEditUser) btnCancelEditUser.addEventListener('click', () => ui.closeModalEditarUsuario());
+
+  if (formEditUser) {
+    formEditUser.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('user-edit-id').value;
+      const nombreCompleto = document.getElementById('user-edit-name').value.trim();
+      const areaInteres = document.getElementById('user-edit-area').value.trim();
+      const nivelExperiencia = document.getElementById('user-edit-nivel').value;
+      const departamentoFacultad = document.getElementById('user-edit-facultad').value.trim();
+
+      if (!nombreCompleto) {
+        ui.showToast('El nombre completo es obligatorio', 'warning');
+        document.getElementById('user-edit-name').focus();
+        return;
+      }
+
+      const saveBtn = document.getElementById('btn-save-edit-user');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>Guardando cambios...</span>';
+      }
+
+      try {
+        await api.actualizarUsuario(id, {
+          nombreCompleto,
+          areaInteres,
+          nivelExperiencia,
+          departamentoFacultad
+        });
+        ui.closeModalEditarUsuario();
+        ui.showToast(`Usuario "${nombreCompleto}" actualizado exitosamente`, 'success');
+        await cargarUsuariosAdmin();
+        await cargarCursosAdmin();
+      } catch (err) {
+        ui.showToast('Error al actualizar usuario: ' + err.message, 'error');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>Guardar Cambios</span><span class="btn-arrow">➔</span>';
         }
       }
     });
@@ -1665,8 +1937,60 @@ export function aplicarFiltrosUsuariosAdmin() {
     state.cursosAdmin,
     (docente, cursosAsignados) => {
       ui.mostrarModalCursosDocenteAdmin(docente, cursosAsignados);
-    }
+    },
+    (usuario) => toggleActivoUsuarioAdmin(usuario),
+    (usuario) => cambiarRolUsuarioAdmin(usuario),
+    (usuario) => editarUsuarioAdmin(usuario)
   );
+}
+
+function editarUsuarioAdmin(usuario) {
+  const isSuper = state.esSuperAdmin();
+  const r = (usuario.rol || '').toUpperCase();
+  if (!isSuper && (r === 'SUPERADMIN' || r === 'ADMINISTRADOR')) {
+    ui.showToast('Un Administrador solo puede editar Docentes y Estudiantes.', 'error');
+    return;
+  }
+  ui.openModalEditarUsuario(usuario);
+}
+
+function cambiarRolUsuarioAdmin(usuario) {
+  if (!state.esSuperAdmin()) {
+    ui.showToast('Solo el Super Administrador tiene autorización exclusiva para cambiar roles.', 'error');
+    return;
+  }
+  ui.mostrarModalCambioRol(usuario, async (usuarioId, nuevoRol, detalles) => {
+    await api.cambiarRolUsuario(usuarioId, nuevoRol, detalles);
+    ui.showToast(`¡Rol actualizado! "${usuario.nombreCompleto}" ahora tiene el rol ${nuevoRol}.`, 'success');
+    await cargarUsuariosAdmin();
+    await cargarCursosAdmin();
+  });
+}
+
+async function toggleActivoUsuarioAdmin(usuario) {
+  const esActivo = usuario.activo !== false;
+  const nuevoEstado = !esActivo;
+  const accion = nuevoEstado ? 'activar' : 'desactivar';
+  const rolTxt = usuario.rol ? usuario.rol.toLowerCase() : 'usuario';
+
+  if (!nuevoEstado && state.usuario && usuario.correoElectronico &&
+      state.usuario.correoElectronico.toLowerCase() === usuario.correoElectronico.toLowerCase()) {
+    ui.showToast('No puedes desactivar tu propia cuenta activa.', 'warning');
+    return;
+  }
+
+  const confirmar = confirm(`¿Estás seguro de que deseas ${accion} al ${rolTxt} "${usuario.nombreCompleto}"?`);
+  if (!confirmar) return;
+
+  try {
+    await api.toggleUsuarioActivo(usuario.id, nuevoEstado);
+    usuario.activo = nuevoEstado;
+    ui.showToast(`Usuario "${usuario.nombreCompleto}" ${nuevoEstado ? 'activado' : 'desactivado'} exitosamente.`, 'success');
+    await cargarUsuariosAdmin();
+    await cargarCursosAdmin();
+  } catch (err) {
+    ui.showToast('Error al cambiar estado del usuario: ' + err.message, 'error');
+  }
 }
 
 // ==========================================================================

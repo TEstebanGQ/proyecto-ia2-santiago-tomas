@@ -368,11 +368,46 @@ export const api = {
     return data;
   },
 
+  async checkGoogleUser(email) {
+    const res = await fetch(
+      `${API_BASE_URL}/auth/google/check?email=${encodeURIComponent(email)}`,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      }
+    );
+    if (!res.ok) {
+      return { existe: false, perfilCompleto: false, requiereCompletarPerfil: true };
+    }
+    return await res.json();
+  },
+
   async loginGoogle(
-    email,
+    emailOrPayload,
     nombre = '',
-    rol = 'ESTUDIANTE'
+    rol = 'ESTUDIANTE',
+    nivelExperiencia = '',
+    areaInteres = '',
+    departamentoFacultad = ''
   ) {
+    let payload = {};
+    if (typeof emailOrPayload === 'object' && emailOrPayload !== null) {
+      payload = {
+        proveedor: 'google',
+        ...emailOrPayload
+      };
+    } else {
+      payload = {
+        email: emailOrPayload,
+        nombre,
+        rol,
+        nivelExperiencia,
+        areaInteres,
+        departamentoFacultad,
+        proveedor: 'google'
+      };
+    }
+
     const res = await fetch(
       `${API_BASE_URL}/auth/google`,
       {
@@ -380,12 +415,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          email,
-          nombre,
-          rol,
-          proveedor: 'google'
-        }),
+        body: JSON.stringify(payload),
         credentials: 'include'
       }
     );
@@ -1057,6 +1087,19 @@ export const api = {
     return await res.json();
   },
 
+  async toggleUsuarioActivo(id, activo) {
+    const res = await fetch(`${API_BASE_URL}/usuarios/${id}/activo?activo=${activo}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(false),
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error al cambiar estado del usuario');
+    }
+    return await res.json();
+  },
+
   async getRolesPermitidos() {
     const res = await fetch(`${API_BASE_URL}/usuarios/roles-permitidos`, {
       headers: getAuthHeaders(false),
@@ -1064,6 +1107,37 @@ export const api = {
     });
     if (!res.ok) {
       return ['DOCENTE', 'ESTUDIANTE'];
+    }
+    return await res.json();
+  },
+
+  async actualizarUsuario(id, datos) {
+    const res = await fetch(`${API_BASE_URL}/usuarios/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(true),
+      credentials: 'include',
+      body: JSON.stringify(datos)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error al actualizar los datos del usuario');
+    }
+    return await res.json();
+  },
+
+  async cambiarRolUsuario(id, nuevoRol, detalles = {}) {
+    const res = await fetch(`${API_BASE_URL}/usuarios/${id}/rol`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(true),
+      credentials: 'include',
+      body: JSON.stringify({
+        nuevoRol,
+        ...detalles
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error al cambiar el rol del usuario (exclusivo Superadmin)');
     }
     return await res.json();
   }

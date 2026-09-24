@@ -292,25 +292,298 @@ function initAreaChips() {
   });
 }
 
-// 7. Autenticación con Google Sign-In
+// 7. Autenticación con Google Sign-In & Onboarding Obligatorio
 function initGoogleLogin() {
-  const btn = document.getElementById('login-google-btn');
-  if (!btn) return;
+  const btnOpen = document.getElementById('login-google-btn');
+  const modal = document.getElementById('modal-google-auth');
+  const btnClose = document.getElementById('btn-close-google-modal');
+  const stepSelect = document.getElementById('google-step-select');
+  const stepProfile = document.getElementById('google-step-profile');
+  const accountItems = document.querySelectorAll('.google-account-item');
+  const btnToggleCustom = document.getElementById('btn-toggle-custom-google');
+  const customForm = document.getElementById('google-custom-account-form');
+  const profileForm = document.getElementById('google-complete-profile-form');
+  const btnBack = document.getElementById('btn-back-to-google-accounts');
 
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span>Verificando credenciales de Google...</span>';
+  // Datos temporales de la cuenta de Google seleccionada
+  let activeGoogleAccount = {
+    email: '',
+    nombre: '',
+    rol: 'ESTUDIANTE'
+  };
 
-    try {
-      const authData = await api.loginGoogle('estudiante.google@universidad.edu.co', 'Estudiante Google Demo', 'ESTUDIANTE');
-      guardarSesionYRedirigir(authData, `¡Bienvenido(a) con Google, ${authData.nombre}!`);
-    } catch (err) {
-      mostrarToast('Error en autenticación con Google: ' + err.message, 'error');
-      btn.disabled = false;
-      btn.innerHTML = originalText;
+  if (!btnOpen || !modal) return;
+
+  // Abrir modal de Google
+  btnOpen.addEventListener('click', () => {
+    modal.style.display = 'flex';
+    mostrarPasoGoogle('select');
+  });
+
+  // Cerrar modal de Google
+  if (btnClose) {
+    btnClose.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
+
+  // Cerrar al dar click fuera
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.style.display = 'none';
     }
   });
+
+  // Alternar formulario de cuenta personalizada
+  if (btnToggleCustom && customForm) {
+    btnToggleCustom.addEventListener('click', () => {
+      const isHidden = customForm.style.display === 'none';
+      customForm.style.display = isHidden ? 'block' : 'none';
+      if (isHidden) {
+        document.getElementById('google-custom-email')?.focus();
+      }
+    });
+  }
+
+  // Manejar selección de cuenta rápida existente
+  accountItems.forEach(item => {
+    item.addEventListener('click', async () => {
+      const email = item.dataset.email;
+      const nombre = item.dataset.name;
+      await procesarCuentaGoogle(email, nombre);
+    });
+  });
+
+  // Manejar envío de cuenta personalizada
+  if (customForm) {
+    customForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const emailInput = document.getElementById('google-custom-email');
+      const nameInput = document.getElementById('google-custom-name');
+
+      const email = emailInput ? emailInput.value.trim() : '';
+      const nombre = nameInput ? nameInput.value.trim() : '';
+
+      if (!email || !nombre) {
+        mostrarToast('Por favor ingresa tu correo y nombre completo de Google.', 'error');
+        return;
+      }
+
+      await procesarCuentaGoogle(email, nombre);
+    });
+  }
+
+  // Función principal para verificar y procesar la cuenta de Google
+  async function procesarCuentaGoogle(email, nombre) {
+    activeGoogleAccount.email = email;
+    activeGoogleAccount.nombre = nombre;
+
+    mostrarToast('Verificando cuenta de Google...', 'info');
+
+    try {
+      const check = await api.checkGoogleUser(email);
+
+      // Si es Superadmin, Administrador o Estudiante con perfil completo -> Login directo
+      if (check.existe && check.perfilCompleto && !check.requiereCompletarPerfil) {
+        const authData = await api.loginGoogle({
+          email,
+          nombre: check.nombre || nombre,
+          rol: check.rol || 'ESTUDIANTE'
+        });
+
+        guardarSesionYRedirigir(authData, `¡Bienvenido(a) con Google, ${authData.nombre}!`);
+        return;
+      }
+
+      // Si no existe o tiene datos incompletos -> Obligatorio completar perfil académico
+      abrirPasoCompletarPerfil(email, check.nombre || nombre, check.rol || 'ESTUDIANTE', check);
+    } catch (err) {
+      console.warn('Error verificando cuenta Google, solicitando datos obligatorios:', err);
+      abrirPasoCompletarPerfil(email, nombre, 'ESTUDIANTE', {});
+    }
+  }
+
+  // Abrir Paso 2: Formulario Obligatorio de Información Académica
+  function abrirPasoCompletarPerfil(email, nombre, rolSugerido, checkData) {
+    mostrarPasoGoogle('profile');
+
+    const nameEl = document.getElementById('google-profile-name');
+    const emailEl = document.getElementById('google-profile-email');
+    const avatarEl = document.getElementById('google-profile-avatar');
+
+    if (nameEl) nameEl.textContent = nombre;
+    if (emailEl) emailEl.textContent = email;
+    if (avatarEl) {
+      const initials = (nombre || 'G').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+      avatarEl.textContent = initials;
+    }
+
+    // Configurar roles en Paso 2
+    const segStudent = document.getElementById('google-role-student');
+    const segDocente = document.getElementById('google-role-docente');
+    const facultyReqLabel = document.getElementById('google-faculty-req-label');
+
+    let rolActual = rolSugerido === 'DOCENTE' ? 'DOCENTE' : 'ESTUDIANTE';
+    activeGoogleAccount.rol = rolActual;
+
+    const actualizarVisualRol = (rol) => {
+      activeGoogleAccount.rol = rol;
+      if (segStudent) segStudent.classList.toggle('active', rol === 'ESTUDIANTE');
+      if (segDocente) segDocente.classList.toggle('active', rol === 'DOCENTE');
+      if (facultyReqLabel) {
+        facultyReqLabel.innerHTML = rol === 'DOCENTE'
+          ? '<strong style="color: #DC2626;">(Obligatorio para docentes)</strong>'
+          : '(Opcional para estudiantes)';
+      }
+    };
+
+    if (segStudent) segStudent.onclick = () => actualizarVisualRol('ESTUDIANTE');
+    if (segDocente) segDocente.onclick = () => actualizarVisualRol('DOCENTE');
+    actualizarVisualRol(rolActual);
+
+    // Precargar si había datos parciales
+    const levelInput = document.getElementById('google-input-level');
+    const areaInput = document.getElementById('google-input-area');
+    const facultyInput = document.getElementById('google-input-faculty');
+
+    if (levelInput) levelInput.value = checkData.nivelExperiencia || '';
+    if (areaInput) areaInput.value = checkData.areaInteres || '';
+    if (facultyInput && checkData.departamentoFacultad) facultyInput.value = checkData.departamentoFacultad;
+
+    // Limpiar errores visuales previos
+    limpiarErroresGoogle();
+  }
+
+  // Chips interactivos de área de interés
+  const chips = document.querySelectorAll('.google-chip');
+  const areaInput = document.getElementById('google-input-area');
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      if (areaInput) {
+        areaInput.value = chip.dataset.val;
+        areaInput.classList.remove('input-invalid');
+        const msg = document.getElementById('google-area-msg');
+        if (msg) msg.textContent = '';
+      }
+    });
+  });
+
+  // Botón para volver al selector de cuentas
+  if (btnBack) {
+    btnBack.addEventListener('click', () => {
+      mostrarPasoGoogle('select');
+    });
+  }
+
+  // Envío del Formulario Obligatorio de Información de Perfil
+  if (profileForm) {
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const levelInput = document.getElementById('google-input-level');
+      const levelMsg = document.getElementById('google-level-msg');
+      const areaInput = document.getElementById('google-input-area');
+      const areaMsg = document.getElementById('google-area-msg');
+      const facultyInput = document.getElementById('google-input-faculty');
+      const facultyMsg = document.getElementById('google-faculty-msg');
+      const submitBtn = document.getElementById('btn-submit-google-profile');
+
+      limpiarErroresGoogle();
+
+      let valido = true;
+
+      // 1. Validar Nivel de Experiencia OBLIGATORIO
+      const nivel = levelInput ? levelInput.value.trim() : '';
+      if (!nivel) {
+        valido = false;
+        if (levelInput) levelInput.classList.add('input-invalid');
+        if (levelMsg) {
+          levelMsg.textContent = 'Debes seleccionar obligatoriamente tu nivel de experiencia.';
+          levelMsg.className = 'input-validation-msg error';
+        }
+      }
+
+      // 2. Validar Área de Interés OBLIGATORIA
+      const area = areaInput ? areaInput.value.trim() : '';
+      if (!area || area.length < 3) {
+        valido = false;
+        if (areaInput) areaInput.classList.add('input-invalid');
+        if (areaMsg) {
+          areaMsg.textContent = 'Debes indicar obligatoriamente tu área de interés vocacional (mínimo 3 caracteres).';
+          areaMsg.className = 'input-validation-msg error';
+        }
+      }
+
+      // 3. Validar Facultad si es Docente
+      const facultad = facultyInput ? facultyInput.value.trim() : '';
+      if (activeGoogleAccount.rol === 'DOCENTE' && !facultad) {
+        valido = false;
+        if (facultyInput) facultyInput.classList.add('input-invalid');
+        if (facultyMsg) {
+          facultyMsg.textContent = 'Para el rol de Docente, la facultad o departamento es obligatoria.';
+          facultyMsg.className = 'input-validation-msg error';
+        }
+      }
+
+      if (!valido) {
+        mostrarToast('Por favor completa todos los campos académicos obligatorios.', 'error');
+        return;
+      }
+
+      // Proceder con el registro / completado en el backend
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Completando vinculación con Google...</span>';
+      }
+
+      try {
+        const authData = await api.loginGoogle({
+          email: activeGoogleAccount.email,
+          nombre: activeGoogleAccount.nombre,
+          rol: activeGoogleAccount.rol,
+          nivelExperiencia: nivel,
+          areaInteres: area,
+          departamentoFacultad: facultad || 'Google Pregrado'
+        });
+
+        if (authData.requiereCompletarPerfil) {
+          mostrarToast(authData.mensaje || 'Información requerida pendiente.', 'error');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>Completar Registro e Ingresar</span><span class="pro-btn-arrow">➔</span>';
+          }
+          return;
+        }
+
+        modal.style.display = 'none';
+        guardarSesionYRedirigir(authData, `¡Registro con Google exitoso! Bienvenido(a), ${authData.nombre}`);
+      } catch (err) {
+        mostrarToast('Error al vincular cuenta de Google: ' + err.message, 'error');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Completar Registro e Ingresar</span><span class="pro-btn-arrow">➔</span>';
+        }
+      }
+    });
+  }
+
+  function mostrarPasoGoogle(paso) {
+    if (stepSelect) stepSelect.style.display = paso === 'select' ? 'block' : 'none';
+    if (stepProfile) stepProfile.style.display = paso === 'profile' ? 'block' : 'none';
+  }
+
+  function limpiarErroresGoogle() {
+    ['google-input-level', 'google-input-area', 'google-input-faculty'].forEach(id => {
+      document.getElementById(id)?.classList.remove('input-invalid');
+    });
+    ['google-level-msg', 'google-area-msg', 'google-faculty-msg'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = '';
+        el.className = 'input-validation-msg';
+      }
+    });
+  }
 }
 
 // 8. Formulario de Inicio de Sesión

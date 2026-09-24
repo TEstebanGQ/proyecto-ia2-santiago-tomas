@@ -153,10 +153,10 @@ export const state = {
     this.estadisticas = stats;
   },
 
-  // Gestión de Sesión de Chat Conversacional (Máximo 5 consultas por sesión)
+  // Gestión de Sesión de Chat Conversacional (Máximo 10 consultas por sesión)
   chatSession: {
     turnCount: 0,
-    maxTurns: 5,
+    maxTurns: 10,
     mensajes: [],
     cursosMencionados: []
   },
@@ -170,7 +170,7 @@ export const state = {
           const parsed = JSON.parse(saved);
           this.chatSession = {
             turnCount: parsed.turnCount || 0,
-            maxTurns: 5,
+            maxTurns: 10,
             mensajes: Array.isArray(parsed.mensajes) ? parsed.mensajes : [],
             cursosMencionados: Array.isArray(parsed.cursosMencionados) ? parsed.cursosMencionados : []
           };
@@ -182,7 +182,7 @@ export const state = {
     }
     this.chatSession = {
       turnCount: 0,
-      maxTurns: 5,
+      maxTurns: 10,
       mensajes: [],
       cursosMencionados: []
     };
@@ -261,7 +261,7 @@ export const state = {
   reiniciarChat() {
     this.chatSession = {
       turnCount: 0,
-      maxTurns: 5,
+      maxTurns: 10,
       mensajes: [],
       cursosMencionados: []
     };
