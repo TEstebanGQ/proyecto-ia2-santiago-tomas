@@ -62,7 +62,11 @@
       const params = new URLSearchParams(window.location.search);
       if (params.has('logout') || params.has('cambiar')) return;
 
-      fetch('http://localhost:8080/api/auth/me', { credentials: 'include' })
+      const authMeUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:8080/api/auth/me'
+        : 'https://proyecto-ia2-santiago-tomas.onrender.com/api/auth/me';
+
+      fetch(authMeUrl, { credentials: 'include' })
         .then(res => {
           if (res.ok) {
             window.location.replace('index.html');
