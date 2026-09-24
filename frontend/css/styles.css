@@ -5882,3 +5882,166 @@ button, input, select, textarea {
   box-shadow: 4px 4px 0px #18191E;
 }
 
+/* ==========================================================
+   MODAL NÓMINA DE ESTUDIANTES - PANEL DOCENTE
+   ========================================================== */
+.modal-docente-roster-card {
+  max-width: 860px !important;
+  width: 95% !important;
+  padding: 2.2rem !important;
+  border-radius: 24px !important;
+}
+
+.docente-roster-table-wrapper {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+}
+
+.docente-roster-scroll {
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.docente-roster-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.docente-roster-scroll::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+.docente-roster-scroll::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 6px;
+}
+.docente-roster-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.docente-roster-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  table-layout: fixed;
+}
+
+.docente-roster-table th {
+  background: #F8FAFC;
+  padding: 0.85rem 1.15rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid #E2E8F0;
+  white-space: nowrap;
+}
+
+.docente-roster-table td {
+  padding: 0.95rem 1.15rem;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+  font-size: 0.88rem;
+}
+
+.docente-roster-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.docente-roster-table tbody tr:hover {
+  background: #F8FAFC;
+}
+
+.docente-roster-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.docente-student-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  overflow: hidden;
+}
+
+.docente-student-name {
+  font-weight: 700;
+  color: #0F172A;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docente-student-interest {
+  font-size: 0.77rem;
+  color: #64748B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docente-student-interest strong {
+  color: #334155;
+  font-weight: 600;
+}
+
+.docente-student-email {
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docente-student-email svg {
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.docente-date-badge {
+  color: #64748B;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.docente-roster-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: #F8FAFC;
+  border-radius: 16px;
+  border: 1px dashed #CBD5E1;
+}
+
+.docente-roster-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #EFF6FF;
+  color: #3B82F6;
+  margin: 0 auto 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .modal-docente-roster-card {
+    padding: 1.25rem !important;
+  }
+  .docente-roster-scroll {
+    overflow-x: auto;
+  }
+  .docente-roster-table {
+    min-width: 600px;
+  }
+}
+
+

@@ -2528,95 +2528,104 @@ export const ui = {
 
     if (!inscritos || inscritos.length === 0) {
       studentsHtml = `
-        <div style="text-align: center; padding: 2.8rem 1.5rem; background: #F8FAFC; border-radius: 12px; border: 1px dashed #CBD5E1;">
-          <div style="width: 48px; height: 48px; border-radius: 50%; background: #EFF6FF; color: #3B82F6; margin: 0 auto 0.75rem; display: flex; align-items: center; justify-content: center;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+        <div class="docente-roster-empty">
+          <div class="docente-roster-empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
           </div>
-          <p style="font-weight: 700; color: #1E293B; font-size: 1rem; margin-bottom: 0.35rem;">Aún no hay estudiantes inscritos en esta materia</p>
-          <p style="font-size: 0.85rem; color: #64748B; max-width: 440px; margin: 0 auto;">
-            Tan pronto los alumnos seleccionen esta asignatura o reciban su plan vocacional con IA, aparecerán registrados en esta nómina.
+          <h4 style="font-weight: 700; color: #1E293B; font-size: 1.05rem; margin-bottom: 0.35rem;">Aún no hay estudiantes inscritos en esta materia</h4>
+          <p style="font-size: 0.88rem; color: #64748B; max-width: 440px; margin: 0 auto; line-height: 1.5;">
+            Tan pronto los alumnos seleccionen esta asignatura en el catálogo o reciban su orientación vocacional con IA, aparecerán registrados en esta nómina.
           </p>
         </div>
       `;
     } else {
       studentsHtml = `
-        <div class="admin-table-container" style="max-height: 380px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 12px;">
-          <table class="admin-table" style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr>
-                <th style="background: #F8FAFC;">Estudiante</th>
-                <th style="background: #F8FAFC;">Correo Institucional</th>
-                <th style="background: #F8FAFC;">Nivel</th>
-                <th style="background: #F8FAFC;">Fecha Matrícula</th>
-                <th style="background: #F8FAFC; text-align: right;">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${inscritos.map(ins => {
-                const nombre = ins.estudianteNombre || 'Estudiante';
-                const initials = nombre
-                  .split(' ')
-                  .filter(n => n.length > 0)
-                  .map(n => n[0])
-                  .slice(0, 2)
-                  .join('')
-                  .toUpperCase();
-                const fecha = ins.fechaInscripcion
-                  ? new Date(ins.fechaInscripcion).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' })
-                  : 'Reciente';
-                return `
-                  <tr>
-                    <td>
-                      <div style="display: flex; align-items: center; gap: 0.65rem;">
-                        <div style="width: 32px; height: 32px; border-radius: 50%; background: #E0E7FF; color: #4338CA; font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                          ${initials}
+        <div class="docente-roster-table-wrapper">
+          <div class="docente-roster-scroll">
+            <table class="docente-roster-table">
+              <thead>
+                <tr>
+                  <th style="width: 32%;">Estudiante</th>
+                  <th style="width: 29%;">Correo Institucional</th>
+                  <th style="width: 14%;">Nivel</th>
+                  <th style="width: 13%;">Fecha</th>
+                  <th style="width: 12%; text-align: right;">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${inscritos.map(ins => {
+                  const nombre = ins.estudianteNombre || 'Estudiante';
+                  const correo = ins.estudianteCorreo || '-';
+                  const area = ins.estudianteAreaInteres || 'Tecnología';
+                  const nivel = ins.estudianteNivel || 'Principiante';
+                  const fecha = ins.fechaInscripcion
+                    ? new Date(ins.fechaInscripcion).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : 'Reciente';
+                  const estado = ins.estado || 'Inscrito';
+
+                  return `
+                    <tr>
+                      <td>
+                        <div class="docente-student-info">
+                          <span class="docente-student-name">${this.escapeHtml(nombre)}</span>
+                          <span class="docente-student-interest">
+                            <span>Área:</span> <strong>${this.escapeHtml(area)}</strong>
+                          </span>
                         </div>
-                        <div>
-                          <div style="font-weight: 600; color: #0F172A; font-size: 0.88rem;">${nombre}</div>
-                          <div style="font-size: 0.75rem; color: #64748B;">Interés: ${ins.estudianteAreaInteres || 'Tecnología'}</div>
+                      </td>
+                      <td>
+                        <div class="docente-student-email" title="${this.escapeHtml(correo)}">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                          <span>${this.escapeHtml(correo)}</span>
                         </div>
-                      </div>
-                    </td>
-                    <td style="color: #475569; font-size: 0.85rem;">${ins.estudianteCorreo || '-'}</td>
-                    <td><span class="badge-level badge-level-${(ins.estudianteNivel || 'Principiante').toLowerCase()}" style="font-size: 0.75rem;">${ins.estudianteNivel || 'Principiante'}</span></td>
-                    <td style="color: #64748B; font-size: 0.82rem;">${fecha}</td>
-                    <td style="text-align: right;">
-                      <span class="status-badge status-badge-active" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
-                        <span class="status-dot"></span> ${ins.estado || 'Inscrito'}
-                      </span>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
+                      </td>
+                      <td>
+                        <span class="badge-level badge-level-${nivel.toLowerCase()}">${this.escapeHtml(nivel)}</span>
+                      </td>
+                      <td>
+                        <span class="docente-date-badge">${fecha}</span>
+                      </td>
+                      <td style="text-align: right;">
+                        <span class="status-badge status-badge-active" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                          <span class="status-dot"></span> ${this.escapeHtml(estado)}
+                        </span>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
       `;
     }
 
     modal.innerHTML = `
-      <div class="modal-editorial-card modal-course-card" style="max-width: 720px; width: 94%;">
+      <div class="modal-editorial-card modal-docente-roster-card">
         <div class="modal-header" style="margin-bottom: 0.75rem;">
           <div class="course-modal-badges">
             <span class="badge-cat">${curso.categoria || 'Especialidad'}</span>
             <span class="badge-level badge-level-${(curso.nivel || 'Intermedio').toLowerCase()}">${curso.nivel || 'Intermedio'}</span>
-            <span class="badge-inscritos" style="background: #E0E7FF; color: #4338CA; border-color: #C7D2FE; display: inline-flex; align-items: center; gap: 4px;">
+            <span class="badge-inscritos" style="background: #E0E7FF; color: #4338CA; border-color: #C7D2FE; display: inline-flex; align-items: center; gap: 5px;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               <span>${total} matriculado${total === 1 ? '' : 's'}</span>
             </span>
           </div>
-          <button class="modal-close-btn" id="close-inscritos-modal-btn">✕</button>
+          <button class="modal-close-btn" id="close-inscritos-modal-btn" aria-label="Cerrar modal">✕</button>
         </div>
         
-        <h3 class="modal-course-title" style="font-size: 1.35rem; margin-bottom: 0.35rem; color: #0F172A;">${curso.nombre}</h3>
+        <h3 class="modal-course-title" style="font-size: 1.4rem; margin-bottom: 0.35rem; color: #0F172A;">${this.escapeHtml(curso.nombre || 'Materia')}</h3>
         <p class="modal-course-desc" style="margin-bottom: 1.25rem; font-size: 0.88rem; color: #64748B;">
           Nómina oficial de estudiantes inscritos en esta materia académica (${curso.duracionHoras || 40} horas lectivas).
         </p>
 
         ${studentsHtml}
 
-        <div class="modal-course-footer" style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
-          <button class="btn-secondary-pill" id="btn-close-inscritos-footer">
+        <div class="modal-course-footer" style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="font-size: 0.84rem; color: #64748B;">
+            Total en nómina: <strong style="color: #0F172A;">${total}</strong> estudiante${total === 1 ? '' : 's'}
+          </div>
+          <button class="btn-secondary-pill" id="btn-close-inscritos-footer" style="padding: 0.55rem 1.4rem; font-weight: 700;">
             Cerrar Nómina
           </button>
         </div>
