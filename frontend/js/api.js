@@ -4,7 +4,9 @@
  * La sesión se gestiona con HttpOnly Cookies y validación en tiempo real contra el servidor Redis.
  */
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+  ? 'http://localhost:8080/api'
+  : 'https://proyecto-ia2-santiago-tomas.onrender.com/api';
 
 function getAuthHeaders(includeContentType = true) {
   const headers = {};
