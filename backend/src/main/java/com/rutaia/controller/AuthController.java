@@ -15,6 +15,7 @@ import com.rutaia.service.GoogleIdentityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,6 +36,9 @@ public class AuthController {
     private final RedisTokenService redisTokenService;
     private final AuditoriaService auditoriaService;
     private final GoogleIdentityService googleIdentityService;
+
+    @Value("${app.cookie.secure:false}")
+    private boolean secureCookie;
 
     public AuthController(
             EstudianteRepository estudianteRepository,
@@ -262,10 +266,10 @@ public class AuthController {
         // 6. Establecer HttpOnly Cookie para que el navegador NO almacene el token en localStorage/caché
         org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("rutaia_token", tokenJwt)
                 .httpOnly(true)
-                .secure(false)
+                .secure(secureCookie)
+                .sameSite(secureCookie ? "None" : "Lax")
                 .path("/")
                 .maxAge(86400)
-                .sameSite("Lax")
                 .build();
 
         AuthResponseDTO response = new AuthResponseDTO(
@@ -497,10 +501,10 @@ public class AuthController {
 
         org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("rutaia_token", tokenJwt)
                 .httpOnly(true)
-                .secure(false)
+                .secure(secureCookie)
+                .sameSite(secureCookie ? "None" : "Lax")
                 .path("/")
                 .maxAge(86400)
-                .sameSite("Lax")
                 .build();
 
         AuthResponseDTO authResp = new AuthResponseDTO(
@@ -585,10 +589,10 @@ public class AuthController {
 
         org.springframework.http.ResponseCookie deleteCookie = org.springframework.http.ResponseCookie.from("rutaia_token", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(secureCookie)
+                .sameSite(secureCookie ? "None" : "Lax")
                 .path("/")
                 .maxAge(0)
-                .sameSite("Lax")
                 .build();
 
         Map<String, Object> resp = new HashMap<>();

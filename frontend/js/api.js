@@ -432,15 +432,18 @@ export const api = {
       }
     );
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       throw new Error(
-        data.mensaje ||
+        data.mensaje || data.message || res.statusText ||
         'Error en autenticación con Google'
       );
     }
 
+    if (Object.keys(data).length === 0) {
+      throw new Error('El servidor no devolvió una sesión válida. Intenta nuevamente.');
+    }
     return data;
   },
 
