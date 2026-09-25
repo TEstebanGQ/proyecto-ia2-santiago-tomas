@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://github.com/TEstebanGQ.png" width="112" alt="Logo de Tomas Gonzalez" />
-</p>
-
 # RutaIA: Sistema Inteligente de Orientación Académica y Recomendación Curricular (RAG + JWT + Redis + Umbral Dinámico)
 
 [![Java](https://img.shields.io/badge/Java-17_LTS-orange.svg)](https://www.oracle.com/java/)
