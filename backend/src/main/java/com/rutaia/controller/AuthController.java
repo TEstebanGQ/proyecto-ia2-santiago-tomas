@@ -363,9 +363,13 @@ public class AuthController {
         try {
             googleProfile = googleIdentityService.verify(request.getCredential());
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            AuthResponseDTO response = new AuthResponseDTO();
+            response.setMensaje(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+            AuthResponseDTO response = new AuthResponseDTO();
+            response.setMensaje(e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
         }
 
         // Google solo registra e inicia sesiones del rol ESTUDIANTE. Los roles institucionales
