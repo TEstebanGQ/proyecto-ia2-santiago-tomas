@@ -20,6 +20,8 @@ import java.util.List;
 public class UsuarioDataLoader implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(UsuarioDataLoader.class);
+    private static final String LEGACY_DEFAULT_PASSWORD_HASH =
+            "$2a$10$wTqSfvHhP5wVn27tA5L8c.e6f1pPsmP5R.xX.tT6b2u1lq8s1P6aK";
 
     private final UsuarioRepository usuarioRepository;
     private final EstudianteRepository estudianteRepository;
@@ -41,6 +43,7 @@ public class UsuarioDataLoader implements CommandLineRunner {
     @Override
     public void run(String... args) {
         log.info("Inicializando y sincronizando usuarios del sistema...");
+        migrarCredencialesPredeterminadasLegadas();
 
         // 1. Superadmin institucional
         if (!usuarioRepository.findByCorreoElectronicoIgnoreCase("superadmin@universidad.edu.co").isPresent()) {
@@ -124,5 +127,25 @@ public class UsuarioDataLoader implements CommandLineRunner {
         }
 
         log.info("Sincronización de usuarios completada exitosamente.");
+    }
+
+    private void migrarCredencialesPredeterminadasLegadas() {
+        List<String> correos = List.of(
+                "superadmin@universidad.edu.co",
+                "admin@universidad.edu.co",
+                "profesor.programacion@universidad.edu.co",
+                "santiago.gomez@universidad.edu.co"
+        );
+        for (String correo : correos) {
+            usuarioRepository.findByCorreoElectronicoIgnoreCase(correo).ifPresent(usuario -> {
+                // Solo toca el hash heredado de init.sql; nunca una contraseña cambiada.
+                if (LEGACY_DEFAULT_PASSWORD_HASH.equals(usuario.getPassword())) {
+                    usuario.setPassword(passwordEncoder.encode("password123"));
+                    usuario.setDebeCambiarPassword(true);
+                    usuarioRepository.save(usuario);
+                    log.info("Credencial predeterminada migrada para {}", correo);
+                }
+            });
+        }
     }
 }
