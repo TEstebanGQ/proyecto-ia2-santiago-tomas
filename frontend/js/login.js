@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initEmailValidators();
   initPasswordValidators();
   initAreaChips();
-  initGoogleLogin();
+  initGoogleIdentityLogin();
   initLoginForm();
   initRegisterForm();
 });
@@ -627,7 +627,11 @@ function initLoginForm() {
 
     try {
       const authData = await api.login(email, rolSeleccionado, '', password);
-      guardarSesionYRedirigir(authData, `Bienvenido(a) a RutaIA. Rol: ${authData.rol}`);
+      if (authData.debeCambiarPassword) {
+        mostrarCambioPasswordInicial(authData);
+      } else {
+        guardarSesionYRedirigir(authData, `Bienvenido(a) a RutaIA. Rol: ${authData.rol}`);
+      }
     } catch (err) {
       mostrarToast('Error al ingresar: ' + err.message, 'error');
       submitBtn.disabled = false;
@@ -727,6 +731,50 @@ function initRegisterForm() {
 }
 
 // 10. Confirmar Sesión en Redis y Redirigir al Dashboard Principal
+function mostrarCambioPasswordInicial(authData) {
+  const modal = document.getElementById('initial-password-modal');
+  const form = document.getElementById('initial-password-form');
+  const user = document.getElementById('initial-password-user');
+  if (!modal || !form) return;
+
+  if (user) user.textContent = authData.nombre || authData.email || 'Cuenta institucional';
+  modal.style.display = 'flex';
+  document.getElementById('initial-password-current')?.focus();
+
+  form.onsubmit = async event => {
+    event.preventDefault();
+    const actual = document.getElementById('initial-password-current')?.value || '';
+    const nueva = document.getElementById('initial-password-new')?.value || '';
+    const confirmacion = document.getElementById('initial-password-confirm')?.value || '';
+    const submit = document.getElementById('btn-submit-initial-password');
+
+    if (!actual || nueva.length < 6) {
+      mostrarToast('La nueva contraseña debe tener al menos 6 caracteres.', 'error');
+      return;
+    }
+    if (nueva !== confirmacion) {
+      mostrarToast('La confirmación no coincide con la nueva contraseña.', 'error');
+      return;
+    }
+    if (actual === nueva) {
+      mostrarToast('La nueva contraseña debe ser diferente a la inicial.', 'error');
+      return;
+    }
+
+    submit.disabled = true;
+    submit.innerHTML = '<span>Actualizando contraseña...</span>';
+    try {
+      await api.cambiarPasswordInicial(actual, nueva);
+      modal.style.display = 'none';
+      guardarSesionYRedirigir(authData, 'Contraseña actualizada. Bienvenido(a) a RutaIA.');
+    } catch (error) {
+      mostrarToast(error.message, 'error');
+      submit.disabled = false;
+      submit.innerHTML = '<span>Guardar nueva contraseña e ingresar</span><span class="pro-btn-arrow">→</span>';
+    }
+  };
+}
+
 function guardarSesionYRedirigir(authData, mensajeBienvenida) {
   try {
     // Seguridad Estricta con Redis: Toda la información de sesión se almacena exclusivamente en Redis
@@ -742,6 +790,169 @@ function guardarSesionYRedirigir(authData, mensajeBienvenida) {
   setTimeout(() => {
     window.location.href = 'index.html';
   }, 650);
+}
+
+// Inicio de sesión real con Google Identity Services. Google presenta las
+// cuentas abiertas del navegador y entrega una credencial firmada al callback.
+function initGoogleIdentityLogin() {
+  const openButton = document.getElementById('login-google-btn');
+  const realGoogleButton = document.getElementById('google-signin-real');
+  const modal = document.getElementById('modal-google-identity');
+  const profileStep = document.getElementById('google-step-profile');
+  const selectStep = document.getElementById('google-step-select');
+  const closeButton = document.getElementById('btn-close-google-modal');
+  const backButton = document.getElementById('btn-back-to-google-accounts');
+  const form = document.getElementById('google-complete-profile-form');
+  const clientId = window.RUTAIA_GOOGLE_CLIENT_ID;
+  let account = null;
+  let initialized = false;
+
+  if (!openButton || !modal || !form) return;
+
+  const showProfile = async (credential) => {
+    const payloadPart = credential.split('.')[1];
+    try {
+      const payload = JSON.parse(atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/')));
+      account = {
+        credential,
+        email: payload.email || '',
+        nombre: payload.name || 'Estudiante Google'
+      };
+    } catch (error) {
+      mostrarToast('Google no entregó los datos de la cuenta. Intenta nuevamente.', 'error');
+      return;
+    }
+
+    // Si el correo ya está registrado y su perfil está completo, el backend
+    // inicia su sesión inmediatamente. Solo cuentas nuevas/incompletas ven el formulario.
+    try {
+      const authData = await api.loginGoogle({ credential });
+      if (!authData.requiereCompletarPerfil) {
+        guardarSesionYRedirigir(authData, `¡Bienvenido(a) de nuevo, ${authData.nombre}!`);
+        return;
+      }
+    } catch (error) {
+      if (error.message.includes('403')) {
+        mostrarToast('Esta cuenta no está habilitada para el acceso estudiantil con Google.', 'error');
+        return;
+      }
+      // Una cuenta nueva continúa al registro; el token definitivo se valida en el backend al guardarlo.
+    }
+
+    document.getElementById('google-profile-name').textContent = account.nombre;
+    document.getElementById('google-profile-email').textContent = account.email;
+    document.getElementById('google-profile-avatar').textContent = account.nombre
+      .split(' ').map(word => word[0]).slice(0, 2).join('').toUpperCase();
+    if (selectStep) selectStep.style.display = 'none';
+    if (profileStep) profileStep.style.display = 'block';
+    modal.style.display = 'flex';
+    document.getElementById('google-input-level')?.focus();
+  };
+
+  const initialize = () => {
+    if (initialized) return true;
+    if (!clientId || !window.google?.accounts?.id) return false;
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: response => showProfile(response.credential),
+      auto_select: false,
+      cancel_on_tap_outside: true
+    });
+    initialized = true;
+    if (realGoogleButton) {
+      window.google.accounts.id.renderButton(realGoogleButton, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        locale: 'es',
+        width: Math.min(390, Math.max(280, openButton?.offsetWidth || 390))
+      });
+      realGoogleButton.style.display = 'flex';
+      if (openButton) openButton.style.display = 'none';
+    }
+    return true;
+  };
+
+  // La librería se carga de forma asíncrona. Al estar lista se sustituye el
+  // botón decorativo por el botón oficial que abre el selector de cuentas real.
+  const waitForGoogle = window.setInterval(() => {
+    if (initialize()) window.clearInterval(waitForGoogle);
+  }, 150);
+
+  openButton.addEventListener('click', () => {
+    if (!initialize()) {
+      mostrarToast('Google aún está cargando. Intenta de nuevo en unos segundos.', 'info');
+      return;
+    }
+    // Solo se usa como respaldo mientras la librería termina de renderizar el botón oficial.
+    window.google.accounts.id.prompt();
+  });
+
+  closeButton?.addEventListener('click', () => { modal.style.display = 'none'; });
+  backButton?.addEventListener('click', () => {
+    modal.style.display = 'none';
+    account = null;
+    window.google?.accounts?.id?.prompt();
+  });
+  modal.addEventListener('click', event => {
+    if (event.target === modal) modal.style.display = 'none';
+  });
+
+  document.querySelectorAll('.google-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const area = document.getElementById('google-input-area');
+      if (area) area.value = chip.dataset.val || '';
+    });
+  });
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const nivel = document.getElementById('google-input-level')?.value.trim();
+    const area = document.getElementById('google-input-area')?.value.trim();
+    const facultad = document.getElementById('google-input-faculty')?.value.trim();
+    const password = document.getElementById('google-input-password')?.value || '';
+    const passwordConfirm = document.getElementById('google-input-password-confirm')?.value || '';
+    const submit = document.getElementById('btn-submit-google-profile');
+
+    if (!account?.credential) {
+      mostrarToast('Selecciona una cuenta real de Google para continuar.', 'error');
+      return;
+    }
+    if (!nivel || !area || area.length < 3) {
+      mostrarToast('Completa tu nivel y área de interés para continuar.', 'error');
+      return;
+    }
+    if (password.length < 6) {
+      mostrarToast('Crea una contraseña de al menos 6 caracteres para RutaIA.', 'error');
+      return;
+    }
+    if (password !== passwordConfirm) {
+      mostrarToast('La confirmación de contraseña no coincide.', 'error');
+      return;
+    }
+
+    submit.disabled = true;
+    submit.innerHTML = '<span>Validando cuenta e ingresando...</span>';
+    try {
+      const authData = await api.loginGoogle({
+        credential: account.credential,
+        rol: 'ESTUDIANTE',
+        password,
+        nivelExperiencia: nivel,
+        areaInteres: area,
+        departamentoFacultad: facultad || 'Google Pregrado'
+      });
+      modal.style.display = 'none';
+      guardarSesionYRedirigir(authData, `¡Bienvenido(a), ${authData.nombre}!`);
+    } catch (error) {
+      mostrarToast('No fue posible iniciar con Google: ' + error.message, 'error');
+      submit.disabled = false;
+      submit.innerHTML = '<span>Completar Registro e Ingresar</span><span class="pro-btn-arrow">→</span>';
+    }
+  });
 }
 
 function mostrarToast(mensaje, tipo = 'info') {

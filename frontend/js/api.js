@@ -368,6 +368,18 @@ export const api = {
     return data;
   },
 
+  async cambiarPasswordInicial(passwordActual, nuevaPassword) {
+    const res = await fetch(`${API_BASE_URL}/auth/cambiar-password-inicial`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ passwordActual, nuevaPassword })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.mensaje || 'No fue posible actualizar la contraseña.');
+    return data;
+  },
+
   async checkGoogleUser(email) {
     const res = await fetch(
       `${API_BASE_URL}/auth/google/check?email=${encodeURIComponent(email)}`,

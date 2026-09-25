@@ -10,6 +10,7 @@ public class AuthRequestDTO {
     private String nivelExperiencia;
     private String areaInteres;
     private String departamentoFacultad;
+    private String credential;
 
     public AuthRequestDTO() {
     }
@@ -90,5 +91,13 @@ public class AuthRequestDTO {
 
     public void setDepartamentoFacultad(String departamentoFacultad) {
         this.departamentoFacultad = departamentoFacultad;
+    }
+
+    public String getCredential() {
+        return credential;
+    }
+
+    public void setCredential(String credential) {
+        this.credential = credential;
     }
 }

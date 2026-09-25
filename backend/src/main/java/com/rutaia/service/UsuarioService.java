@@ -123,6 +123,7 @@ public class UsuarioService {
                 dto.getAreaInteres(),
                 dto.getDepartamentoFacultad()
         );
+        nuevoUsuario.setDebeCambiarPassword(true);
 
         nuevoUsuario = usuarioRepository.save(nuevoUsuario);
 

@@ -103,6 +103,7 @@ services:
       - QDRANT_PORT=6333
       - QDRANT_URL=http://qdrant:6333
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID:-134514735180-itup9unjaso8pr7lk8vvq9hk0bl81avm.apps.googleusercontent.com}
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/recomendar-cursos
     depends_on:
       postgres:

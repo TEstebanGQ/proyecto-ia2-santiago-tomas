@@ -50,6 +50,11 @@
   <!-- Estilos del Sistema -->
   <link rel="stylesheet" href="css/variables.css?v=6.5">
   <link rel="stylesheet" href="css/styles.css?v=6.5">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    // El Client ID es público. El secreto de OAuth nunca se expone en el navegador.
+    window.RUTAIA_GOOGLE_CLIENT_ID = '134514735180-itup9unjaso8pr7lk8vvq9hk0bl81avm.apps.googleusercontent.com';
+  </script>
 
   <!-- Router Guard: La sesión reside exclusivamente en el servidor Redis mediante HttpOnly Cookie -->
   <script>
@@ -277,6 +282,7 @@
             </svg>
             <span>Continuar con Google</span>
           </button>
+          <div id="google-signin-real" style="display: none; justify-content: center;"></div>
 
           <!-- Divider Minimalista -->
           <div class="pro-divider">
@@ -503,7 +509,7 @@
   </div>
 
   <!-- Modal Google Sign-In con Onboarding Obligatorio -->
-  <div class="google-modal-overlay" id="modal-google-auth" style="display: none;">
+  <div class="google-modal-overlay" id="modal-google-identity" style="display: none;">
     <div class="google-modal-card">
       <button type="button" class="google-modal-close" id="btn-close-google-modal" aria-label="Cerrar">&times;</button>
       
@@ -592,23 +598,12 @@
             <span class="google-check-pill">✓ Verificado</span>
           </div>
           <h3 style="margin-top: 0.9rem; font-size: 1.15rem; font-weight: 800; color: #0F172A;">Completar Información Obligatoria</h3>
-          <p class="google-req-banner">
-            ⚠️ <strong>Requisito Académico:</strong> Para ingresar a RutaIA por Google, debes completar obligatoriamente tu rol, nivel y área de formación académica.
-          </p>
         </div>
 
         <form id="google-complete-profile-form" novalidate>
-          <!-- Rol -->
           <div class="pro-field">
-            <label>Rol en la Institución *</label>
-            <div class="pro-segmented-roles" role="radiogroup" style="margin-top: 0.25rem;">
-              <button type="button" class="role-segment active" id="google-role-student" data-role="ESTUDIANTE">
-                <span>Estudiante 🎓</span>
-              </button>
-              <button type="button" class="role-segment" id="google-role-docente" data-role="DOCENTE">
-                <span>Docente 📚</span>
-              </button>
-            </div>
+            <label>Rol asignado</label>
+            <div class="google-check-pill" style="display: inline-flex; width: fit-content; padding: 0.35rem 0.65rem;">✓ Estudiante</div>
           </div>
 
           <!-- Nivel de Experiencia -->
@@ -643,11 +638,20 @@
 
           <!-- Facultad o Departamento -->
           <div class="pro-field">
-            <label for="google-input-faculty">Facultad o Departamento Académico <span id="google-faculty-req-label" style="font-size: 0.78rem; color: #64748B;">(Opcional Estudiante / Requerido Docente)</span></label>
+            <label for="google-input-faculty">Facultad o Departamento Académico <span id="google-faculty-req-label" style="font-size: 0.78rem; color: #64748B;">(Opcional)</span></label>
             <div class="pro-input-wrapper">
               <input type="text" id="google-input-faculty" placeholder="Ej: Facultad de Ingeniería de Sistemas" value="Facultad de Ingeniería" />
             </div>
             <div class="input-validation-msg" id="google-faculty-msg"></div>
+          </div>
+
+          <div class="pro-field">
+            <label for="google-input-password">Crea una contraseña para RutaIA *</label>
+            <div class="pro-input-wrapper"><input type="password" id="google-input-password" required minlength="6" placeholder="Mínimo 6 caracteres" autocomplete="new-password" /></div>
+          </div>
+          <div class="pro-field">
+            <label for="google-input-password-confirm">Confirma tu contraseña *</label>
+            <div class="pro-input-wrapper"><input type="password" id="google-input-password-confirm" required minlength="6" placeholder="Repite tu contraseña" autocomplete="new-password" /></div>
           </div>
 
           <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
@@ -665,10 +669,44 @@
     </div>
   </div>
 
+  <!-- Cambio obligatorio de contraseña para cuentas creadas manualmente -->
+  <div class="google-modal-overlay" id="initial-password-modal" style="display: none;">
+    <div class="google-modal-card" style="max-width: 460px;">
+      <div class="google-modal-header">
+        <div class="google-verified-badge">
+          <div class="google-acc-avatar" style="background: #7C3AED;">🔒</div>
+          <div style="text-align: left; flex: 1;">
+            <div id="initial-password-user" style="font-weight: 800; font-size: 0.95rem; color: #0F172A;">Cuenta institucional</div>
+            <div style="font-size: 0.8rem; color: #64748B;">Primer acceso seguro</div>
+          </div>
+        </div>
+        <h3 style="margin-top: 0.9rem; font-size: 1.15rem; font-weight: 800; color: #0F172A;">Cambia tu contraseña inicial</h3>
+        <p class="google-req-banner">Por seguridad debes confirmar la contraseña asignada y crear una nueva antes de continuar.</p>
+      </div>
+      <form id="initial-password-form" novalidate>
+        <div class="pro-field">
+          <label for="initial-password-current">Contraseña actual *</label>
+          <div class="pro-input-wrapper"><input type="password" id="initial-password-current" required autocomplete="current-password" /></div>
+        </div>
+        <div class="pro-field">
+          <label for="initial-password-new">Nueva contraseña *</label>
+          <div class="pro-input-wrapper"><input type="password" id="initial-password-new" required minlength="6" autocomplete="new-password" /></div>
+        </div>
+        <div class="pro-field">
+          <label for="initial-password-confirm">Confirma la nueva contraseña *</label>
+          <div class="pro-input-wrapper"><input type="password" id="initial-password-confirm" required minlength="6" autocomplete="new-password" /></div>
+        </div>
+        <button type="submit" class="pro-btn-primary" id="btn-submit-initial-password">
+          <span>Guardar nueva contraseña e ingresar</span><span class="pro-btn-arrow">→</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- Contenedor Toast para Notificaciones -->
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Script Modular de Login -->
-  <script type="module" src="js/login.js"></script>
+  <script type="module" src="js/login.js?v=8.2"></script>
 </body>
 </html>
