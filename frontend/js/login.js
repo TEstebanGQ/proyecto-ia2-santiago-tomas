@@ -3,7 +3,7 @@
  * Layout: Split-Screen Enterprise Editorial
  */
 
-import { api } from './api.js';
+import { api } from './api.js?v=8.3';
 
 let rolSeleccionado = 'ESTUDIANTE';
 

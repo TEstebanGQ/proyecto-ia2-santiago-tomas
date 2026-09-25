@@ -356,7 +356,9 @@ export const api = {
       }
     );
 
-    const data = await res.json();
+    // Un 401 puede llegar sin cuerpo desde el proxy. No ocultarlo con un error
+    // de parseo de JSON; el formulario podrá informar la causa correctamente.
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       throw new Error(
