@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/TEstebanGQ.png" width="112" alt="Logo de Tomas Gonzalez" />
+</p>
+
 # RutaIA: Sistema Inteligente de Orientación Académica y Recomendación Curricular (RAG + JWT + Redis + Umbral Dinámico)
 
 [![Java](https://img.shields.io/badge/Java-17_LTS-orange.svg)](https://www.oracle.com/java/)
@@ -12,8 +16,8 @@
 ---
 
 ## 1. Integrantes del Proyecto
-- **Santiago Gómez Morales**
-- **Tomás Restrepo Valderrama**
+- **Tomas Gonzalez**
+- **Santiago Suarez**
 - **Asignatura**: Inteligencia Artificial 2 (IA2)
 
 ---
@@ -113,7 +117,55 @@ node scripts/serve_frontend.js
 
 ---
 
-## 6. Guía de Instalación y Puesta en Marcha Exhaustiva Paso a Paso
+## 6. Despliegue en Producción
+
+RutaIA se despliega como servicios separados. Esta división permite que el frontend se entregue rápido, el backend conserve las reglas de negocio y n8n procese las consultas RAG.
+
+| Plataforma | Servicio | Función |
+| :--- | :--- | :--- |
+| **GitHub** | Repositorio y ramas | Control de versiones, revisiones y despliegues automáticos. |
+| **Vercel** | `frontend/` | Publicación estática del portal. Redirige `/` a `login.html` y reenvía `/api/*` al backend. |
+| **Render** | Spring Boot | API REST, autenticación JWT, Redis y operaciones curriculares. |
+| **Render** | PostgreSQL | Persistencia de usuarios, estudiantes, cursos, consultas y recomendaciones. |
+| **Render** | n8n | Orquestación de webhooks, búsqueda RAG y respuesta del asesor. Se aprovisiona con `render.n8n.yaml`. |
+| **Google Identity Services** | OAuth | Selección de la cuenta Google real del navegador e inicio de sesión seguro. |
+| **OpenRouter** | IA | Embeddings y generación de las respuestas de orientación. |
+| **Qdrant** | Base vectorial | Índice semántico de cursos para recuperación RAG. |
+
+### 6.1 Desplegar el frontend en Vercel
+
+1. Importa el repositorio en Vercel y selecciona la rama que vas a publicar.
+2. En **Settings → Build and Deployment**, configura:
+   - **Framework Preset:** `Other`
+   - **Root Directory:** `frontend`
+   - **Build Command:** vacío
+   - **Output Directory:** `.`
+3. Vercel sirve el frontend y el archivo `frontend/vercel.json` redirige la raíz al acceso y hace proxy de `/api/*` hacia Render. Esto mantiene frontend y API bajo el mismo origen del navegador, evitando la pérdida de cookies de sesión.
+
+### 6.2 Desplegar backend, base de datos y n8n en Render
+
+1. Despliega el backend Spring Boot como Web Service y conecta el PostgreSQL y Redis de Render.
+2. En el backend define como mínimo:
+
+   ```text
+   GOOGLE_OAUTH_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+   APP_COOKIE_SECURE=true
+   N8N_WEBHOOK_URL=https://rutaia-n8n.onrender.com/webhook/recomendar-cursos
+   OPENROUTER_API_KEY=tu-clave-privada
+   ```
+
+3. Para n8n ve a **New → Blueprint**, selecciona la rama del proyecto y especifica el archivo `render.n8n.yaml`.
+4. Render solicitará las credenciales internas del PostgreSQL existente, `OPENROUTER_API_KEY`, `GEMINI_API_KEY` si se usa Gemini y `QDRANT_URL`. Estos valores se guardan como secretos de Render, nunca en Git.
+5. Cuando Render genere la URL pública de n8n, usa esa misma URL para `WEBHOOK_URL` y `N8N_EDITOR_BASE_URL` en n8n; luego coloca la URL del webhook en `N8N_WEBHOOK_URL` del backend.
+6. Importa y activa el flujo `n8n/workflows/RutaIA_RAG_Optimizado_n8n.json` desde el editor de n8n.
+
+### 6.3 Configurar Google para producción
+
+En Google Cloud Console, en el cliente OAuth, agrega cada dominio de Vercel en **Authorized JavaScript origins**. No se debe publicar el Client Secret: el frontend solo usa el Client ID y el backend valida la credencial de Google.
+
+---
+
+## 7. Guía de Instalación y Puesta en Marcha Exhaustiva Paso a Paso
 
 A continuación se detalla cada componente, qué hace por debajo y cómo verificar que todo funcione a la perfección:
 
