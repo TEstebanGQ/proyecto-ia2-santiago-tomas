@@ -6,7 +6,7 @@
 
 const API_BASE_URL = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? 'http://localhost:8080/api'
-  : 'https://proyecto-ia2-santiago-tomas.onrender.com/api';
+  : '/api';
 
 function getAuthHeaders(includeContentType = true) {
   const headers = {};
@@ -368,6 +368,18 @@ export const api = {
     return data;
   },
 
+  async cambiarPasswordInicial(passwordActual, nuevaPassword) {
+    const res = await fetch(`${API_BASE_URL}/auth/cambiar-password-inicial`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ passwordActual, nuevaPassword })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.mensaje || 'No fue posible actualizar la contraseña.');
+    return data;
+  },
+
   async checkGoogleUser(email) {
     const res = await fetch(
       `${API_BASE_URL}/auth/google/check?email=${encodeURIComponent(email)}`,
@@ -420,15 +432,18 @@ export const api = {
       }
     );
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       throw new Error(
-        data.mensaje ||
+        data.mensaje || data.message || res.statusText ||
         'Error en autenticación con Google'
       );
     }
 
+    if (Object.keys(data).length === 0) {
+      throw new Error('El servidor no devolvió una sesión válida. Intenta nuevamente.');
+    }
     return data;
   },
 

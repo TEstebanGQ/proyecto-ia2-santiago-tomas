@@ -24,6 +24,7 @@ CREATE TABLE estudiantes (
     correo_electronico VARCHAR(150) UNIQUE NOT NULL,
     nivel_experiencia VARCHAR(30) NOT NULL CHECK (nivel_experiencia IN ('Principiante', 'Intermedio', 'Avanzado')),
     area_interes VARCHAR(100) NOT NULL,
+    activo BOOLEAN DEFAULT TRUE NOT NULL,
     fecha_creacion TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
@@ -143,6 +144,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     area_interes VARCHAR(100),
     departamento_facultad VARCHAR(100),
     activo BOOLEAN DEFAULT TRUE NOT NULL,
+    debe_cambiar_password BOOLEAN DEFAULT FALSE NOT NULL,
     fecha_creacion TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 

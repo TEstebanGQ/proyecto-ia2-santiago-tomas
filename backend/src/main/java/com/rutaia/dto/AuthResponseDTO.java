@@ -13,6 +13,7 @@ public class AuthResponseDTO {
     private Boolean requiereCompletarPerfil = false;
     private String mensaje;
     private String departamentoFacultad;
+    private Boolean debeCambiarPassword = false;
 
     public AuthResponseDTO() {
     }
@@ -129,5 +130,13 @@ public class AuthResponseDTO {
 
     public void setDepartamentoFacultad(String departamentoFacultad) {
         this.departamentoFacultad = departamentoFacultad;
+    }
+
+    public Boolean getDebeCambiarPassword() {
+        return debeCambiarPassword;
+    }
+
+    public void setDebeCambiarPassword(Boolean debeCambiarPassword) {
+        this.debeCambiarPassword = debeCambiarPassword;
     }
 }

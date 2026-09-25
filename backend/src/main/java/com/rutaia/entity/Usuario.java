@@ -35,6 +35,9 @@ public class Usuario {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
+    @Column(name = "debe_cambiar_password", nullable = false)
+    private Boolean debeCambiarPassword = false;
+
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
@@ -140,6 +143,14 @@ public class Usuario {
 
     public void setActivo(Boolean activo) {
         this.activo = activo;
+    }
+
+    public Boolean getDebeCambiarPassword() {
+        return debeCambiarPassword;
+    }
+
+    public void setDebeCambiarPassword(Boolean debeCambiarPassword) {
+        this.debeCambiarPassword = debeCambiarPassword;
     }
 
     public LocalDateTime getFechaCreacion() {

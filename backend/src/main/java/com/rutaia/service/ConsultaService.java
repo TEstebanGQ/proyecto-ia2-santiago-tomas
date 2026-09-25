@@ -100,6 +100,13 @@ public class ConsultaService {
         N8nRecomendacionResponse n8nResponse =
                 n8nOrquestadorService.enviarConsultaAn8n(n8nRequest);
 
+        // El catálogo sigue disponible aunque el orquestador externo esté
+        // reiniciando o no responda. Esto evita mostrar un error técnico al estudiante.
+        if ("Error".equalsIgnoreCase(n8nResponse.getEstadoFinal())) {
+            log.warn("n8n no estuvo disponible para la consulta #{}; se usa el catálogo local", consulta.getId());
+            n8nResponse = crearRespuestaCatalogoLocal(consulta);
+        }
+
         // RF 14: Procesamiento y almacenamiento según estado final
         RecomendacionResponseDTO responseDTO =
                 new RecomendacionResponseDTO();
@@ -236,5 +243,31 @@ public class ConsultaService {
         }
 
         return responseDTO;
+    }
+
+    private N8nRecomendacionResponse crearRespuestaCatalogoLocal(Consulta consulta) {
+        List<Curso> cursos = cursoRepository.findByActivoTrue();
+        N8nRecomendacionResponse respuesta = new N8nRecomendacionResponse();
+        respuesta.setIdConsulta(consulta.getId());
+        respuesta.setPregunta(consulta.getPregunta());
+        respuesta.setEstadoFinal(cursos.isEmpty() ? "Sin resultados" : "Respondida");
+
+        List<N8nRecomendacionResponse.N8nFuenteDTO> fuentes = new ArrayList<>();
+        for (Curso curso : cursos) {
+            N8nRecomendacionResponse.N8nFuenteDTO fuente = new N8nRecomendacionResponse.N8nFuenteDTO();
+            fuente.setId(curso.getId());
+            fuente.setNombre(curso.getNombre());
+            fuente.setDescripcion(curso.getDescripcion());
+            fuente.setCategoria(curso.getCategoria());
+            fuente.setNivel(curso.getNivel());
+            fuente.setDuracionHoras(curso.getDuracionHoras());
+            fuente.setSimilitud(BigDecimal.valueOf(0.70));
+            fuentes.add(fuente);
+        }
+        respuesta.setFuentes(fuentes);
+        respuesta.setRespuesta(cursos.isEmpty()
+                ? "Actualmente no hay cursos activos en el catálogo institucional."
+                : "Mientras el asesor IA se reconecta, estos son los cursos disponibles en el catálogo institucional.");
+        return respuesta;
     }
 }

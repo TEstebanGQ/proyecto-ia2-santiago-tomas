@@ -11,9 +11,11 @@ import com.rutaia.repository.UsuarioRepository;
 import com.rutaia.security.JwtUtil;
 import com.rutaia.service.AuditoriaService;
 import com.rutaia.service.RedisTokenService;
+import com.rutaia.service.GoogleIdentityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +35,10 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final RedisTokenService redisTokenService;
     private final AuditoriaService auditoriaService;
+    private final GoogleIdentityService googleIdentityService;
+
+    @Value("${app.cookie.secure:false}")
+    private boolean secureCookie;
 
     public AuthController(
             EstudianteRepository estudianteRepository,
@@ -41,7 +47,8 @@ public class AuthController {
             PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil,
             RedisTokenService redisTokenService,
-            AuditoriaService auditoriaService
+            AuditoriaService auditoriaService,
+            GoogleIdentityService googleIdentityService
     ) {
         this.estudianteRepository = estudianteRepository;
         this.docenteRepository = docenteRepository;
@@ -50,6 +57,7 @@ public class AuthController {
         this.jwtUtil = jwtUtil;
         this.redisTokenService = redisTokenService;
         this.auditoriaService = auditoriaService;
+        this.googleIdentityService = googleIdentityService;
     }
 
     @PostMapping("/login")
@@ -258,15 +266,13 @@ public class AuthController {
         // 6. Establecer HttpOnly Cookie para que el navegador NO almacene el token en localStorage/caché
         org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("rutaia_token", tokenJwt)
                 .httpOnly(true)
-                .secure(false)
+                .secure(secureCookie)
+                .sameSite(secureCookie ? "None" : "Lax")
                 .path("/")
                 .maxAge(86400)
-                .sameSite("Lax")
                 .build();
 
-        return ResponseEntity.ok()
-                .header(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new AuthResponseDTO(
+        AuthResponseDTO response = new AuthResponseDTO(
                         id,
                         nombre,
                         email,
@@ -275,7 +281,42 @@ public class AuthController {
                         area,
                         tokenJwt,
                         request.getProveedor() != null ? request.getProveedor() : "local"
-                ));
+                );
+        usuarioRepository.findByCorreoElectronicoIgnoreCase(email)
+                .ifPresent(usuario -> response.setDebeCambiarPassword(Boolean.TRUE.equals(usuario.getDebeCambiarPassword())));
+
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(response);
+    }
+
+    @PostMapping("/cambiar-password-inicial")
+    @Operation(summary = "Cambiar obligatoriamente la contraseña inicial del usuario autenticado")
+    public ResponseEntity<Map<String, String>> cambiarPasswordInicial(
+            @jakarta.validation.Valid @RequestBody com.rutaia.dto.CambioPasswordInicialDTO request,
+            HttpServletRequest servletRequest
+    ) {
+        String token = extractToken(servletRequest);
+        if (token == null || !jwtUtil.esTokenValido(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String email = jwtUtil.extraerEmail(token);
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreoElectronicoIgnoreCase(email);
+        if (usuarioOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Usuario usuario = usuarioOpt.get();
+        if (!passwordEncoder.matches(request.getPasswordActual(), usuario.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("mensaje", "La contraseña actual no es correcta."));
+        }
+        if (passwordEncoder.matches(request.getNuevaPassword(), usuario.getPassword())) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", "La nueva contraseña debe ser diferente a la inicial."));
+        }
+        usuario.setPassword(passwordEncoder.encode(request.getNuevaPassword()));
+        usuario.setDebeCambiarPassword(false);
+        usuarioRepository.save(usuario);
+        auditoriaService.registrarEvento("CAMBIO_PASSWORD_INICIAL", email, usuario.getNombreCompleto(), usuario.getRol(), "El usuario actualizó su contraseña inicial obligatoria.");
+        return ResponseEntity.ok(Map.of("mensaje", "Contraseña actualizada correctamente."));
     }
 
     @GetMapping("/google/check")
@@ -318,9 +359,20 @@ public class AuthController {
     @PostMapping("/google")
     @Operation(summary = "Autenticar o registrar mediante Google Sign-In (Genera JWT y almacena en Redis)")
     public ResponseEntity<AuthResponseDTO> googleLogin(@RequestBody AuthRequestDTO request) {
-        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "usuario.google@universidad.edu.co";
-        String nombre = request.getNombre() != null && !request.getNombre().isBlank() ? request.getNombre().trim() : "Usuario Google";
-        String rol = request.getRol() != null && !request.getRol().isBlank() ? request.getRol().trim().toUpperCase() : "ESTUDIANTE";
+        GoogleIdentityService.GoogleProfile googleProfile;
+        try {
+            googleProfile = googleIdentityService.verify(request.getCredential());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
+        // Google solo registra e inicia sesiones del rol ESTUDIANTE. Los roles institucionales
+        // privilegiados se administran exclusivamente desde el panel Superadmin.
+        String email = googleProfile.email();
+        String nombre = googleProfile.name();
+        String rol = "ESTUDIANTE";
         String nivel = request.getNivelExperiencia() != null ? request.getNivelExperiencia().trim() : null;
         String area = request.getAreaInteres() != null ? request.getAreaInteres().trim() : null;
         String facultad = request.getDepartamentoFacultad() != null ? request.getDepartamentoFacultad().trim() : null;
@@ -330,6 +382,9 @@ public class AuthController {
         Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreoElectronicoIgnoreCase(email);
         if (usuarioOpt.isPresent()) {
             Usuario u = usuarioOpt.get();
+            if (!"ESTUDIANTE".equalsIgnoreCase(u.getRol())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
             rol = u.getRol().toUpperCase();
             id = u.getId();
             nombre = u.getNombreCompleto();
@@ -378,12 +433,12 @@ public class AuthController {
                 nivel = u.getNivelExperiencia();
                 area = u.getAreaInteres();
             }
-        } else if (email.contains("superadmin") || "SUPERADMIN".equalsIgnoreCase(rol)) {
+        } else if ("SUPERADMIN".equalsIgnoreCase(rol)) {
             id = 0L;
             rol = "SUPERADMIN";
             nivel = "Superadmin";
             area = "Gobierno Institucional y Superadministración";
-        } else if (email.contains("admin") || "ADMINISTRADOR".equalsIgnoreCase(rol)) {
+        } else if ("ADMINISTRADOR".equalsIgnoreCase(rol)) {
             id = 0L;
             rol = "ADMINISTRADOR";
             nivel = "Coordinador";
@@ -391,7 +446,8 @@ public class AuthController {
         } else {
             // Usuario NUEVO por Google
             // Validar obligatoriedad de nivelExperiencia y areaInteres
-            if (nivel == null || nivel.isBlank() || area == null || area.isBlank()) {
+            if (nivel == null || nivel.isBlank() || area == null || area.isBlank()
+                    || request.getPassword() == null || request.getPassword().trim().length() < 6) {
                 AuthResponseDTO incompleteResp = new AuthResponseDTO();
                 incompleteResp.setEmail(email);
                 incompleteResp.setNombre(nombre);
@@ -412,7 +468,7 @@ public class AuthController {
                 facultad = "DOCENTE".equals(rol) ? "Facultad de Ingeniería" : "Google Pregrado";
             }
 
-            Usuario u = new Usuario(nombre, email, passwordEncoder.encode(UUID.randomUUID().toString()), rol, nivel, area, facultad);
+            Usuario u = new Usuario(nombre, email, passwordEncoder.encode(request.getPassword().trim()), rol, nivel, area, facultad);
             u = usuarioRepository.save(u);
             id = u.getId();
 
@@ -445,10 +501,10 @@ public class AuthController {
 
         org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("rutaia_token", tokenJwt)
                 .httpOnly(true)
-                .secure(false)
+                .secure(secureCookie)
+                .sameSite(secureCookie ? "None" : "Lax")
                 .path("/")
                 .maxAge(86400)
-                .sameSite("Lax")
                 .build();
 
         AuthResponseDTO authResp = new AuthResponseDTO(
@@ -533,10 +589,10 @@ public class AuthController {
 
         org.springframework.http.ResponseCookie deleteCookie = org.springframework.http.ResponseCookie.from("rutaia_token", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(secureCookie)
+                .sameSite(secureCookie ? "None" : "Lax")
                 .path("/")
                 .maxAge(0)
-                .sameSite("Lax")
                 .build();
 
         Map<String, Object> resp = new HashMap<>();

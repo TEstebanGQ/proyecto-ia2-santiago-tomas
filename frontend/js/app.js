@@ -3,9 +3,9 @@
  * Concepto: Editorial Learning Lab
  */
 
-import { api } from './api.js?v=7.7';
-import { state } from './state.js?v=7.7';
-import { ui } from './ui.js?v=7.7';
+import { api } from './api.js?v=8.0';
+import { state } from './state.js?v=8.0';
+import { ui } from './ui.js?v=8.0';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Obtener y validar sesión activa directamente desde Redis (vía HttpOnly Cookie)

@@ -96,10 +96,15 @@ export const state = {
 
   setEstudiantes(lista) {
     this.estudiantes = lista;
-    if (this.usuario && this.usuario.rol === 'ESTUDIANTE' && this.usuario.id) {
-      const found = lista.find(e => e.id == this.usuario.id);
-      if (found) {
-        this.estudianteActivo = found;
+    // Usuarios y estudiantes usan tablas con identificadores distintos.
+    // Se relacionan por correo, nunca por el id de usuario.
+    if (this.usuario && this.usuario.rol === 'ESTUDIANTE') {
+      const email = String(this.usuario.email || '').trim().toLowerCase();
+      const estudianteDelUsuario = lista.find(e =>
+        String(e.correoElectronico || '').trim().toLowerCase() === email
+      );
+      if (estudianteDelUsuario) {
+        this.estudianteActivo = estudianteDelUsuario;
         return;
       }
     }

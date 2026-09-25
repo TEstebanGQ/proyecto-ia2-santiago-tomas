@@ -1,28 +1,87 @@
 /* ==========================================================
-   RutaIA - Concepto 2: Editorial Learning Lab (Design System)
-   Inspirado en estética editorial, cálida, limpia y académica.
+   RutaIA - Editorial Learning Lab (Design System v6.0)
+   Paleta consolidada: unifica los colores "sueltos" encontrados
+   en styles.css (slate de Tailwind, rojos/limes duplicados,
+   tokens sin usar) en un único sistema semántico y accesible.
+
+   Compatible con el código actual: se mantienen los nombres de
+   variable ya usados en el proyecto. Se agregan variantes -bg/-text
+   para badges, alerts y toasts, y se retira lo que no se usaba.
    ========================================================== */
 
 :root {
-  /* Fondos y Superficies Cálidas */
-  --bg-body: #F7F5EE;
+  /* ----------------------------------------------------------
+     ESCALA DE GRISES (cálida) — sustituye al "slate" frío de
+     Tailwind que aparecía suelto en las vistas de Admin/Métricas
+     (#F8FAFC, #E2E8F0, #94A3B8, #64748B, #0F172A, etc.)
+     ---------------------------------------------------------- */
+  --gray-50: #FAF8F2;
+  --gray-100: #F2EFE8;
+  --gray-200: #E8E4DB;
+  --gray-300: #D9D4C8;
+  --gray-400: #A6A08F;
+  --gray-500: #848590;
+  --gray-600: #76777E;
+  --gray-700: #575861;
+  --gray-800: #4B4C52;
+  --gray-900: #26272C;
+
+  /* Fondos y Superficies */
+  --bg-body: var(--gray-50);
   --bg-sidebar: #FFFFFF;
   --bg-surface: #FFFFFF;
   --bg-card: #FFFFFF;
-  --bg-card-subtle: #F2EFE8;
+  --bg-card-subtle: var(--gray-100);
   --bg-input: #FFFFFF;
   --bg-highlight: #E4FB52;
 
-  /* Acentos Principales de Marca */
+  /* ----------------------------------------------------------
+     ACENTO DE MARCA — un solo lima (el más usado en el código,
+     34 apariciones), retirado su duplicado #A3E635
+     ---------------------------------------------------------- */
   --accent-lime: #D7F338;
   --accent-lime-hover: #C5E226;
-  --accent-coral: #FF5E3A;
-  --accent-orange: #FF9F38;
-  --accent-emerald: #10B981;
-  --accent-success: #16A34A;
-  --accent-danger: #EF4444;
+  --accent-lime-active: #B3CE1F;
 
-  /* Mosaicos Pastel de Categorías (Bento Grid) */
+  /* Acento secundario cálido (antes declarado y sin usar;
+     ahora con un rol real: CTAs secundarios, "Registro", enlaces
+     destacados dentro de tarjetas editoriales) */
+  --accent-coral: #FF5E3A;
+  --accent-coral-hover: #E64F2E;
+
+  /* ----------------------------------------------------------
+     COLORES SEMÁNTICOS — un único valor por estado (antes había
+     3 rojos y 2 verdes distintos haciendo el mismo trabajo),
+     cada uno con su -bg (para badges/alerts) y -text (accesible
+     sobre fondo claro, AA en texto normal)
+     ---------------------------------------------------------- */
+  --color-success: #15803D;
+  --color-success-bg: #DCFCE7;
+  --color-success-text: #166534;
+
+  --color-danger: #DC2626;
+  --color-danger-bg: #FEE2E2;
+  --color-danger-text: #991B1B;
+
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FEF3C7;
+  --color-warning-text: #92400E;
+
+  --color-info: #2563EB;
+  --color-info-bg: #EFF6FF;
+  --color-info-text: #1E40AF;
+
+  /* Alias retrocompatibles con nombres ya usados en el código */
+  --accent-success: var(--color-success);
+  --accent-danger: var(--color-danger);
+  --accent-emerald: var(--color-success);
+  /* antes duplicado de success */
+
+  /* ----------------------------------------------------------
+     MOSAICOS PASTEL DE CATEGORÍAS (Bento Grid)
+     Se ajusta --cat-ai-text para alinear con el violeta #7C3AED
+     que aparecía suelto en el código para temas de IA
+     ---------------------------------------------------------- */
   --cat-web-bg: #E8F88E;
   --cat-web-text: #374706;
   --cat-java-bg: #FEE1BA;
@@ -31,8 +90,8 @@
   --cat-data-text: #7A281E;
   --cat-rpa-bg: #F8D3EC;
   --cat-rpa-text: #6B1E54;
-  --cat-ai-bg: #DFDAFC;
-  --cat-ai-text: #32267B;
+  --cat-ai-bg: #EDE9FE;
+  --cat-ai-text: #6D28D9;
   --cat-security-bg: #C7F6EB;
   --cat-security-text: #0E5848;
   --cat-docker-bg: #D4F4F0;
@@ -40,12 +99,12 @@
 
   /* Tipografía y Textos */
   --text-primary: #18191E;
-  --text-secondary: #575861;
-  --text-muted: #848590;
+  --text-secondary: var(--gray-700);
+  --text-muted: var(--gray-500);
   --text-on-lime: #121316;
 
   /* Bordes y Líneas */
-  --border-subtle: #E8E4DB;
+  --border-subtle: var(--gray-200);
   --border-card: #ECE8E0;
   --border-focus: #18191E;
 
