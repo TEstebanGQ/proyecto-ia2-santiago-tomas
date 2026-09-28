@@ -96,15 +96,10 @@ export const state = {
 
   setEstudiantes(lista) {
     this.estudiantes = lista;
-    // Usuarios y estudiantes usan tablas con identificadores distintos.
-    // Se relacionan por correo, nunca por el id de usuario.
-    if (this.usuario && this.usuario.rol === 'ESTUDIANTE') {
-      const email = String(this.usuario.email || '').trim().toLowerCase();
-      const estudianteDelUsuario = lista.find(e =>
-        String(e.correoElectronico || '').trim().toLowerCase() === email
-      );
-      if (estudianteDelUsuario) {
-        this.estudianteActivo = estudianteDelUsuario;
+    if (this.usuario && this.usuario.rol === 'ESTUDIANTE' && this.usuario.id) {
+      const found = lista.find(e => e.id == this.usuario.id);
+      if (found) {
+        this.estudianteActivo = found;
         return;
       }
     }
@@ -158,10 +153,10 @@ export const state = {
     this.estadisticas = stats;
   },
 
-  // Gestión de Sesión de Chat Conversacional (Máximo 10 consultas por sesión)
+  // Gestión de Sesión de Chat Conversacional (Máximo 5 consultas por sesión)
   chatSession: {
     turnCount: 0,
-    maxTurns: 10,
+    maxTurns: 5,
     mensajes: [],
     cursosMencionados: []
   },
@@ -175,7 +170,7 @@ export const state = {
           const parsed = JSON.parse(saved);
           this.chatSession = {
             turnCount: parsed.turnCount || 0,
-            maxTurns: 10,
+            maxTurns: 5,
             mensajes: Array.isArray(parsed.mensajes) ? parsed.mensajes : [],
             cursosMencionados: Array.isArray(parsed.cursosMencionados) ? parsed.cursosMencionados : []
           };
@@ -187,7 +182,7 @@ export const state = {
     }
     this.chatSession = {
       turnCount: 0,
-      maxTurns: 10,
+      maxTurns: 5,
       mensajes: [],
       cursosMencionados: []
     };
@@ -266,7 +261,7 @@ export const state = {
   reiniciarChat() {
     this.chatSession = {
       turnCount: 0,
-      maxTurns: 10,
+      maxTurns: 5,
       mensajes: [],
       cursosMencionados: []
     };

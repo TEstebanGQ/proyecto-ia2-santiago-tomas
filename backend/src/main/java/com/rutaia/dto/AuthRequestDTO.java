@@ -7,10 +7,6 @@ public class AuthRequestDTO {
     private String rol;
     private String nombre;
     private String proveedor;
-    private String nivelExperiencia;
-    private String areaInteres;
-    private String departamentoFacultad;
-    private String credential;
 
     public AuthRequestDTO() {
     }
@@ -67,37 +63,5 @@ public class AuthRequestDTO {
 
     public void setProveedor(String proveedor) {
         this.proveedor = proveedor;
-    }
-
-    public String getNivelExperiencia() {
-        return nivelExperiencia;
-    }
-
-    public void setNivelExperiencia(String nivelExperiencia) {
-        this.nivelExperiencia = nivelExperiencia;
-    }
-
-    public String getAreaInteres() {
-        return areaInteres;
-    }
-
-    public void setAreaInteres(String areaInteres) {
-        this.areaInteres = areaInteres;
-    }
-
-    public String getDepartamentoFacultad() {
-        return departamentoFacultad;
-    }
-
-    public void setDepartamentoFacultad(String departamentoFacultad) {
-        this.departamentoFacultad = departamentoFacultad;
-    }
-
-    public String getCredential() {
-        return credential;
-    }
-
-    public void setCredential(String credential) {
-        this.credential = credential;
     }
 }

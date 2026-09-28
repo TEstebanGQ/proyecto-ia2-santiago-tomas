@@ -23,9 +23,6 @@ public class Estudiante {
     @Column(name = "area_interes", nullable = false, length = 100)
     private String areaInteres;
 
-    @Column(name = "activo", nullable = false)
-    private Boolean activo = true;
-
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
@@ -43,9 +40,6 @@ public class Estudiante {
     protected void onCreate() {
         if (this.fechaCreacion == null) {
             this.fechaCreacion = LocalDateTime.now();
-        }
-        if (this.activo == null) {
-            this.activo = true;
         }
     }
 
@@ -87,14 +81,6 @@ public class Estudiante {
 
     public void setAreaInteres(String areaInteres) {
         this.areaInteres = areaInteres;
-    }
-
-    public Boolean getActivo() {
-        return activo;
-    }
-
-    public void setActivo(Boolean activo) {
-        this.activo = activo;
     }
 
     public LocalDateTime getFechaCreacion() {

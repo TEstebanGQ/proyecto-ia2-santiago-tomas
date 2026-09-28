@@ -44,15 +44,6 @@ public class DocenteController {
         return ResponseEntity.ok(docenteService.listarTodosDocentes());
     }
 
-    @PatchMapping("/{id}/activo")
-    @Operation(summary = "Activar o desactivar docente institucional")
-    public ResponseEntity<DocenteResponseDTO> toggleActivoDocente(
-            @PathVariable Long id,
-            @RequestBody(required = false) java.util.Map<String, Boolean> body) {
-        Boolean activo = (body != null) ? body.get("activo") : null;
-        return ResponseEntity.ok(docenteService.toggleActivo(id, activo));
-    }
-
     @GetMapping("/perfil")
     @Operation(summary = "Obtener perfil del docente actual")
     public ResponseEntity<DocenteResponseDTO> obtenerPerfil(
@@ -66,8 +57,7 @@ public class DocenteController {
                 d.getCorreoElectronico(),
                 d.getAreaEspecialidad(),
                 d.getDepartamentoFacultad(),
-                d.getFechaCreacion(),
-                d.getActivo()
+                d.getFechaCreacion()
         ));
     }
 

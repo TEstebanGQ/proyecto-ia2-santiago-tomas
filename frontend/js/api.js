@@ -6,7 +6,7 @@
 
 const API_BASE_URL = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? 'http://localhost:8080/api'
-  : '/api';
+  : 'https://proyecto-ia2-santiago-tomas.onrender.com/api';
 
 function getAuthHeaders(includeContentType = true) {
   const headers = {};
@@ -356,9 +356,7 @@ export const api = {
       }
     );
 
-    // Un 401 puede llegar sin cuerpo desde el proxy. No ocultarlo con un error
-    // de parseo de JSON; el formulario podrá informar la causa correctamente.
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json();
 
     if (!res.ok) {
       throw new Error(
@@ -370,58 +368,11 @@ export const api = {
     return data;
   },
 
-  async cambiarPasswordInicial(passwordActual, nuevaPassword) {
-    const res = await fetch(`${API_BASE_URL}/auth/cambiar-password-inicial`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ passwordActual, nuevaPassword })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.mensaje || 'No fue posible actualizar la contraseña.');
-    return data;
-  },
-
-  async checkGoogleUser(email) {
-    const res = await fetch(
-      `${API_BASE_URL}/auth/google/check?email=${encodeURIComponent(email)}`,
-      {
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      }
-    );
-    if (!res.ok) {
-      return { existe: false, perfilCompleto: false, requiereCompletarPerfil: true };
-    }
-    return await res.json();
-  },
-
   async loginGoogle(
-    emailOrPayload,
+    email,
     nombre = '',
-    rol = 'ESTUDIANTE',
-    nivelExperiencia = '',
-    areaInteres = '',
-    departamentoFacultad = ''
+    rol = 'ESTUDIANTE'
   ) {
-    let payload = {};
-    if (typeof emailOrPayload === 'object' && emailOrPayload !== null) {
-      payload = {
-        proveedor: 'google',
-        ...emailOrPayload
-      };
-    } else {
-      payload = {
-        email: emailOrPayload,
-        nombre,
-        rol,
-        nivelExperiencia,
-        areaInteres,
-        departamentoFacultad,
-        proveedor: 'google'
-      };
-    }
-
     const res = await fetch(
       `${API_BASE_URL}/auth/google`,
       {
@@ -429,23 +380,25 @@ export const api = {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          email,
+          nombre,
+          rol,
+          proveedor: 'google'
+        }),
         credentials: 'include'
       }
     );
 
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json();
 
     if (!res.ok) {
       throw new Error(
-        data.mensaje || data.message || res.statusText ||
+        data.mensaje ||
         'Error en autenticación con Google'
       );
     }
 
-    if (Object.keys(data).length === 0) {
-      throw new Error('El servidor no devolvió una sesión válida. Intenta nuevamente.');
-    }
     return data;
   },
 
@@ -1104,19 +1057,6 @@ export const api = {
     return await res.json();
   },
 
-  async toggleUsuarioActivo(id, activo) {
-    const res = await fetch(`${API_BASE_URL}/usuarios/${id}/activo?activo=${activo}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(false),
-      credentials: 'include'
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al cambiar estado del usuario');
-    }
-    return await res.json();
-  },
-
   async getRolesPermitidos() {
     const res = await fetch(`${API_BASE_URL}/usuarios/roles-permitidos`, {
       headers: getAuthHeaders(false),
@@ -1124,37 +1064,6 @@ export const api = {
     });
     if (!res.ok) {
       return ['DOCENTE', 'ESTUDIANTE'];
-    }
-    return await res.json();
-  },
-
-  async actualizarUsuario(id, datos) {
-    const res = await fetch(`${API_BASE_URL}/usuarios/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(true),
-      credentials: 'include',
-      body: JSON.stringify(datos)
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al actualizar los datos del usuario');
-    }
-    return await res.json();
-  },
-
-  async cambiarRolUsuario(id, nuevoRol, detalles = {}) {
-    const res = await fetch(`${API_BASE_URL}/usuarios/${id}/rol`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(true),
-      credentials: 'include',
-      body: JSON.stringify({
-        nuevoRol,
-        ...detalles
-      })
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al cambiar el rol del usuario (exclusivo Superadmin)');
     }
     return await res.json();
   }
