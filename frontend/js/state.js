@@ -155,8 +155,9 @@ export const state = {
 
   // Gestión de Sesión de Chat Conversacional (Máximo 5 consultas por sesión)
   chatSession: {
+    conversacionId: null,
     turnCount: 0,
-    maxTurns: 5,
+    maxTurns: 10,
     mensajes: [],
     cursosMencionados: []
   },
@@ -169,8 +170,9 @@ export const state = {
         if (saved) {
           const parsed = JSON.parse(saved);
           this.chatSession = {
+            conversacionId: parsed.conversacionId || null,
             turnCount: parsed.turnCount || 0,
-            maxTurns: 5,
+            maxTurns: 10,
             mensajes: Array.isArray(parsed.mensajes) ? parsed.mensajes : [],
             cursosMencionados: Array.isArray(parsed.cursosMencionados) ? parsed.cursosMencionados : []
           };
@@ -181,8 +183,9 @@ export const state = {
       console.warn('Error al cargar chatSession de sessionStorage', e);
     }
     this.chatSession = {
+      conversacionId: null,
       turnCount: 0,
-      maxTurns: 5,
+      maxTurns: 10,
       mensajes: [],
       cursosMencionados: []
     };
@@ -221,6 +224,8 @@ export const state = {
   },
 
   agregarRespuestaIA(resultado) {
+    if (resultado.conversacionId) this.chatSession.conversacionId = resultado.conversacionId;
+    if (resultado.consultasEnConversacion) this.chatSession.turnCount = resultado.consultasEnConversacion;
     const cursosNuevos = [];
     if (resultado.fuentes && Array.isArray(resultado.fuentes)) {
       resultado.fuentes.forEach(f => {
@@ -260,8 +265,9 @@ export const state = {
 
   reiniciarChat() {
     this.chatSession = {
+      conversacionId: null,
       turnCount: 0,
-      maxTurns: 5,
+      maxTurns: 10,
       mensajes: [],
       cursosMencionados: []
     };

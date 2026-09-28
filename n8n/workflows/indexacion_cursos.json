@@ -1,4 +1,5 @@
 {
+  "id": "indexacion-cursos-rutaia-001",
   "name": "RutaIA - 01 Indexacion de Cursos en Qdrant",
   "nodes": [
     {

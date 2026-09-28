@@ -9,6 +9,8 @@ public class RecomendacionResponseDTO {
 
     private Long idConsulta;
     private Long idRecomendacion;
+    private Long conversacionId;
+    private Integer consultasEnConversacion;
     private String pregunta;
     private String respuesta;
     private List<FuenteResponseDTO> fuentes = new ArrayList<>();
@@ -36,6 +38,10 @@ public class RecomendacionResponseDTO {
     public void setIdRecomendacion(Long idRecomendacion) {
         this.idRecomendacion = idRecomendacion;
     }
+    public Long getConversacionId() { return conversacionId; }
+    public void setConversacionId(Long conversacionId) { this.conversacionId = conversacionId; }
+    public Integer getConsultasEnConversacion() { return consultasEnConversacion; }
+    public void setConsultasEnConversacion(Integer consultasEnConversacion) { this.consultasEnConversacion = consultasEnConversacion; }
 
     public String getPregunta() {
         return pregunta;

@@ -454,9 +454,9 @@ function initScrollBottomButton() {
 }
 
 async function ejecutarConsulta(pregunta) {
-  // Validar si superó el límite de 5 consultas en esta sesión (Ventana deslizante)
+  // Validar el límite de 10 consultas de la conversación persistente
   if (!state.puedeEnviarMensaje()) {
-    ui.showToast('Has alcanzado el límite de 5 consultas en esta sesión. Inicia una nueva conversación para continuar.', 'warning');
+    ui.showToast('Has alcanzado el límite de 10 consultas en esta conversación. Inicia un nuevo chat para continuar.', 'warning');
     return;
   }
 
@@ -493,7 +493,8 @@ async function ejecutarConsulta(pregunta) {
       state.estudianteActivo.id,
       pregunta,
       contexto.cursosPrevios,
-      contexto.contextoPrevio
+      contexto.contextoPrevio,
+      state.chatSession.conversacionId
     );
     state.setUltimaRecomendacion(resultado);
     state.agregarRespuestaIA(resultado);

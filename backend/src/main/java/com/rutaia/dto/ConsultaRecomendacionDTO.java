@@ -14,6 +14,7 @@ public class ConsultaRecomendacionDTO {
     private java.util.List<String> cursosPrevios;
 
     private String contextoPrevio;
+    private Long conversacionId;
 
     public ConsultaRecomendacionDTO() {
     }
@@ -61,4 +62,6 @@ public class ConsultaRecomendacionDTO {
     public void setContextoPrevio(String contextoPrevio) {
         this.contextoPrevio = contextoPrevio;
     }
+    public Long getConversacionId() { return conversacionId; }
+    public void setConversacionId(Long conversacionId) { this.conversacionId = conversacionId; }
 }

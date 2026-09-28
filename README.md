@@ -1,4 +1,4 @@
-# RutaIA: Sistema Inteligente de Orientación Académica y Recomendación Curricular (RAG + JWT + Redis + Umbral Dinámico)
+ppppppppppppppyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy# RutaIA: Sistema Inteligente de Orientación Académica y Recomendación Curricular (RAG + JWT + Redis + Umbral Dinámico)
 
 [![Java](https://img.shields.io/badge/Java-17_LTS-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4.3-brightgreen.svg)](https://spring.io/projects/spring-boot)
@@ -403,6 +403,10 @@ proyecto-IA2-SANTIAGO-TOMAS/
 ```
 
 ---
+
+## Guía actualizada de ejecución local
+
+Para una puesta en marcha verificada en Windows y Linux, con puertos actuales, Docker, n8n, indexación y verificación, consulta [docs/puesta_en_marcha_windows_linux.md](docs/puesta_en_marcha_windows_linux.md).
 
 ## 13. Solución de Problemas Frecuentes (Troubleshooting)
 

@@ -20,9 +20,9 @@ public class CursoService {
 
     private final CursoRepository cursoRepository;
     private final CalificacionCursoRepository calificacionCursoRepository;
-    private final QdrantSyncService qdrantSyncService;
+    private final N8nCourseSyncService qdrantSyncService;
 
-    public CursoService(CursoRepository cursoRepository, CalificacionCursoRepository calificacionCursoRepository, QdrantSyncService qdrantSyncService) {
+    public CursoService(CursoRepository cursoRepository, CalificacionCursoRepository calificacionCursoRepository, N8nCourseSyncService qdrantSyncService) {
         this.cursoRepository = cursoRepository;
         this.calificacionCursoRepository = calificacionCursoRepository;
         this.qdrantSyncService = qdrantSyncService;
@@ -75,7 +75,7 @@ public class CursoService {
 
         // Sincronización automática con Qdrant Vector DB si está activo (RF 05)
         if (Boolean.TRUE.equals(guardado.getActivo())) {
-            qdrantSyncService.sincronizarCurso(guardado);
+            asegurarSincronizacion(qdrantSyncService.sincronizarCurso(guardado), "crear");
         }
 
         return mapToResponse(guardado);
@@ -101,9 +101,9 @@ public class CursoService {
 
         // Sincronización o eliminación del vector según el estado de activación
         if (Boolean.TRUE.equals(actualizado.getActivo())) {
-            qdrantSyncService.sincronizarCurso(actualizado);
+            asegurarSincronizacion(qdrantSyncService.sincronizarCurso(actualizado), "actualizar/activar");
         } else {
-            qdrantSyncService.eliminarVectorCurso(id);
+            asegurarSincronizacion(qdrantSyncService.eliminarVectorCurso(id), "desactivar");
         }
 
         return mapToResponse(actualizado);
@@ -117,7 +117,7 @@ public class CursoService {
         Curso actualizado = cursoRepository.save(curso);
 
         // Eliminación inmediata del vector en Qdrant al desactivar el curso
-        qdrantSyncService.eliminarVectorCurso(id);
+        asegurarSincronizacion(qdrantSyncService.eliminarVectorCurso(id), "desactivar");
 
         return mapToResponse(actualizado);
     }
@@ -130,7 +130,7 @@ public class CursoService {
         Curso actualizado = cursoRepository.save(curso);
 
         // Sincronización y reindexación del vector en Qdrant al reactivar el curso
-        qdrantSyncService.sincronizarCurso(actualizado);
+        asegurarSincronizacion(qdrantSyncService.sincronizarCurso(actualizado), "activar");
 
         return mapToResponse(actualizado);
     }
@@ -165,6 +165,13 @@ public class CursoService {
         }
         if (dto.getDescripcion() == null || dto.getDescripcion().isBlank()) {
             throw new BusinessRuleException("El curso no puede registrarse sin descripción.");
+        }
+    }
+
+    private void asegurarSincronizacion(boolean sincronizado, String operacion) {
+        if (!sincronizado) {
+            throw new BusinessRuleException("No se pudo " + operacion
+                    + " el curso porque Qdrant no confirmó la sincronización. No se aplicaron cambios.");
         }
     }
 

@@ -93,9 +93,12 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres_secure_password}
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION=${QDRANT_COLLECTION_NAME:-cursos_academicos}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_EMBEDDING_MODEL=${OPENROUTER_EMBEDDING_MODEL:-openai/text-embedding-3-small}
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/recomendar-cursos
+      - N8N_COURSE_SYNC_WEBHOOK_URL=http://n8n:5678/webhook/sincronizar-curso
     depends_on:
       postgres:
         condition: service_healthy

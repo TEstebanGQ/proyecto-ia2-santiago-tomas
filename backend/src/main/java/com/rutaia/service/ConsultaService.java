@@ -23,6 +23,7 @@ public class ConsultaService {
     private final EstudianteRepository estudianteRepository;
     private final CursoRepository cursoRepository;
     private final ConsultaRepository consultaRepository;
+    private final ConversacionRepository conversacionRepository;
     private final RecomendacionRepository recomendacionRepository;
     private final N8nOrquestadorService n8nOrquestadorService;
     private final ConfiguracionService configuracionService;
@@ -31,6 +32,7 @@ public class ConsultaService {
             EstudianteRepository estudianteRepository,
             CursoRepository cursoRepository,
             ConsultaRepository consultaRepository,
+            ConversacionRepository conversacionRepository,
             RecomendacionRepository recomendacionRepository,
             N8nOrquestadorService n8nOrquestadorService,
             ConfiguracionService configuracionService
@@ -38,6 +40,7 @@ public class ConsultaService {
         this.estudianteRepository = estudianteRepository;
         this.cursoRepository = cursoRepository;
         this.consultaRepository = consultaRepository;
+        this.conversacionRepository = conversacionRepository;
         this.recomendacionRepository = recomendacionRepository;
         this.n8nOrquestadorService = n8nOrquestadorService;
         this.configuracionService = configuracionService;
@@ -63,12 +66,28 @@ public class ConsultaService {
                         )
                 );
 
+        Conversacion conversacion;
+        if (dto.getConversacionId() == null) {
+            conversacion = conversacionRepository.save(new Conversacion(estudiante));
+        } else {
+            conversacion = conversacionRepository.findById(dto.getConversacionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("La conversación no existe."));
+            if (!conversacion.getEstudiante().getId().equals(estudiante.getId())) {
+                throw new BusinessRuleException("La conversación no pertenece al estudiante seleccionado.");
+            }
+        }
+        long consultasPrevias = consultaRepository.countByConversacionId(conversacion.getId());
+        if (consultasPrevias >= 10) {
+            throw new BusinessRuleException("Esta conversación ya alcanzó el límite de 10 consultas. Inicia un nuevo chat para continuar.");
+        }
+
         // RF 07: Registrar consulta con estado inicial Pendiente
         Consulta consulta = new Consulta(
                 estudiante,
                 dto.getPregunta().trim(),
                 "Pendiente"
         );
+        consulta.setConversacion(conversacion);
 
         consulta = consultaRepository.save(consulta);
 
@@ -105,6 +124,8 @@ public class ConsultaService {
                 new RecomendacionResponseDTO();
 
         responseDTO.setIdConsulta(consulta.getId());
+        responseDTO.setConversacionId(conversacion.getId());
+        responseDTO.setConsultasEnConversacion((int) consultasPrevias + 1);
         responseDTO.setPregunta(consulta.getPregunta());
 
         if ("Respondida".equalsIgnoreCase(n8nResponse.getEstadoFinal())) {

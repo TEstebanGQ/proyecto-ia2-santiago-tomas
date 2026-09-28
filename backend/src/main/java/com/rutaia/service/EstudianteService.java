@@ -113,6 +113,7 @@ public class EstudianteService {
         for (Consulta c : consultas) {
             HistorialConsultaDTO item = new HistorialConsultaDTO();
             item.setIdConsulta(c.getId());
+            if (c.getConversacion() != null) item.setConversacionId(c.getConversacion().getId());
             item.setPregunta(c.getPregunta());
             item.setFecha(c.getFecha());
             item.setEstado(c.getEstado());

@@ -1,0 +1,18 @@
+{
+  "name": "RutaIA - Sincronizar curso con Qdrant",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "sincronizar-curso", "responseMode": "responseNode" },
+      "id": "webhook-sync-course", "name": "Webhook Sincronizar Curso", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [200, 300]
+    },
+    {
+      "parameters": { "jsCode": "const input = $json.body || $json;\nconst id = Number(input.cursoId);\nif (!id || !input.accion) throw new Error('cursoId y accion son obligatorios');\nif (input.accion === 'ELIMINAR') {\n  const r = await fetch('http://qdrant:6333/collections/cursos_academicos/points/delete?wait=true', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({points:[id]})});\n  if (!r.ok) throw new Error('Qdrant no pudo borrar el vector');\n  return [{json:{ok:true, accion:'ELIMINAR', cursoId:id}}];\n}\nconst c = input.curso;\nif (!c) throw new Error('Faltan datos del curso');\nconst texto = `Curso: ${c.nombre}. Categoría: ${c.categoria}. Nivel: ${c.nivel}. Duración: ${c.duracionHoras} horas. Prerrequisitos: ${c.prerrequisitos || 'Ninguno'}. Descripción: ${c.descripcion}`;\nconst emb = await fetch('https://openrouter.ai/api/v1/embeddings', {method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${$env.OPENROUTER_API_KEY}`}, body:JSON.stringify({model:$env.OPENROUTER_EMBEDDING_MODEL || 'openai/text-embedding-3-small', input:texto})});\nif (!emb.ok) throw new Error('No fue posible generar el embedding');\nconst vector = (await emb.json()).data?.[0]?.embedding;\nconst q = await fetch('http://qdrant:6333/collections/cursos_academicos/points?wait=true', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({points:[{id,vector,payload:{curso_id:id,nombre:c.nombre,descripcion:c.descripcion,categoria:c.categoria,nivel:c.nivel,duracion_horas:c.duracionHoras,prerrequisitos:c.prerrequisitos || '',activo:true}}]})});\nif (!q.ok) throw new Error('Qdrant no pudo indexar el curso');\nreturn [{json:{ok:true, accion:'UPSERT', cursoId:id}}];" },
+      "id": "sync-qdrant", "name": "Sincronizar en Qdrant", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [450, 300]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ $json }}" },
+      "id": "respond-sync", "name": "Responder sincronización", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.1, "position": [700, 300]
+    }
+  ],
+  "connections": { "Webhook Sincronizar Curso": { "main": [[{ "node": "Sincronizar en Qdrant", "type": "main", "index": 0 }]] }, "Sincronizar en Qdrant": { "main": [[{ "node": "Responder sincronización", "type": "main", "index": 0 }]] } }
+}

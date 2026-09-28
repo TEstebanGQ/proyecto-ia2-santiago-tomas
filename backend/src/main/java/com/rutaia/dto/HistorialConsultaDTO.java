@@ -7,6 +7,7 @@ import java.util.List;
 public class HistorialConsultaDTO {
 
     private Long idConsulta;
+    private Long conversacionId;
     private Long idRecomendacion;
     private String pregunta;
     private LocalDateTime fecha;
@@ -26,6 +27,8 @@ public class HistorialConsultaDTO {
     public void setIdConsulta(Long idConsulta) {
         this.idConsulta = idConsulta;
     }
+    public Long getConversacionId() { return conversacionId; }
+    public void setConversacionId(Long conversacionId) { this.conversacionId = conversacionId; }
 
     public Long getIdRecomendacion() {
         return idRecomendacion;

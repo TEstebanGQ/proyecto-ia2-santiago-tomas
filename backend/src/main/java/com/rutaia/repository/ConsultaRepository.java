@@ -9,6 +9,7 @@ import java.util.List;
 @Repository
 public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
     List<Consulta> findByEstudianteIdOrderByFechaDesc(Long estudianteId);
+    long countByConversacionId(Long conversacionId);
     long countByEstado(String estado);
     long countByEstudianteId(Long estudianteId);
     long countByEstudianteIdAndEstado(Long estudianteId, String estado);

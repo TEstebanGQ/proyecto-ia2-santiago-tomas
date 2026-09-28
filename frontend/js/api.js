@@ -205,7 +205,7 @@ export const api = {
     estudianteId,
     pregunta,
     cursosPrevios = [],
-    contextoPrevio = ''
+    contextoPrevio = '', conversacionId = null
   ) {
     const payload = {
       estudianteId,
@@ -222,6 +222,7 @@ export const api = {
     if (contextoPrevio) {
       payload.contextoPrevio = contextoPrevio;
     }
+    if (conversacionId) payload.conversacionId = conversacionId;
 
     const res = await fetch(
       `${API_BASE_URL}/consultas/recomendar`,

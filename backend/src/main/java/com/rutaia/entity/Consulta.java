@@ -15,6 +15,10 @@ public class Consulta {
     @JoinColumn(name = "estudiante_id", nullable = false)
     private Estudiante estudiante;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversacion_id")
+    private Conversacion conversacion;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String pregunta;
 
@@ -61,6 +65,9 @@ public class Consulta {
     public void setEstudiante(Estudiante estudiante) {
         this.estudiante = estudiante;
     }
+
+    public Conversacion getConversacion() { return conversacion; }
+    public void setConversacion(Conversacion conversacion) { this.conversacion = conversacion; }
 
     public String getPregunta() {
         return pregunta;

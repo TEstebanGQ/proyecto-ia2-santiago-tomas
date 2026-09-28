@@ -89,7 +89,7 @@ public class QdrantSyncService {
             body.put("points", Collections.singletonList(point));
 
             // 4. Enviar a Qdrant (Upsert)
-            String url = String.format("%s/collections/%s/points", qdrantUrl, collectionName);
+            String url = String.format("%s/collections/%s/points?wait=true", qdrantUrl, collectionName);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             if (qdrantApiKey != null && !qdrantApiKey.isBlank()) {
@@ -121,7 +121,7 @@ public class QdrantSyncService {
 
         try {
             log.info("Eliminando vector del curso #{} en Qdrant (desactivación)...", cursoId);
-            String url = String.format("%s/collections/%s/points/delete", qdrantUrl, collectionName);
+            String url = String.format("%s/collections/%s/points/delete?wait=true", qdrantUrl, collectionName);
 
             Map<String, Object> body = new HashMap<>();
             body.put("points", Collections.singletonList(cursoId));
