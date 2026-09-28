@@ -1,0 +1,178 @@
+{
+  "name": "RutaIA - 03 Comparacion Semantica de Preguntas mediante Embeddings",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "comparar-preguntas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Comparar Preguntas",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst preguntaA = (body.preguntaA && typeof body.preguntaA === 'string' && body.preguntaA.trim()) \n  ? body.preguntaA.trim() \n  : 'Quiero aprender a crear páginas web';\n\nconst preguntaB = (body.preguntaB && typeof body.preguntaB === 'string' && body.preguntaB.trim()) \n  ? body.preguntaB.trim() \n  : 'Me interesa desarrollar sitios con HTML y CSS';\n\nreturn [{\n  json: {\n    preguntaA,\n    preguntaB\n  }\n}];"
+      },
+      "id": "code-preparar",
+      "name": "Validar y Preparar Preguntas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/text-embedding-3-small\",\n  \"input\": \"{{ $('Validar y Preparar Preguntas').item.json.preguntaA.replace(/\"/g, '\\\\\"') }}\"\n}"
+      },
+      "id": "http-embedding-a",
+      "name": "Generar Embedding Pregunta A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/text-embedding-3-small\",\n  \"input\": \"{{ $('Validar y Preparar Preguntas').item.json.preguntaB.replace(/\"/g, '\\\\\"') }}\"\n}"
+      },
+      "id": "http-embedding-b",
+      "name": "Generar Embedding Pregunta B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepNode = $('Validar y Preparar Preguntas').item.json;\nconst preguntaA = prepNode.preguntaA;\nconst preguntaB = prepNode.preguntaB;\n\nconst respA = $('Generar Embedding Pregunta A').item.json;\nconst respB = $('Generar Embedding Pregunta B').item.json;\n\nif (!respA.data || !respA.data[0] || !Array.isArray(respA.data[0].embedding)) {\n  throw new Error('Vector A inválido o no generado por OpenRouter');\n}\nif (!respB.data || !respB.data[0] || !Array.isArray(respB.data[0].embedding)) {\n  throw new Error('Vector B inválido o no generado por OpenRouter');\n}\n\nconst vecA = respA.data[0].embedding;\nconst vecB = respB.data[0].embedding;\n\nif (vecA.length !== vecB.length || vecA.length === 0) {\n  throw new Error(`Incompatibilidad de dimensiones: Vector A (${vecA.length}) vs Vector B (${vecB.length})`);\n}\n\n// Cálculo algebraico directo de Similitud Coseno (SIN LLM)\nlet dotProduct = 0;\nlet normA = 0;\nlet normB = 0;\n\nfor (let i = 0; i < vecA.length; i++) {\n  dotProduct += vecA[i] * vecB[i];\n  normA += vecA[i] * vecA[i];\n  normB += vecB[i] * vecB[i];\n}\n\nnormA = Math.sqrt(normA);\nnormB = Math.sqrt(normB);\n\nconst similitud = (normA === 0 || normB === 0) ? 0 : dotProduct / (normA * normB);\n\nreturn [{\n  json: {\n    preguntaA,\n    preguntaB,\n    similitud: Math.round(similitud * 10000) / 10000\n  }\n}];"
+      },
+      "id": "code-similitud-coseno",
+      "name": "Calcular Similitud Coseno (Sin LLM)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [820, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Respuesta JSON Similitud",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Comparar Preguntas": {
+      "main": [
+        [
+          {
+            "node": "Validar y Preparar Preguntas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar y Preparar Preguntas": {
+      "main": [
+        [
+          {
+            "node": "Generar Embedding Pregunta A",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generar Embedding Pregunta B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Embedding Pregunta A": {
+      "main": [
+        [
+          {
+            "node": "Calcular Similitud Coseno (Sin LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Embedding Pregunta B": {
+      "main": [
+        [
+          {
+            "node": "Calcular Similitud Coseno (Sin LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Similitud Coseno (Sin LLM)": {
+      "main": [
+        [
+          {
+            "node": "Respuesta JSON Similitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

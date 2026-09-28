@@ -40,6 +40,7 @@ public class SecurityConfig {
 
                 // Rutas públicas
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/consultas/comparar-embeddings").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/estudiantes").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/estudiantes/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/cursos").permitAll()

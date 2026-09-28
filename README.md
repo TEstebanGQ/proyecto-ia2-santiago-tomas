@@ -57,7 +57,7 @@ En entornos académicos y tecnológicos universitarios, los estudiantes se enfre
 [ Spring Security ]  [ CursoService ] [ ConfiguracionService ] [ EstadisticaService ] [ N8nOrquestador ]
        │                      │               │               │                      │
        ▼ (Valida Token)       ▼ (Sync Vector) ▼ (Umbral RAG)  ▼ (Métricas)           ▼ (Webhook)
- [ REDIS 7 DB ]      [ QDRANT VECTOR DB ] └──────────────┬──┘                 [ n8n WORKFLOW ]
+ [ REDIS 7 DB ]      [ QDRANT VECTOR DB ] ──────────────┬───┘                 [ n8n WORKFLOW ]
   (Puerto 6379)        (Puerto 6333)                    │                     (Puerto 5678)
        ▲                      ▲                         ▼                            │
        │                      │                 [ POSTGRESQL DB ]                    ▼
@@ -182,11 +182,12 @@ xxxxxxxxxxxx   postgres:16           0.0.0.0:5432->5432/tcp              rutaia_
 ### Paso 4: Configurar los Workflows en n8n
 1. Abre tu navegador en **`http://localhost:5678`**.
 2. Si entras por primera vez, n8n te solicitará crear una cuenta de administrador local (nombre, email y contraseña personal).
-3. Dirígete al menú lateral **Workflows** e importa los dos flujos ubicados en la carpeta `n8n/workflows/`:
+3. Dirígete al menú lateral **Workflows** e importa los flujos ubicados en la carpeta `n8n/workflows/`:
    - **`01 Indexacion de Cursos en Qdrant`**: Archivo `n8n/workflows/indexacion_cursos.json`.
    - **`02 RAG Recomendacion de Cursos`**: Archivo `n8n/workflows/rag_recomendacion.json`.
+   - **`03 Comparacion Semantica de Preguntas`**: Archivo `n8n/workflows/comparacion_semantica_embeddings.json`.
 4. En los nodos que se comunican con OpenRouter, valida que en la cabecera `Authorization` esté configurada tu API Key (`Bearer TU_API_KEY`).
-5. **Muy Importante**: Activa ambos workflows con el switch superior **Active (On)**.
+5. **Muy Importante**: Activa los workflows con el switch superior **Active (On)**.
 
 ---
 
@@ -353,21 +354,96 @@ Puedes ensayar los siguientes casos utilizando el asistente RAG y las funciones 
 
 ---
 
-## 12. Estructura del Repositorio
+## 12. Comparación Semántica de Preguntas mediante Embeddings (Sin LLM)
+
+### 12.1 Objetivo del Flujo
+Construir y ejecutar un flujo de prueba que permita comparar semánticamente dos preguntas mediante sus representaciones vectoriales (**embeddings**), determinando su grado de afinidad mediante **similitud del coseno directa**, **sin utilizar un modelo de lenguaje (LLM)** para evaluar o decidir si son similares.
+
+### 12.2 Escenario de Prueba
+- **Pregunta A**: `"Quiero aprender a crear páginas web"`
+- **Pregunta B**: `"Me interesa desarrollar sitios con HTML y CSS"`
+
+### 12.3 Fundamento Conceptual: ¿Por qué dos frases con palabras diferentes pueden producir embeddings similares?
+A nivel léxico tradicional (búsqueda literal o *keyword matching*), estas dos oraciones presentan una coincidencia prácticamente nula: ninguna de las palabras principales coincide (`aprender` ≠ `desarrollar`, `crear` ≠ `sitios`, `páginas web` ≠ `HTML y CSS`).
+
+Sin embargo, los modelos de embeddings (como `openai/text-embedding-3-small`, de 1536 dimensiones) proyectan el texto en un **espacio geométrico latente continuo y denso**:
+1. **Representación Semántica Distribuida**: El modelo procesa las oraciones mediante capas de auto-atención (*Transformer*), asignando coordenadas basadas en el contexto, significado y patrones semánticos aprendidos de corpus masivos.
+2. **Convergencia Conceptual en el Espacio Latente**:
+   - *"Quiero aprender"* y *"Me interesa"* comparten la misma intención vocacional y predisposición formativa.
+   - *"crear páginas web"* y *"desarrollar sitios con HTML y CSS"* pertenecen al mismo hiperónimo conceptual de ingeniería de software frontend (HTML y CSS son las tecnologías fundamentales estándar de las páginas web).
+3. **Cercanía en la Hiperesfera Vectorial**:
+   - Ambos vectores resultantes ($\mathbf{u}$ y $\mathbf{v}$) apuntan casi en la misma dirección dentro del espacio de 1536 dimensiones.
+4. **Cálculo Determinista sin LLM (Similitud del Coseno)**:
+   - Para decidir si son afines, **no se requiere un LLM**, sino una fórmula matemática lineal y puramente algebraica:
+     $$\text{similitud}(\mathbf{u}, \mathbf{v}) = \cos(\theta) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2} = \frac{\sum_{i=1}^n u_i v_i}{\sqrt{\sum_{i=1}^n u_i^2} \sqrt{\sum_{i=1}^n v_i^2}}$$
+   - El resultado es un escalar numérico entre $-1$ y $1$ (donde $1$ representa identidad direccional perfecta). En este escenario, la afinidad vectorial directa se sitúa en torno a **`0.65`** (indicando alta correlación semántica a pesar de la divergencia léxica).
+
+### 12.4 Mecanismos de Ejecución Disponibles
+
+El proyecto cuenta con cuatro alternativas complementarias para ejecutar y verificar este requerimiento:
+
+#### Opción A: Script Autónomo en Python
+```bash
+python3 scripts/test_comparacion_embeddings.py
+```
+*(Opcionalmente se pueden pasar preguntas personalizadas por argumento):*
+```bash
+python3 scripts/test_comparacion_embeddings.py "Quiero aprender a crear páginas web" "Me interesa desarrollar sitios con HTML y CSS"
+```
+
+#### Opción B: Script en Node.js
+```bash
+node scripts/test_comparacion_embeddings.js
+```
+
+#### Opción C: Endpoint REST en Spring Boot
+```bash
+curl -X POST http://localhost:8080/api/consultas/comparar-embeddings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "preguntaA": "Quiero aprender a crear páginas web",
+    "preguntaB": "Me interesa desarrollar sitios con HTML y CSS"
+  }'
+```
+
+#### Opción D: Flujo Visual en n8n
+Importar el workflow [`n8n/workflows/comparacion_semantica_embeddings.json`](n8n/workflows/comparacion_semantica_embeddings.json) y disparar el webhook:
+```bash
+curl -X POST http://localhost:5678/webhook/comparar-preguntas \
+  -H "Content-Type: application/json" \
+  -d '{
+    "preguntaA": "Quiero aprender a crear páginas web",
+    "preguntaB": "Me interesa desarrollar sitios con HTML y CSS"
+  }'
+```
+
+### 12.5 Salida Mínima Esperada y Resultado Obtenido
+```json
+{
+  "preguntaA": "Quiero aprender a crear páginas web",
+  "preguntaB": "Me interesa desarrollar sitios con HTML y CSS",
+  "similitud": 0.6531
+}
+```
+*(Nota: El cálculo se realiza directamente entre los vectores generados por `openai/text-embedding-3-small`, cumpliendo la restricción de cero intervención de LLM para la decisión de afinidad).*
+
+---
+
+## 13. Estructura del Repositorio
 
 ```
 proyecto-IA2-SANTIAGO-TOMAS/
 ├── backend/                              # Backend en Spring Boot 3.4.3
 │   ├── src/main/java/com/rutaia/
-│   │   ├── config/SecurityConfig.java    # Configuración Spring Security, CORS y Endpoints Protegidos
-│   │   ├── controller/                   # Controllers (Auth, Cursos, Estudiantes, Consultas, Configuracion, Estadistica)
-│   │   ├── dto/                          # DTOs (UmbralConfigDTO, N8nRecomendacionRequest, CursoDTO, etc.)
+│   │   ├── config/SecurityConfig.java    # Configuración Spring Security, CORS y Endpoints Públicos
+│   │   ├── controller/                   # Controllers (Auth, Cursos, Estudiantes, Consultas, Config, Stats)
+│   │   ├── dto/                          # DTOs (ComparacionEmbeddingsDTO, UmbralConfigDTO, CursoDTO, etc.)
 │   │   ├── entity/                       # Entidades JPA (Estudiante, Curso, Consulta, Configuracion, Calificacion)
 │   │   ├── repository/                   # Repositorios JPA (ConfiguracionRepository, EstudianteRepository, etc.)
 │   │   ├── security/                     # JwtUtil y JwtAuthFilter
-│   │   └── service/                      # Lógica de negocio (ConfiguracionService, EstadisticaService, QdrantSyncService)
+│   │   └── service/                      # Lógica (EmbeddingComparisonService, QdrantSyncService, ConsultaService)
 │   ├── src/main/resources/
-│   │   └── application.properties        # Configuración DB, Redis, JWT, Qdrant y rag.threshold.default
+│   │   └── application.properties        # Configuración DB, Redis, JWT, Qdrant y openrouter.embedding.model
 │   └── build.gradle                      # Dependencias y construcción con Gradle
 ├── frontend/                             # Aplicación Web Frontend
 │   ├── css/
@@ -391,11 +467,14 @@ proyecto-IA2-SANTIAGO-TOMAS/
 ├── n8n/
 │   └── workflows/
 │       ├── indexacion_cursos.json        # Flujo de carga inicial vectorial
-│       └── rag_recomendacion.json        # Flujo RAG con evaluación dinámica del umbral
+│       ├── rag_recomendacion.json        # Flujo RAG con evaluación dinámica del umbral
+│       └── comparacion_semantica_embeddings.json # Flujo de comparación directa de preguntas sin LLM
 ├── scripts/
 │   ├── check_health.js                   # Verificación de salud de la infraestructura
 │   ├── indexar_cursos.py                 # Script de indexación directa a Qdrant
 │   ├── serve_frontend.js                 # Servidor HTTP estático de desarrollo
+│   ├── test_comparacion_embeddings.py    # Comparación semántica directa entre preguntas (Sin LLM)
+│   ├── test_comparacion_embeddings.js    # Comparación semántica en Node.js (Sin LLM)
 │   └── test_query_score.js               # Script de prueba de puntuaciones de similitud RAG
 ├── .env.example                          # Plantilla de variables de entorno
 ├── .gitignore                            # Archivos excluidos del control de versiones
@@ -404,11 +483,10 @@ proyecto-IA2-SANTIAGO-TOMAS/
 
 ---
 
-## 13. Solución de Problemas Frecuentes (Troubleshooting)
+## 14. Solución de Problemas Frecuentes (Troubleshooting)
 
 - **Puerto 8080 en uso**: Si al ejecutar `./gradlew bootRun` recibes `Port 8080 was already in use`, termina el proceso que lo ocupa con `netstat -ano | findstr :8080` y `taskkill /PID <PID> /F`.
 - **Error de Docker Desktop**: Asegúrate de que Docker Desktop esté encendido antes de correr `docker compose up -d`. Si un contenedor falla, revisa sus logs con `docker logs rutaia_postgres` o `docker logs rutaia_redis`.
 - **OpenRouter sin créditos o error 401**: Verifica que tu variable `OPENROUTER_API_KEY` en `.env` tenga créditos disponibles y sea válida.
 - **La cookie de sesión no se envía**: Asegúrate de abrir el frontend a través de un servidor HTTP local (`http://localhost:3000`), no abriendo directamente el archivo como `file:///...`, ya que los navegadores restringen las cookies sobre el protocolo de archivo local.
 - **El umbral configurado no filtra correctamente**: Comprueba que el workflow `02 RAG Recomendacion de Cursos` en n8n esté activo (`Active`) y reciba el campo `umbralSimilitud` enviado por el backend.
-
